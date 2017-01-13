@@ -49,6 +49,7 @@ def init_sync_d_interface_tables():
     db_conn.connect(COUNTERS_DB)
 
     # { if_name (SONiC) -> sai_id }
+    # ex: { "Ethernet76" : "1000000000023" }
     if_name_map = db_conn.get_all(COUNTERS_DB, COUNTERS_PORT_NAME_MAP, blocking=True)
     logger.debug("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
 
