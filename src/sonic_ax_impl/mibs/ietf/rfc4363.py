@@ -1,46 +1,19 @@
+import json
 from enum import unique, Enum
 
 from sonic_ax_impl import mibs
 from ax_interface import MIBMeta, ValueType, MIBUpdater, MIBEntry, ContextualMIBEntry
 from ax_interface.encodings import ObjectIdentifier
 
-
-@unique
-class DbTables(int, Enum):
+def mac_decimals(mac):
     """
-    Maps database tables names to SNMP sub-identifiers.
-    https://tools.ietf.org/html/rfc1213#section-6.4
-
-    REDIS_TABLE_NAME = (RFC1213 OID NUMBER)
+    >>> mac_decimals("52:54:00:57:59:6A")
+    ["82", "84", "0", "87", "89", "106"]
     """
+    return tuple(int(h, 16) for h in mac.split(":"))
 
-    # ifOperStatus ::= { ifEntry 8 }
-    # ifLastChange :: { ifEntry 9 }
-    # ifInOctets ::= { ifEntry 10 }
-    SAI_PORT_STAT_IF_IN_OCTETS = 10
-    # ifInUcastPkts ::= { ifEntry 11 }
-    SAI_PORT_STAT_IF_IN_UCAST_PKTS = 11
-    # ifInNUcastPkts ::= { ifEntry 12 }
-    SAI_PORT_STAT_IF_IN_NON_UCAST_PKTS = 12
-    # ifInDiscards ::= { ifEntry 13 }
-    SAI_PORT_STAT_IF_IN_DISCARDS = 13
-    # ifInErrors ::= { ifEntry 14 }
-    SAI_PORT_STAT_IF_IN_ERRORS = 14
-    # ifInUnknownProtos ::= { ifEntry 15 }
-    SAI_PORT_STAT_IF_IN_UNKNOWN_PROTOS = 15
-    # ifOutOctets  ::= { ifEntry 16 }
-    SAI_PORT_STAT_IF_OUT_OCTETS = 16
-    # ifOutUcastPkts ::= { ifEntry 17 }
-    SAI_PORT_STAT_IF_OUT_UCAST_PKTS = 17
-    # ifOutNUcastPkts ::= { ifEntry 18 }
-    SAI_PORT_STAT_IF_OUT_NON_UCAST_PKTS = 18
-    # ifOutDiscards ::= { ifEntry 19 }
-    SAI_PORT_STAT_IF_OUT_DISCARDS = 19
-    # ifOutErrors ::= { ifEntry 20 }
-    SAI_PORT_STAT_IF_OUT_ERRORS = 20
-    # ifOutQLen ::= { ifEntry 21 }
-    SAI_PORT_STAT_IF_OUT_QLEN = 21
-
+def fdb_vlanmac(fdb):
+    return (int(fdb["vlan"]),) + mac_decimals(fdb["mac"])
 
 class FdbUpdater(MIBUpdater):
     def __init__(self):
@@ -61,36 +34,34 @@ class FdbUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
-        fdb_strings = db_conn.keys(APPS_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:{")
-        self.vlanmac_oid_map = {}
+        ## TODO: add error handling
+        self.db_conn.connect(mibs.APPL_DB)
+        fdb_strings = self.db_conn.keys(mibs.APPL_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:*")
+        self.vlanmac_ifindex_map = {}
         for s in fdb_strings:
-            fdb = json.from(s)
-            ent = db_conn.get_all(s)
-            port = ent["SAI_FDB_ENTRY_ATTR_PORT_ID"]
-            ## TODO
-            self.vlanmac_ifindex_map[fdb] = port
+            fdb = json.loads(s.decode().split(":", maxsplit=2)[-1])
+            ent = self.db_conn.get_all(mibs.APPL_DB, s, blocking=True)
+            port_oid = ent[b"SAI_FDB_ENTRY_ATTR_PORT_ID"]
+            if port_oid.startswith(b"oid:0x"):
+                port_oid = port_oid[6:]
 
-    def fdb_ifindex(self, vlanmac)
-        return self.elf.vlanmac_ifindex_map[vlanmac]
+            self.vlanmac_ifindex_map[fdb_vlanmac(fdb)] = mibs.get_index(self.if_id_map[port_oid])
 
 
-class FdbMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.17.7.1.2.2.1.2'):
+    def fdb_ifindex(self, sub_id, oid_key=None):
+        assert oid_key is not None
+        return self.vlanmac_ifindex_map[oid_key[-7:]]
+
+
+class FdbMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.17.7.1.2.2.1'):
     """
-    'interfaces' https://tools.ietf.org/html/rfc4363
+    'Forwarding Database' https://tools.ietf.org/html/rfc4363
     """
 
-    if_updater = FdbUpdater()
-    _ifNumber = len(if_updater.if_name_map)
+    fdb_updater = FdbUpdater()
 
-    # OID sub-identifiers are 1-based, while the actual interfaces are zero-based.
-    # offset the interface range when registering the OIDs
-    fdb_range = if_updater.vlanmac_ifindex_map.keys()
+    fdb_range = fdb_updater.vlanmac_ifindex_map.keys()
 
-    # (subtree, value_type, callable_, *args, handler=None)
-    #ifNumber = MIBEntry('1', ValueType.INTEGER, lambda: InterfacesMIB._ifNumber)
-
-    # ifTable ::= { interfaces 2 }
-    # ifEntry ::= { ifTable 1 }
 
     ifIndex = \
-        ContextualMIBEntry('', fdb_range, ValueType.INTEGER, FdbUpdater.fdb_ifindex)
+        ContextualMIBEntry('2', fdb_range, ValueType.INTEGER, fdb_updater.fdb_ifindex)

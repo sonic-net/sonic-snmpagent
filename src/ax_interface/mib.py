@@ -127,10 +127,13 @@ class ContextualMIBEntry(MIBEntry):
 
     def __iter__(self):
         for sub_id in self.sub_ids:
-            yield self.sub_id + (sub_id,)
+            if isinstance(sub_id, tuple):
+                yield self.sub_id + sub_id
+            else:
+                yield self.sub_id + (sub_id,)
 
-    def __call__(self, sub_id=None):
-        return self._callable_.__call__(sub_id, *self._callable_args)
+    def __call__(self, sub_id=None, **kwargs):
+        return self._callable_.__call__(sub_id, *self._callable_args, **kwargs)
 
 
 class MIBTable(dict):
@@ -186,7 +189,7 @@ class MIBTable(dict):
                 None,  # null value
             )
         else:
-            oid_value = mib_entry(oid_key[-1])
+            oid_value = mib_entry(oid_key[-1], oid_key=oid_key)
             # OID found, call the OIDEntry
             vr = ValueRepresentation(
                 mib_entry.value_type if oid_value is not None else ValueType.NO_SUCH_INSTANCE,
