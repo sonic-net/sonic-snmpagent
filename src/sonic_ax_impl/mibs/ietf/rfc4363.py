@@ -2,15 +2,9 @@ import json
 from enum import unique, Enum
 
 from sonic_ax_impl import mibs
+from sonic_ax_impl.mibs.ietf import *
 from ax_interface import MIBMeta, ValueType, MIBUpdater, MIBEntry, ContextualMIBEntry
 from ax_interface.encodings import ObjectIdentifier
-
-def mac_decimals(mac):
-    """
-    >>> mac_decimals("52:54:00:57:59:6A")
-    ["82", "84", "0", "87", "89", "106"]
-    """
-    return tuple(int(h, 16) for h in mac.split(":"))
 
 def fdb_vlanmac(fdb):
     return (int(fdb["vlan"]),) + mac_decimals(fdb["mac"])
@@ -51,7 +45,6 @@ class FdbUpdater(MIBUpdater):
     def fdb_ifindex(self, sub_id, oid_key=None):
         assert oid_key is not None
         return self.vlanmac_ifindex_map[oid_key[-7:]]
-
 
 class FdbMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.17.7.1.2.2.1'):
     """
