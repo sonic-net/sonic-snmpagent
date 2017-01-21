@@ -29,12 +29,14 @@ class FdbUpdater(MIBUpdater):
         Pulls the table references for each interface.
         """
         ## TODO: add error handling
-        self.db_conn.connect(mibs.APPL_DB)
-        fdb_strings = self.db_conn.keys(mibs.APPL_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:*")
+        self.db_conn.connect(mibs.ASIC_DB)
+        fdb_strings = self.db_conn.keys(mibs.ASIC_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:*")
         self.vlanmac_ifindex_map = {}
+        if fdb_strings is None:
+            return
         for s in fdb_strings:
             fdb = json.loads(s.decode().split(":", maxsplit=2)[-1])
-            ent = self.db_conn.get_all(mibs.APPL_DB, s, blocking=True)
+            ent = self.db_conn.get_all(mibs.ASIC_DB, s, blocking=True)
             port_oid = ent[b"SAI_FDB_ENTRY_ATTR_PORT_ID"]
             if port_oid.startswith(b"oid:0x"):
                 port_oid = port_oid[6:]

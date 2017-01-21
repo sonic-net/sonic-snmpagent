@@ -8,6 +8,7 @@ from sonic_ax_impl import logger, _if_alias_map
 COUNTERS_PORT_NAME_MAP = b'COUNTERS_PORT_NAME_MAP'
 SONIC_ETHERNET_RE_PATTERN = "^Ethernet(\d+)$"
 APPL_DB = 'APPL_DB'
+ASIC_DB = 'ASIC_DB'
 COUNTERS_DB = 'COUNTERS_DB'
 
 
