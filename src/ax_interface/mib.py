@@ -218,7 +218,7 @@ class MIBTable(dict):
             # is less than our end value--it's a match.
             oid_key = remaining_oids[0]
             mib_entry = self[oid_key]
-            oid_value = mib_entry(oid_key[-1])
+            oid_value = mib_entry(oid_key[-1], oid_key=oid_key)
             if oid_value is None:
                 # handler returned None, which implies there's no data, keep walking.
                 remaining_oids = remaining_oids[1:]

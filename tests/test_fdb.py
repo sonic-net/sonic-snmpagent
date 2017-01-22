@@ -17,7 +17,7 @@ from ax_interface.encodings import ObjectIdentifier
 from ax_interface.constants import PduTypes
 from sonic_ax_impl.mibs import ieee802_1ab
 from sonic_ax_impl.mibs.ietf import rfc4363
-
+from sonic_ax_impl.main import SonicMIB
 
 class TestFdbMIB(TestCase):
     @classmethod
@@ -25,7 +25,7 @@ class TestFdbMIB(TestCase):
         class FdbMIB(rfc4363.FdbMIB):
             pass
 
-        cls.lut = MIBTable(FdbMIB)
+        cls.lut = MIBTable(SonicMIB)
 
     def test_print_oids(self):
         for k in self.lut.keys():
