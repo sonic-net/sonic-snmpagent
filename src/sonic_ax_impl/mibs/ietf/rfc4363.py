@@ -28,14 +28,20 @@ class FdbUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
-        ## TODO: add error handling
         self.db_conn.connect(mibs.ASIC_DB)
         fdb_strings = self.db_conn.keys(mibs.ASIC_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:*")
         self.vlanmac_ifindex_map = {}
         if fdb_strings is None:
             return
         for s in fdb_strings:
-            fdb = json.loads(s.decode().split(":", maxsplit=2)[-1])
+            fdb_str = s.decode()
+            try:
+                fdb = json.loads(fdb_str.split(":", maxsplit=2)[-1])
+            except ValueError as e:  # includes simplejson.decoder.JSONDecodeError
+                mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': {}.".format(fdb_str, e))
+                self.vlanmac_ifindex_map = {}
+                break
+
             ent = self.db_conn.get_all(mibs.ASIC_DB, s, blocking=True)
             port_oid = ent[b"SAI_FDB_ENTRY_ATTR_PORT_ID"]
             if port_oid.startswith(b"oid:0x"):
@@ -44,9 +50,9 @@ class FdbUpdater(MIBUpdater):
             self.vlanmac_ifindex_map[fdb_vlanmac(fdb)] = mibs.get_index(self.if_id_map[port_oid])
 
 
-    def fdb_ifindex(self, sub_id, oid_key=None):
-        assert oid_key is not None
-        return self.vlanmac_ifindex_map[oid_key[-7:]]
+    def fdb_ifindex(self, sub_id):
+        assert sub_id is not None
+        return self.vlanmac_ifindex_map[sub_id]
 
 class FdbMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.17.7.1.2.2.1'):
     """

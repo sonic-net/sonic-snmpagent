@@ -49,15 +49,17 @@ class MIBMeta(type):
                 raise ValueError("Invalid prefix '{}' for class '{}'".format(prefix, name))
 
             _prefix = util.oid2tuple(prefix)
+            _prefix_len = len(_prefix)
 
             # gather all static MIB entries.
-            sub_ids = {_prefix + v.sub_id: v for k, v in vars(cls).items() if type(v) is MIBEntry}
+            sub_ids = {_prefix + v.subtree: v for k, v in vars(cls).items() if type(v) is MIBEntry}
 
             # gather all contextual IDs for each MIB entry--and drop them into the sub-ID listing
             contextual_entries = (v for v in vars(cls).values() if type(v) is ContextualMIBEntry)
             for cme in contextual_entries:
                 for sub_id in cme:
                     sub_ids.update({_prefix + sub_id: cme})
+                    setattr(cme, ContextualMIBEntry.PREFIXLEN, _prefix_len + len(cme.subtree))
 
             # gather all updater instances
             updaters = set(v for k, v in vars(cls).items() if isinstance(v, MIBUpdater))
@@ -114,13 +116,15 @@ class MIBEntry:
         self._callable_args = args
         self.subtree = subtree
         self.value_type = value_type
-        self.sub_id = util.oid2tuple(subtree, dot_prefix=False)
+        self.subtree = util.oid2tuple(subtree, dot_prefix=False)
 
-    def __call__(self, sub_id=None):
+    def __call__(self):
         return self._callable_.__call__(*self._callable_args)
 
 
 class ContextualMIBEntry(MIBEntry):
+    PREFIXLEN = '__prefixlen__'
+
     def __init__(self, subtree, sub_ids, value_type, callable_, *args, updater=None):
         super().__init__(subtree, value_type, callable_, *args)
         self.sub_ids = sub_ids
@@ -128,12 +132,15 @@ class ContextualMIBEntry(MIBEntry):
     def __iter__(self):
         for sub_id in self.sub_ids:
             if isinstance(sub_id, tuple):
-                yield self.sub_id + sub_id
+                yield self.subtree + sub_id
             else:
-                yield self.sub_id + (sub_id,)
+                yield self.subtree + (sub_id,)
 
-    def __call__(self, sub_id=None, **kwargs):
-        return self._callable_.__call__(sub_id, *self._callable_args, **kwargs)
+    def __call__(self, sub_id):
+        if isinstance(sub_id, tuple) and len(sub_id) == 1:
+            return self._callable_.__call__(sub_id[0], *self._callable_args)
+        else:
+            return self._callable_.__call__(sub_id, *self._callable_args)
 
 
 class MIBTable(dict):
@@ -189,7 +196,8 @@ class MIBTable(dict):
                 None,  # null value
             )
         else:
-            oid_value = mib_entry(oid_key[-1], oid_key=oid_key)
+            sub_id = oid_key[getattr(mib_entry, ContextualMIBEntry.PREFIXLEN):]
+            oid_value = mib_entry(sub_id)
             # OID found, call the OIDEntry
             vr = ValueRepresentation(
                 mib_entry.value_type if oid_value is not None else ValueType.NO_SUCH_INSTANCE,
@@ -218,7 +226,8 @@ class MIBTable(dict):
             # is less than our end value--it's a match.
             oid_key = remaining_oids[0]
             mib_entry = self[oid_key]
-            oid_value = mib_entry(oid_key[-1], oid_key=oid_key)
+            sub_id = oid_key[getattr(mib_entry, ContextualMIBEntry.PREFIXLEN) :]
+            oid_value = mib_entry(sub_id)
             if oid_value is None:
                 # handler returned None, which implies there's no data, keep walking.
                 remaining_oids = remaining_oids[1:]
