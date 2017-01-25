@@ -10,21 +10,17 @@ from unittest import TestCase
 import tests.mock_tables.dbconnector
 
 from ax_interface.mib import MIBTable
-from ax_interface.pdu import PDU, PDUHeader, PDUHeaderTags, supported_pdus, ContextOptionalPDU, _ignored_pdus, PDUStream
-from ax_interface.pdu_implementations import OpenPDU, ResponsePDU, RegisterPDU, GetPDU
-from ax_interface import exceptions, ValueType
+from ax_interface.pdu import PDUHeader
+from ax_interface.pdu_implementations import GetPDU
+from ax_interface import ValueType
 from ax_interface.encodings import ObjectIdentifier
 from ax_interface.constants import PduTypes
-from sonic_ax_impl.mibs import ieee802_1ab
 from sonic_ax_impl.mibs.ietf import rfc4363
 from sonic_ax_impl.main import SonicMIB
 
 class TestFdbMIB(TestCase):
     @classmethod
     def setUpClass(cls):
-        class FdbMIB(rfc4363.FdbMIB):
-            pass
-
         cls.lut = MIBTable(SonicMIB)
 
     def test_print_oids(self):
