@@ -5,6 +5,7 @@ from sonic_ax_impl import mibs
 from sonic_ax_impl.mibs.ietf import *
 from ax_interface import MIBMeta, ValueType, MIBUpdater, MIBEntry, ContextualMIBEntry
 from ax_interface.encodings import ObjectIdentifier
+from ax_interface.util import mac_decimals
 
 def fdb_vlanmac(fdb):
     return (int(fdb["vlan"]),) + mac_decimals(fdb["mac"])
