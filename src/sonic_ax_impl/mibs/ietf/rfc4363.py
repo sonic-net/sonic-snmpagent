@@ -2,7 +2,7 @@ import json
 from enum import unique, Enum
 
 from sonic_ax_impl import mibs
-from ax_interface import MIBMeta, ValueType, MIBUpdater, ContextualMIBEntry
+from ax_interface import MIBMeta, ValueType, MIBUpdater, ContextualMIBEntry, SubtreeMIBEntry
 from ax_interface.util import mac_decimals
 
 def fdb_vlanmac(fdb):
@@ -64,4 +64,4 @@ class FdbMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.17.7.1.2.2.1'):
 
 
     ifIndex = \
-        ContextualMIBEntry('2', fdb_range, ValueType.INTEGER, fdb_updater.fdb_ifindex)
+        SubtreeMIBEntry('2', fdb_range, ValueType.INTEGER, fdb_updater.fdb_ifindex)
