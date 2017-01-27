@@ -4,6 +4,7 @@ from enum import unique, Enum
 from sonic_ax_impl import mibs
 from ax_interface import MIBMeta, ValueType, MIBUpdater, ContextualMIBEntry, SubtreeMIBEntry
 from ax_interface.util import mac_decimals
+from bisect import bisect_right
 
 def fdb_vlanmac(fdb):
     return (int(fdb["vlan"]),) + mac_decimals(fdb["mac"])
@@ -30,6 +31,7 @@ class FdbUpdater(MIBUpdater):
         self.db_conn.connect(mibs.ASIC_DB)
         fdb_strings = self.db_conn.keys(mibs.ASIC_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:*")
         self.vlanmac_ifindex_map = {}
+        self.vlanmac_ifindex_list = []
         if fdb_strings is None:
             return
         for s in fdb_strings:
@@ -46,22 +48,30 @@ class FdbUpdater(MIBUpdater):
             if port_oid.startswith(b"oid:0x"):
                 port_oid = port_oid[6:]
 
-            self.vlanmac_ifindex_map[fdb_vlanmac(fdb)] = mibs.get_index(self.if_id_map[port_oid])
+            vlanmac = fdb_vlanmac(fdb)
+            self.vlanmac_ifindex_map[vlanmac] = mibs.get_index(self.if_id_map[port_oid])
+            self.vlanmac_ifindex_list.append(vlanmac)
+            self.vlanmac_ifindex_list.sort()
 
 
     def fdb_ifindex(self, sub_id):
-        assert sub_id is not None
+        if sub_id not in self.vlanmac_ifindex_map:
+            return None
         return self.vlanmac_ifindex_map[sub_id]
 
-class FdbMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.17.7.1.2.2.1'):
+    def get_next(self, sub_id):
+        right = bisect_right(self.vlanmac_ifindex_list, sub_id)
+        if right >= len(self.vlanmac_ifindex_list):
+            return None
+
+        return self.vlanmac_ifindex_list[right]
+
+class QBridgeMIBObjects(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.17.7.1'):
     """
     'Forwarding Database' https://tools.ietf.org/html/rfc4363
     """
 
     fdb_updater = FdbUpdater()
 
-    fdb_range = fdb_updater.vlanmac_ifindex_map.keys()
-
-
-    ifIndex = \
-        SubtreeMIBEntry('2', fdb_range, ValueType.INTEGER, fdb_updater.fdb_ifindex)
+    dot1qTpFdbPort = \
+        SubtreeMIBEntry('2.2.1.2', fdb_updater, ValueType.INTEGER, fdb_updater.fdb_ifindex)
