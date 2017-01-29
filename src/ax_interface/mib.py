@@ -64,15 +64,14 @@ class MIBMeta(type):
             # gather all static MIB entries.
             static_entries = (v for v in vars(cls).values() if type(v) is MIBEntry)
             for me in static_entries:
-                setattr(me, MIBEntry.PREFIXLEN, _prefix_len + len(me.subtree))
                 sub_ids.update({_prefix + me.subtree: me})
                 prefixes.append(_prefix + me.subtree)
 
             # gather all contextual IDs for each MIB entry--and drop them into the sub-ID listing
             contextual_entries = (v for v in vars(cls).values() if type(v) is ContextualMIBEntry)
             for cme in contextual_entries:
-                prefixes.append(_prefix + cme.subtree)
                 sub_ids.update({_prefix + cme.subtree: cme})
+                prefixes.append(_prefix + cme.subtree)
                 for sub_id in cme:
                     sub_ids.update({_prefix + cme.subtree + sub_id: cme})
 
