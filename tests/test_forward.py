@@ -93,7 +93,7 @@ class TestForwardMIB(TestCase):
         get_pdu = GetPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=(
-                ObjectIdentifier(20, 0, 0, 0, (1, 3, 6, 1, 2, 1, 17, 7, 1, 2, 2, 1, 2, 1000, 100001)),
+                ObjectIdentifier(19, 0, 0, 0, (1, 3, 6, 1, 2, 1, 4, 24, 4, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1)),
             )
         )
 
@@ -110,7 +110,7 @@ class TestForwardMIB(TestCase):
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=(
-                ObjectIdentifier(20, 0, 0, 0, (1, 3, 6, 1, 2, 1, 17, 7, 1, 2, 2, 1, 3)),
+                ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 4, 24, 4, 1, 2)),
             )
         )
 
