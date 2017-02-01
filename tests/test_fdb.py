@@ -18,14 +18,14 @@ from ax_interface.constants import PduTypes
 from sonic_ax_impl.mibs.ietf import rfc4363
 from sonic_ax_impl.main import SonicMIB
 
-class TestSsonicMIB(TestCase):
+class TestSonicMIB(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.lut = MIBTable(SonicMIB)
 
-    def test_print_oids(self):
-        for k in self.lut.keys():
-            print(k)
+    # def test_print_oids(self):
+        # for k in self.lut.keys():
+        #     print(k)
         #mib_entry = self.lut[(1, 3, 6, 1, 2, 1, 17, 7, 1, 2, 2, 1, 2, 1000, 124, 254, 144, 128, 159, 92)]
 
     def test_getpdu(self):

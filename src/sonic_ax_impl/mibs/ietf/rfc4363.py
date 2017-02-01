@@ -18,8 +18,6 @@ class FdbUpdater(MIBUpdater):
         self.if_id_map, \
         self.oid_sai_map, \
         self.oid_name_map = mibs.init_sync_d_interface_tables()
-        # cache of interface counters
-        self.if_counters = {}
         # call our update method once to "seed" data before the "Agent" starts accepting requests.
         self.update_data()
 
@@ -55,9 +53,7 @@ class FdbUpdater(MIBUpdater):
 
 
     def fdb_ifindex(self, sub_id):
-        if sub_id not in self.vlanmac_ifindex_map:
-            return None
-        return self.vlanmac_ifindex_map[sub_id]
+        return self.vlanmac_ifindex_map.get(sub_id, None)
 
     def get_next(self, sub_id):
         right = bisect_right(self.vlanmac_ifindex_list, sub_id)
