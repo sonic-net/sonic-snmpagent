@@ -23,11 +23,6 @@ class TestSonicMIB(TestCase):
     def setUpClass(cls):
         cls.lut = MIBTable(SonicMIB)
 
-    # def test_print_oids(self):
-        # for k in self.lut.keys():
-        #     print(k)
-        #mib_entry = self.lut[(1, 3, 6, 1, 2, 1, 17, 7, 1, 2, 2, 1, 2, 1000, 124, 254, 144, 128, 159, 92)]
-
     def test_getpdu(self):
         oid = ObjectIdentifier(20, 0, 0, 0, (1, 3, 6, 1, 2, 1, 17, 7, 1, 2, 2, 1, 2, 1000, 124, 254, 144, 128, 159, 92))
         get_pdu = GetPDU(
@@ -57,7 +52,6 @@ class TestSonicMIB(TestCase):
         print(response)
 
         n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(value0.data, 49)
@@ -75,7 +69,6 @@ class TestSonicMIB(TestCase):
         print(response)
 
         n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.INTEGER)
         print("test_getnextpdu_exactmatch: ", str(oid))
@@ -95,7 +88,6 @@ class TestSonicMIB(TestCase):
         print(response)
 
         n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.NO_SUCH_INSTANCE)
 
@@ -112,7 +104,6 @@ class TestSonicMIB(TestCase):
         print(response)
 
         n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.END_OF_MIB_VIEW)
 

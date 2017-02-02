@@ -23,19 +23,23 @@ class RouteUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
-        ipn = ipaddress.ip_network("0.0.0.0/0")
         self.route_dest_map = {}
         self.route_dest_list = []
 
         self.db_conn.connect(mibs.APPL_DB)
-        ## TODO: error handling
-        ent = self.db_conn.get_all(mibs.APPL_DB, "ROUTE_TABLE:" + ipn.with_prefixlen, blocking=True)
-        nexthops = ent[b"nexthop"].decode()
-        for nh in nexthops.split(','):
-            sub_id = ip2tuple(ipn.network_address) + ip2tuple(ipn.netmask) + ip2tuple(nh)
-            # print(sub_id)
-            self.route_dest_list.append(sub_id)
-            self.route_dest_map[sub_id] = ipn.network_address.packed
+        route_entries = self.db_conn.keys(mibs.APPL_DB, "ROUTE_TABLE:*")
+
+        for route_entry in route_entries:
+            routestr = route_entry.decode()
+            ipnstr = routestr[len("ROUTE_TABLE:"):]
+            if ipnstr == "0.0.0.0/0":
+                ipn = ipaddress.ip_network(ipnstr)
+                ent = self.db_conn.get_all(mibs.APPL_DB, routestr, blocking=True)
+                nexthops = ent[b"nexthop"].decode()
+                for nh in nexthops.split(','):
+                    sub_id = ip2tuple(ipn.network_address) + ip2tuple(ipn.netmask) + ip2tuple(nh)
+                    self.route_dest_list.append(sub_id)
+                    self.route_dest_map[sub_id] = ipn.network_address.packed
 
         self.route_dest_list.sort()
 

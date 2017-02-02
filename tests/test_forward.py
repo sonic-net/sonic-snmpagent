@@ -7,7 +7,6 @@ sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from unittest import TestCase
 
-# noinspection PyUnresolvedReferences
 import tests.mock_tables.dbconnector
 
 from ax_interface.mib import MIBTable
@@ -23,11 +22,6 @@ class TestForwardMIB(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.lut = MIBTable(SonicMIB)
-
-    # def test_print_oids(self):
-    #     for k in self.lut.keys():
-    #         print(k)
-    #     mib_entry = self.lut[(1, 3, 6, 1, 2, 1, 4, 24, 4, 1, 1)]
 
     def test_network_order(self):
         ip = ipaddress.ip_address("0.1.2.3")
@@ -64,13 +58,11 @@ class TestForwardMIB(TestCase):
         print(response)
 
         n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.IP_ADDRESS)
         self.assertEqual(str(value0.data), ipaddress.ip_address("0.0.0.0").packed.decode())
 
     def test_getnextpdu_exactmatch(self):
-        # oid.include = 1
         oid = ObjectIdentifier(23, 0, 1, 0, (1, 3, 6, 1, 2, 1, 4, 24, 4, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 17))
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
@@ -82,7 +74,6 @@ class TestForwardMIB(TestCase):
         print(response)
 
         n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.IP_ADDRESS)
         print("test_getnextpdu_exactmatch: ", str(oid))
@@ -102,7 +93,6 @@ class TestForwardMIB(TestCase):
         print(response)
 
         n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.NO_SUCH_INSTANCE)
 
@@ -119,7 +109,6 @@ class TestForwardMIB(TestCase):
         print(response)
 
         n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.END_OF_MIB_VIEW)
 
