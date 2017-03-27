@@ -143,12 +143,12 @@ class OctetString(namedtuple('_OctetString', ('length', 'string', 'padding'))):
         return 4 + self.length + util.pad4(self.length)
 
     def __str__(self):
-        return self.string.decode('ascii')
+        return self.string.decode('utf-8')
 
     @classmethod
     def from_string(cls, string):
         length = len(string)
-        _string = bytes(string, 'ascii') if type(string) is str else string
+        _string = bytes(string, 'utf-8') if type(string) is str else string
         return cls(length, _string, util.pad4bytes(len(_string)))
 
     def to_bytes(self, endianness):

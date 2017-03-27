@@ -98,3 +98,10 @@ def mac_decimals(mac):
     """
     return tuple(int(h, 16) for h in mac.split(":"))
 
+def ip2tuple(ip):
+    """
+    >>> ip2tuple("192.168.1.253")
+    (192, 168, 1, 253)
+    """
+    return tuple(int(bs) for bs in str(ip).split('.'))
+

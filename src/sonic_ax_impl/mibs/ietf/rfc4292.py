@@ -5,11 +5,8 @@ from enum import unique, Enum
 from sonic_ax_impl import mibs
 from ax_interface import MIBMeta, ValueType, MIBUpdater, ContextualMIBEntry, SubtreeMIBEntry
 from ax_interface.encodings import OctetString
-from ax_interface.util import mac_decimals
+from ax_interface.util import mac_decimals, ip2tuple
 from bisect import bisect_right
-
-def ip2tuple(ip):
-    return tuple(int(bs) for bs in str(ip).split('.'))
 
 class RouteUpdater(MIBUpdater):
     def __init__(self):
