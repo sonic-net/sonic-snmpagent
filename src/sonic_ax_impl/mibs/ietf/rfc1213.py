@@ -73,8 +73,6 @@ class ArpUpdater(MIBUpdater):
             subid = (if_index,) + iptuple
             self.arp_dest_map[subid] = machex
             self.arp_dest_list.append(subid)
-
-            # print(subid, dev, mac, ip)
         self.arp_dest_list.sort()
 
     def arp_dest(self, sub_id):
