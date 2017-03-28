@@ -64,7 +64,7 @@ class ArpUpdater(MIBUpdater):
             if if_index is None: continue
 
             mactuple = mac_decimals(mac)
-            machex = ''.join([chr(b) for b in mactuple])
+            machex = ''.join(chr(b) for b in mactuple)
             # if MAC is all zero
             #if not any(mac): continue
 
