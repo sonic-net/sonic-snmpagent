@@ -5,7 +5,7 @@ from enum import unique, Enum
 from sonic_ax_impl import mibs
 from ax_interface import MIBMeta, ValueType, MIBUpdater, ContextualMIBEntry, SubtreeMIBEntry
 from ax_interface.encodings import OctetString
-from ax_interface.util import mac_decimals, ip2tuple
+from ax_interface.util import mac_decimals, ip2tuple_v4
 from bisect import bisect_right
 
 class RouteUpdater(MIBUpdater):
@@ -34,7 +34,7 @@ class RouteUpdater(MIBUpdater):
                 ent = self.db_conn.get_all(mibs.APPL_DB, routestr, blocking=True)
                 nexthops = ent[b"nexthop"].decode()
                 for nh in nexthops.split(','):
-                    sub_id = ip2tuple(ipn.network_address) + ip2tuple(ipn.netmask) + (self.tos,) + ip2tuple(nh)
+                    sub_id = ip2tuple_v4(ipn.network_address) + ip2tuple_v4(ipn.netmask) + (self.tos,) + ip2tuple_v4(nh)
                     self.route_dest_list.append(sub_id)
                     self.route_dest_map[sub_id] = ipn.network_address.packed
 

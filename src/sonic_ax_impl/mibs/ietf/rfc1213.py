@@ -5,7 +5,7 @@ from bisect import bisect_right
 from sonic_ax_impl import mibs
 from ax_interface import MIBMeta, ValueType, MIBUpdater, MIBEntry, ContextualMIBEntry, SubtreeMIBEntry
 from ax_interface.encodings import ObjectIdentifier
-from ax_interface.util import mac_decimals, ip2tuple
+from ax_interface.util import mac_decimals, ip2tuple_v4
 
 
 @unique
@@ -68,7 +68,7 @@ class ArpUpdater(MIBUpdater):
             # if MAC is all zero
             #if not any(mac): continue
 
-            iptuple = ip2tuple(ip)
+            iptuple = ip2tuple_v4(ip)
 
             subid = (if_index,) + iptuple
             self.arp_dest_map[subid] = machex

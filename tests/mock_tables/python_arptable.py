@@ -10,8 +10,8 @@ import python_arptable
 
 # Backup original function
 _get_arp_table = getattr(python_arptable, 'get_arp_table')
-#setattr(python_arptable, '_get_arp_table', get_arp_table)
 
+# Monkey patch
 def get_arp_table():
     with open(INPUT_DIR + '/arp.txt') as farp:
         file_content = mock_open(read_data = farp.read())
