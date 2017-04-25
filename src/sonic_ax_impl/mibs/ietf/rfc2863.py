@@ -54,6 +54,10 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.oid_sai_map, \
         self.oid_name_map = mibs.init_sync_d_interface_tables()
 
+        self.lag_name_if_name_map, \
+        self.if_name_lag_name_map, \
+        self.oid_lag_name_map = mibs.init_sync_d_lag_tables(self.db_conn)
+
         self.if_counters = {}
         self.update_data()
 
@@ -71,6 +75,9 @@ class InterfaceMIBUpdater(MIBUpdater):
         :param sub_id: The 1-based sub-identifier query.
         :return: the interface description (simply the chassis name) for the respective sub_id.
         """
+        if sub_id in self.oid_lag_name_map:
+            return self.oid_lag_name_map[sub_id]
+
         return self.if_alias_map[self.oid_name_map[sub_id]]
 
     def interface_alias(self, sub_id):
@@ -79,6 +86,9 @@ class InterfaceMIBUpdater(MIBUpdater):
         :param sub_id: The 1-based sub-identifier query.
         :return: The  SONiC name.
         """
+        if sub_id in self.oid_lag_name_map:
+            return self.oid_lag_name_map[sub_id]
+
         return self.oid_name_map[sub_id]
 
     def get_counter32(self, sub_id, table_name):
@@ -94,6 +104,13 @@ class InterfaceMIBUpdater(MIBUpdater):
         :param mask: mask to apply to counter
         :return: the counter for the respective sub_id/table.
         """
+        if sub_id in self.oid_lag_name_map:
+            counter_value = 0
+            for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[sub_id]]:
+                counter_value += self._get_counter(mibs.get_index(lag_member), table_name, mask)
+
+            return counter_value
+
         sai_id = self.oid_sai_map[sub_id]
         # Enum.name or table_name = 'name_of_the_table'
         _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
@@ -107,17 +124,28 @@ class InterfaceMIBUpdater(MIBUpdater):
             mibs.logger.warning("SyncD 'COUNTERS_DB' missing attribute '{}'.".format(e))
             return None
 
+    def get_if_number(self):
+        """
+        :return: the number of interfaces.
+        """
+        return len(self.oid_sai_map) + len(self.lag_name_if_name_map)
+
+    def get_if_range(self):
+        """
+        :return: the interfaces range.
+        """
+        return list(self.oid_sai_map.keys()) + list(self.oid_lag_name_map.keys())
 
 class InterfaceMIBObjects(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.31.1'):
     """
     'ifMIBObjects' https://tools.ietf.org/html/rfc2863#section-6
     """
     if_updater = InterfaceMIBUpdater()
-    _ifNumber = len(if_updater.if_name_map)
+    _ifNumber = if_updater.get_if_number()
 
     # OID sub-identifiers are 1-based, while the actual interfaces are zero-based.
     # offset the interface range when registering the OIDs
-    if_range = if_updater.oid_sai_map.keys()
+    if_range = if_updater.get_if_range()
 
     # ifXTable = '1'
     # ifXEntry = '1.1'

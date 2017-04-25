@@ -99,6 +99,10 @@ class InterfacesUpdater(MIBUpdater):
         self.if_id_map, \
         self.oid_sai_map, \
         self.oid_name_map = mibs.init_sync_d_interface_tables()
+
+        self.lag_name_if_name_map, \
+        self.if_name_lag_name_map, \
+        self.oid_lag_name_map = mibs.init_sync_d_lag_tables(self.db_conn)
         # cache of interface counters
         self.if_counters = {}
         # call our update method once to "seed" data before the "Agent" starts accepting requests.
@@ -118,6 +122,9 @@ class InterfacesUpdater(MIBUpdater):
         :param sub_id: The 1-based sub-identifier query.
         :return: the interface description (simply the name) for the respective sub_id
         """
+        if sub_id in self.oid_lag_name_map:
+            return self.oid_lag_name_map[sub_id]
+
         return self.if_alias_map[self.oid_name_map[sub_id]]
 
     def get_counter(self, sub_id, table_name):
@@ -126,6 +133,12 @@ class InterfacesUpdater(MIBUpdater):
         :param table_name: the redis table (either IntEnum or string literal) to query.
         :return: the counter for the respective sub_id/table.
         """
+        if sub_id in self.oid_lag_name_map:
+            counter_value = 0
+            for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[sub_id]]:
+                counter_value += self.get_counter(mibs.get_index(lag_member), table_name)
+
+            return counter_value
 
         sai_id = self.oid_sai_map[sub_id]
         # Enum.name or table_name = 'name_of_the_table'
@@ -141,6 +154,71 @@ class InterfacesUpdater(MIBUpdater):
             mibs.logger.warning("SyncD 'COUNTERS_DB' missing attribute '{}'.".format(e))
             return None
 
+    def get_if_number(self):
+        """
+        :return: the number of interfaces.
+        """
+        return len(self.oid_sai_map) + len(self.lag_name_if_name_map)
+
+    def get_if_range(self):
+        """
+        :return: the interfaces range.
+        """
+        return list(self.oid_sai_map.keys()) + list(self.oid_lag_name_map.keys())
+
+    def _get_if_entry(self, sub_id):
+        """
+        :param sub_id: The 1-based sub-identifier query.
+        :return: the DB entry for the respective sub_id.
+        """
+        table = ""
+        if sub_id in self.oid_lag_name_map:
+            table = mibs.lag_entry_table(self.oid_lag_name_map[sub_id])
+        else:
+            table = mibs.if_entry_table(self.oid_name_map[sub_id])
+
+        return self.db_conn.get_all(mibs.APPL_DB, table, blocking=True)
+
+    def _get_status(self, sub_id, key):
+        """
+        :param sub_id: The 1-based sub-identifier query.
+        :param key: Status to get (admin_state or oper_state).
+        :return: state value for the respective sub_id/key.
+        """
+        status_map = {
+            b"up": 1,
+            b"down": 2
+        }
+
+        entry = self._get_if_entry(sub_id)
+        # Note: If interface never become up its state won't be reflected in DB entry
+        # If state is not in DB entry assume interface is down
+        state = entry.get(key, b"down")
+
+        return status_map.get(state, status_map[b"down"])
+
+    def get_admin_status(self, sub_id):
+        """
+        :param sub_id: The 1-based sub-identifier query.
+        :return: admin state value for the respective sub_id.
+        """
+        return self._get_status(sub_id, b"admin_status")
+
+    def get_oper_status(self, sub_id):
+        """
+        :param sub_id: The 1-based sub-identifier query.
+        :return: oper state value for the respective sub_id.
+        """
+        return self._get_status(sub_id, b"oper_status")
+
+    def get_mtu(self, sub_id):
+        """
+        :param sub_id: The 1-based sub-identifier query.
+        :return: MTU value for the respective sub_id.
+        """
+        entry = self._get_if_entry(sub_id)
+        return int(entry.get(b"mtu", 0))
+
 
 class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
     """
@@ -148,11 +226,11 @@ class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
     """
 
     if_updater = InterfacesUpdater()
-    _ifNumber = len(if_updater.if_name_map)
+    _ifNumber = if_updater.get_if_number()
 
     # OID sub-identifiers are 1-based, while the actual interfaces are zero-based.
     # offset the interface range when registering the OIDs
-    if_range = if_updater.oid_sai_map.keys()
+    if_range = if_updater.get_if_range()
 
     # (subtree, value_type, callable_, *args, handler=None)
     ifNumber = MIBEntry('1', ValueType.INTEGER, lambda: InterfacesMIB._ifNumber)
@@ -172,9 +250,8 @@ class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
     ifType = \
         ContextualMIBEntry('2.1.3', if_range, ValueType.INTEGER, lambda sub_id: 6)
 
-    # FIXME Placeholder. ACS switches only use the MTU value of 9196
     ifMtu = \
-        ContextualMIBEntry('2.1.4', if_range, ValueType.INTEGER, lambda sub_id: 9196)
+        ContextualMIBEntry('2.1.4', if_range, ValueType.INTEGER, if_updater.get_mtu)
 
     # FIXME Placeholder.
     #   "If the bandwidth of the interface is greater
@@ -189,13 +266,11 @@ class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
     ifPhysAddress = \
         ContextualMIBEntry('2.1.6', if_range, ValueType.OCTET_STRING, lambda sub_id: '')
 
-    # FIXME Placeholder. 1 -- up; 2 -- down; 3 -- testing
     ifAdminStatus = \
-        ContextualMIBEntry('2.1.7', if_range, ValueType.INTEGER, lambda sub_id: 1)
+        ContextualMIBEntry('2.1.7', if_range, ValueType.INTEGER, if_updater.get_admin_status)
 
-    # FIXME Placeholder. 1 -- up; 2 -- down; 3 -- testing
     ifOperStatus = \
-        ContextualMIBEntry('2.1.8', if_range, ValueType.INTEGER, lambda sub_id: 1)
+        ContextualMIBEntry('2.1.8', if_range, ValueType.INTEGER, if_updater.get_oper_status)
 
     # FIXME Placeholder.
     ifLastChange = \
