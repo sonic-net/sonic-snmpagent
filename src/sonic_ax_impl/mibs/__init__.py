@@ -56,21 +56,22 @@ def get_index(if_name):
     """
     return get_index_from_str(if_name.decode())
 
+
 def get_index_from_str(if_name):
     """
     OIDs are 1-based, interfaces are 0-based, return the 1-based index
     Ethernet N = N + 1
     PortChannel N = N + 1000
     """
-    match = re.match(SONIC_ETHERNET_RE_PATTERN, if_name)
-    if match:
-        n = match.group(1)
-        return int(n) + 1
+    patterns = {
+        SONIC_ETHERNET_RE_PATTERN: 1,
+        SONIC_PORTCHANNEL_RE_PATTERN: 1000
+    }
 
-    match = re.match(SONIC_PORTCHANNEL_RE_PATTERN, if_name)
-    if match:
-        n = match.group(1)
-        return int(n) + 1000
+    for pattern, baseidx in patterns.items():
+        match = re.match(pattern, if_name)
+        if match:
+            return int(match.group(1)) + baseidx
 
 
 def config(**kwargs):

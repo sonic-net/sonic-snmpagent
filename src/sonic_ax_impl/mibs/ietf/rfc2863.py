@@ -109,7 +109,7 @@ class InterfaceMIBUpdater(MIBUpdater):
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[sub_id]]:
                 counter_value += self._get_counter(mibs.get_index(lag_member), table_name, mask)
 
-            return counter_value
+            return counter_value & mask
 
         sai_id = self.oid_sai_map[sub_id]
         # Enum.name or table_name = 'name_of_the_table'
