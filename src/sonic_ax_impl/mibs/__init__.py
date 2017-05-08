@@ -142,17 +142,21 @@ def init_sync_d_lag_tables(db_conn):
     :param db_conn: database connector
     :return: tuple(lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map)
     """
+    # { lag_name (SONiC) -> [ lag_members (if_name) ] }
+    # ex: { "PortChannel0" : [ "Ethernet0", "Ethernet4" ] }
+    lag_name_if_name_map = {}
+    # { if_name (SONiC) -> lag_name }
+    # ex: { "Ethernet0" : "PortChannel0" }
+    if_name_lag_name_map = {}
+    # { OID -> lag_name (SONiC) }
+    oid_lag_name_map = {}
+
     db_conn.connect(APPL_DB)
 
     lag_entries = db_conn.keys(APPL_DB, b"LAG_TABLE:*")
 
-    # { lag_name (SONiC) -> [ lag_members (if_name) ] }
-    # ex: { "PortChannel0" : [ "Ethernet0", "Ethernet4" ] }
-    lag_name_if_name_map = {}
-
-    # { if_name (SONiC) -> lag_name }
-    # ex: { "Ethernet0" : "PortChannel0" }
-    if_name_lag_name_map = {}
+    if not lag_entries:
+        return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map
 
     for lag_entry in lag_entries:
         lag_name = lag_entry[len(b"LAG_TABLE:"):]
@@ -165,8 +169,9 @@ def init_sync_d_lag_tables(db_conn):
         for key, val in lag_name_if_name_map.items():
             if_name_lag_name_map[key] = val
 
-    # { OID -> lag_name (SONiC) }
-    oid_lag_name_map = {get_index(if_name): if_name for if_name in lag_name_if_name_map.keys()
-                        if get_index(if_name)}
+    for if_name in lag_name_if_name_map.keys():
+        idx = get_index(if_name)
+        if idx:
+            oid_lag_name_map[idx] = if_name
 
     return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map
