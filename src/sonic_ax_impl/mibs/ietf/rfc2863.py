@@ -67,7 +67,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = mibs.init_sync_d_interface_tables()
+        self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
 
     def update_data(self):
         """
