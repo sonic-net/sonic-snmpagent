@@ -12,7 +12,7 @@ def fdb_vlanmac(fdb):
 class FdbUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
-        self.db_conn = mibs.init_counters_db()
+        self.db_conn = mibs.init_db()
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \

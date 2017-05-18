@@ -78,15 +78,14 @@ def config(**kwargs):
     global redis_kwargs
     redis_kwargs = {k:v for (k,v) in kwargs.items() if k in ['unix_socket_path', 'host', 'port']}
 
-def init_counters_db():
+def init_db():
     """
-    Connects CountersDB
+    Connects to DB
     :return: db_conn
     """
     # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
     # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
     db_conn = SonicV2Connector(**redis_kwargs)
-    db_conn.connect(COUNTERS_DB)
 
     return db_conn
 
@@ -96,6 +95,10 @@ def init_sync_d_interface_tables(db_conn):
     Initializes interface maps for SyncD-connected MIB(s).
     :return: tuple(if_name_map, if_id_map, oid_map, if_alias_map)
     """
+
+    # Make sure we're connected to COUNTERS_DB
+    db_conn.connect(COUNTERS_DB)
+
     # { if_name (SONiC) -> sai_id }
     # ex: { "Ethernet76" : "1000000000023" }
     if_name_map = db_conn.get_all(COUNTERS_DB, COUNTERS_PORT_NAME_MAP, blocking=True)

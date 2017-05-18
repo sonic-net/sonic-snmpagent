@@ -93,7 +93,7 @@ class IpMib(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.4'):
 class InterfacesUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
-        self.db_conn = mibs.init_counters_db()
+        self.db_conn = mibs.init_db()
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \
