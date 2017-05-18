@@ -33,9 +33,9 @@ class MIBUpdater:
             # reinit internal structures
             if self.update_counter > self.reinit_rate:
                 self.reinit_data()
-                update_counter = 0
+                self.update_counter = 0
             else:
-                update_counter += 1
+                self.update_counter += 1
             # run the background update task
             self.update_data()
             # wait based on our update frequency before executing again.
