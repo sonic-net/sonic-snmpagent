@@ -48,7 +48,7 @@ class InterfaceMIBUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
 
-        self.db_conn, \
+        self.db_conn = mibs.init_counters_db()
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \
