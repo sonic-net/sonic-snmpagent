@@ -101,6 +101,8 @@ class NextHopUpdater(MIBUpdater):
 
         self.db_conn.connect(mibs.APPL_DB)
         route_entries = self.db_conn.keys(mibs.APPL_DB, "ROUTE_TABLE:*")
+        if not route_entries:
+            return
 
         for route_entry in route_entries:
             routestr = route_entry.decode()
