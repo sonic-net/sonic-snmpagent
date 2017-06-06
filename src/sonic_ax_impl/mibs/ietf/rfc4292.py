@@ -35,7 +35,10 @@ class RouteUpdater(MIBUpdater):
                 ipn = ipaddress.ip_network(ipnstr)
                 ent = self.db_conn.get_all(mibs.APPL_DB, routestr, blocking=True)
                 nexthops = ent[b"nexthop"].decode()
-                for nh in nexthops.split(','):
+                ifnames = ent[b"ifname"].decode()
+                for nh, ifn in zip(nexthops.split(','), ifnames.split(',')):
+                    ## Ignore non front panel interfaces
+                    if not ifn.startswith('Ethernet'): continue
                     sub_id = ip2tuple_v4(ipn.network_address) + ip2tuple_v4(ipn.netmask) + (self.tos,) + ip2tuple_v4(nh)
                     self.route_dest_list.append(sub_id)
                     self.route_dest_map[sub_id] = ipn.network_address.packed
