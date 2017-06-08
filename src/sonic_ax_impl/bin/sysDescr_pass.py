@@ -81,7 +81,7 @@ elif command == '-g' and oid != myoid:
     sys.stdout.flush()
     sys.exit()
 
-filepath = "/etc/ssw/sysDescription"
+filepath = "/etc/snmp/sysDescription"
 sysDescription = "SONiC (unknown version) - HwSku (unknown) - Distribution (unknown) - Kernel (unknown)"
 
 try:
