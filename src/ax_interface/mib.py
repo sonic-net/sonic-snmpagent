@@ -1,8 +1,12 @@
+import sys
 import asyncio
 import bisect
 import random
+import logging
 
 from . import util
+from . import logger
+
 from .constants import ValueType
 from .encodings import ValueRepresentation
 
@@ -37,7 +41,18 @@ class MIBUpdater:
             else:
                 self.update_counter += 1
             # run the background update task
-            self.update_data()
+            try:
+                self.update_data()
+            except (KeyboardInterrupt, SystemExit):
+                # They are exception thrown when Ctrl+C or sys.exit() happens
+                raise
+            except:
+                # Any other exception or error, log it and keep running
+                ex = sys.exc_info()[0]
+                exstr = "MIBUpdater.start() caught an unexpected exception: {}".format(str(ex))
+                print(exstr, flush=True)
+                logger.exception(exstr)
+
             # wait based on our update frequency before executing again.
             # randomize to avoid concurrent update storms.
             await asyncio.sleep(self.frequency + random.randint(-2, 2))
@@ -228,13 +243,22 @@ class MIBTable(dict):
         self.updater_instances = getattr(mib_cls, MIBMeta.UPDATERS)
         self.prefixes = getattr(mib_cls, MIBMeta.PREFIXES)
 
+    def done_background_task_callback(fut):
+        ex = fut.exception()
+        if ex is not None:
+            exstr = "MIBTable background task caught an unexpected exception: {}".format(str(ex))
+            print(exstr, flush=True)
+            logger.error(exstr)
+
     def start_background_tasks(self, event):
         tasks = []
         for updater in self.updater_instances:
             updater.frequency = self.update_frequency
             updater.run_event = event
-            fut = event._loop.create_task(updater.start())
-            tasks.append(fut)
+            fut = asyncio.ensure_future(updater.start())
+            fut.add_done_callback(MIBTable.done_background_task_callback)
+            task = event._loop.create_task(fut)
+            tasks.append(task)
         return asyncio.gather(*tasks, loop=event._loop)
 
     def _find_parent_prefix(self, item):
