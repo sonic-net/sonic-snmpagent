@@ -244,7 +244,6 @@ class MIBTable(dict):
         ex = fut.exception()
         if ex is not None:
             exstr = "MIBTable background task caught an unexpected exception: {}".format(str(ex))
-            print(exstr, flush=True)
             logger.error(exstr)
 
     def start_background_tasks(self, event):
