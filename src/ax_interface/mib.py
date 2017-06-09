@@ -48,10 +48,7 @@ class MIBUpdater:
                 raise
             except:
                 # Any other exception or error, log it and keep running
-                ex = sys.exc_info()[0]
-                exstr = "MIBUpdater.start() caught an unexpected exception: {}".format(str(ex))
-                print(exstr, flush=True)
-                logger.exception(exstr)
+                logger.exception("MIBUpdater.start() caught an unexpected exception")
 
             # wait based on our update frequency before executing again.
             # randomize to avoid concurrent update storms.
