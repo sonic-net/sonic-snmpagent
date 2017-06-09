@@ -43,10 +43,7 @@ class MIBUpdater:
             # run the background update task
             try:
                 self.update_data()
-            except (KeyboardInterrupt, SystemExit):
-                # They are exception thrown when Ctrl+C or sys.exit() happens
-                raise
-            except:
+            except Exception:
                 # Any other exception or error, log it and keep running
                 logger.exception("MIBUpdater.start() caught an unexpected exception")
 
@@ -240,7 +237,7 @@ class MIBTable(dict):
         self.updater_instances = getattr(mib_cls, MIBMeta.UPDATERS)
         self.prefixes = getattr(mib_cls, MIBMeta.PREFIXES)
 
-    def done_background_task_callback(fut):
+    def _done_background_task_callback(fut):
         ex = fut.exception()
         if ex is not None:
             exstr = "MIBTable background task caught an unexpected exception: {}".format(str(ex))
@@ -252,7 +249,7 @@ class MIBTable(dict):
             updater.frequency = self.update_frequency
             updater.run_event = event
             fut = asyncio.ensure_future(updater.start())
-            fut.add_done_callback(MIBTable.done_background_task_callback)
+            fut.add_done_callback(MIBTable._done_background_task_callback)
             task = event._loop.create_task(fut)
             tasks.append(task)
         return asyncio.gather(*tasks, loop=event._loop)
