@@ -172,6 +172,7 @@ def init_sync_d_lag_tables(db_conn):
     for lag_entry in lag_entries:
         lag_name = lag_entry[len(b"LAG_TABLE:"):]
         lag_members = db_conn.keys(APPL_DB, b"LAG_MEMBER_TABLE:%s:*" % lag_name)
+        # TODO: db_conn.keys() should really return [] instead of None
         if lag_members is None:
             lag_members = []
 
