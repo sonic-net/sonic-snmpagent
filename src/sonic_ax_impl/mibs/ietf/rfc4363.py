@@ -34,6 +34,9 @@ class FdbUpdater(MIBUpdater):
             self.prev_if_id_map = self.if_id_map
             self.invalid_port_oids = set()
 
+        ## Note: get the bridge port ID to port ID mapping
+        ## In FDB entry, the bridge port ID is available which is one-to-one mapping with port ID
+        ## TODO: LAG in VLAN is to be supported
         self.if_bpid_map = {}
         self.db_conn.connect(mibs.ASIC_DB)
         bridge_port_strings = self.db_conn.keys(mibs.ASIC_DB, "ASIC_STATE:SAI_OBJECT_TYPE_BRIDGE_PORT:*")
@@ -42,6 +45,7 @@ class FdbUpdater(MIBUpdater):
             return
 
         for s in bridge_port_strings:
+            # Example output: ASIC_STATE:SAI_OBJECT_TYPE_BRIDGE_PORT:oid:0x3a000000000616
             bridge_port_id = s[45:]
             ent = self.db_conn.get_all(mibs.ASIC_DB, s, blocking=True)
             port_id = ent[b"SAI_BRIDGE_PORT_ATTR_PORT_ID"][6:]
@@ -52,6 +56,7 @@ class FdbUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
+        self.db_conn.connect(mibs.ASIC_DB)
         self.vlanmac_ifindex_map = {}
         self.vlanmac_ifindex_list = []
 
@@ -68,6 +73,7 @@ class FdbUpdater(MIBUpdater):
                 break
 
             ent = self.db_conn.get_all(mibs.ASIC_DB, s, blocking=True)
+            # Example output: oid:0x3a000000000608
             bridge_port_id = ent[b"SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"][6:]
             port_id = self.if_bpid_map[bridge_port_id]
 
