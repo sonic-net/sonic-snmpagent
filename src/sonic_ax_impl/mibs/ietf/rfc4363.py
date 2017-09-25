@@ -38,6 +38,7 @@ class FdbUpdater(MIBUpdater):
         ## In FDB entry, the bridge port ID is available which is one-to-one mapping with port ID
         ## TODO: LAG in VLAN is to be supported
         self.if_bpid_map = {}
+        self.invalid_if_bpid = set()
         self.db_conn.connect(mibs.ASIC_DB)
         bridge_port_strings = self.db_conn.keys(mibs.ASIC_DB, "ASIC_STATE:SAI_OBJECT_TYPE_BRIDGE_PORT:*")
 
@@ -48,11 +49,15 @@ class FdbUpdater(MIBUpdater):
             # Example output: ASIC_STATE:SAI_OBJECT_TYPE_BRIDGE_PORT:oid:0x3a000000000616
             bridge_port_id = s[45:]
             ent = self.db_conn.get_all(mibs.ASIC_DB, s, blocking=True)
-            try:
+            if b"SAI_BRIDGE_PORT_ATTR_PORT_ID" in ent:
                 port_id = ent[b"SAI_BRIDGE_PORT_ATTR_PORT_ID"][6:]
                 self.if_bpid_map[bridge_port_id] = port_id
-            except KeyError:
-                mibs.logger.warning("SAI_OBJECT_TYPE_BRIDGE_PORT {} does not have SAI_BRIDGE_PORT_ATTR_PORT_ID attribute".format(bridge_port_id))
+                self.invalid_if_bpid.discard(bridge_port_id)
+            else:
+                # Reduce the log amount by remembering the invalid entry in a set
+                if bridge_port_id not in self.invalid_if_bpid:
+                    self.invalid_if_bpid.add(bridge_port_id)
+                    mibs.logger.warning("SAI_OBJECT_TYPE_BRIDGE_PORT {} does not have SAI_BRIDGE_PORT_ATTR_PORT_ID attribute".format(bridge_port_id))
 
     def update_data(self):
         """
