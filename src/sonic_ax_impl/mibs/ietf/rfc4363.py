@@ -1,5 +1,4 @@
 import json
-from . import logger
 from enum import unique, Enum
 
 from sonic_ax_impl import mibs
@@ -53,7 +52,7 @@ class FdbUpdater(MIBUpdater):
                 port_id = ent[b"SAI_BRIDGE_PORT_ATTR_PORT_ID"][6:]
                 self.if_bpid_map[bridge_port_id] = port_id
             except KeyError:
-                logger.warning("SAI_OBJECT_TYPE_BRIDGE_PORT {} does not have SAI_BRIDGE_PORT_ATTR_PORT_ID attribute".format(bridge_port_id))
+                mibs.logger.warning("SAI_OBJECT_TYPE_BRIDGE_PORT {} does not have SAI_BRIDGE_PORT_ATTR_PORT_ID attribute".format(bridge_port_id))
 
     def update_data(self):
         """
