@@ -22,8 +22,6 @@ class PfcUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
-        self.reinit_data()
-
         self.if_counters = \
             {sai_id: self.db_conn.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
              for sai_id in self.if_id_map}
@@ -48,7 +46,7 @@ class PfcUpdater(MIBUpdater):
         self.if_range = []
 
         # init data from Counter DB.
-        self.update_data()
+        self.reinit_data()
 
     def get_next(self, sub_id):
         """
@@ -211,7 +209,7 @@ class PfcPrioUpdater(PfcUpdater):
             port_oid = self.get_oid((sub_id[0],))
             queue_index = self.queue_index(sub_id)
             if port_oid is None or queue_index is None:
-                raise IndexError()
+                return None
         except (IndexError, KeyError):
             mibs.logger.warning("indicationsPerPriority: incorrect sub_id = {}".format(str(sub_id)))
             return None

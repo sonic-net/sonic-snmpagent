@@ -185,7 +185,7 @@ def init_sync_d_queue_tables(db_conn):
     logger.debug("Queue name map:\n" + pprint.pformat(queue_name_map, indent=2))
 
     # Parse the queue_name_map and create the following maps:
-    # port_queues_map -> {if_index : {queue_index : sai_oid}}
+    # port_queues_map -> {"if_index : queue_index" : sai_oid}
     # queue_stat_map -> {queue stat table name : {counter name : value}}
     port_queues_map = {}
     queue_stat_map = {}
@@ -197,13 +197,10 @@ def init_sync_d_queue_tables(db_conn):
         key = queue_key(port_index, queue_index)
         port_queues_map[key] = sai_id
 
-        try:
-            queue_stat_name = queue_table(sai_id)
-            queue_stat = db_conn.get_all(COUNTERS_DB, queue_stat_name, blocking=False)
-            if queue_stat is not None:
-                queue_stat_map[queue_stat_name] = queue_stat
-        except Exception:
-            logger.error("Unable to get the statistic for {} queue {} port".format(queue_index, port_name))
+        queue_stat_name = queue_table(sai_id)
+        queue_stat = db_conn.get_all(COUNTERS_DB, queue_stat_name, blocking=False)
+        if queue_stat is not None:
+            queue_stat_map[queue_stat_name] = queue_stat
 
     # SyncD consistency checks.
     if not port_queues_map:

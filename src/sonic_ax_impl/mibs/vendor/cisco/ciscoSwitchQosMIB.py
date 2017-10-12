@@ -70,9 +70,13 @@ class QueueStatUpdater(MIBUpdater):
     def update_data(self):
         """
         Update redis (caches config)
-        Pulls the table references for each interface.
+        Pulls the table references for each queue.
         """
-        self.reinit_data()
+        for queue_key, sai_id in self.port_queues_map.items():
+            queue_stat_name = mibs.queue_table(sai_id)
+            queue_stat = self.db_conn.get_all(mibs.COUNTERS_DB, queue_stat_name, blocking=False)
+            if queue_stat is not None:
+                self.queue_stat_map[queue_stat_name] = queue_stat
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
