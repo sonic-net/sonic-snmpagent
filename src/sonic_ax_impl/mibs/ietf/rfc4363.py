@@ -62,7 +62,7 @@ class FdbUpdater(MIBUpdater):
             ent = self.db_conn.get_all(mibs.ASIC_DB, s, blocking=True)
             # Example output: oid:0x3a000000000608
             bridge_port_id = ent[b"SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"][6:]
-            if bridge_port_id not in self.if_bpid_map:
+            if not self.if_bpid_map or bridge_port_id not in self.if_bpid_map:
                 continue
             port_id = self.if_bpid_map[bridge_port_id]
 
