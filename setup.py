@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 dependencies = [
-    'swsssdk>=2.0.1',
+    'swsssdk>=2.0.2',
     'psutil>=4.0',
     'python_arptable>=0.0.1',
 ]
