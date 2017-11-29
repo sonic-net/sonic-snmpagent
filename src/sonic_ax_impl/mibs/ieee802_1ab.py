@@ -63,7 +63,6 @@ class LLDPUpdater(MIBUpdater):
         """
         Subclass update data routine. Updates available LLDP counters.
         """
-
         # establish connection to application database.
         self.db_conn.connect(mibs.APPL_DB)
 
@@ -75,8 +74,6 @@ class LLDPUpdater(MIBUpdater):
                 continue
             self.if_range.append((if_oid, ))
             self.lldp_counters.update({if_name: lldp_kvs})
-        if not self.lldp_counters:
-            logger.warning("0 - b'LLDP_ENTRY_TABLE' is empty. No LLDP information could be retrieved.")
         self.if_range.sort()
 
     def local_port_id(self, sub_id):
