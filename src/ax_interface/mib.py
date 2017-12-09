@@ -28,8 +28,8 @@ class MIBUpdater:
     def __init__(self):
         self.run_event = asyncio.Event()
         self.frequency = DEFAULT_UPDATE_FREQUENCY
-        self.update_counter = 0
         self.reinit_rate = DEFAULT_REINIT_RATE // DEFAULT_UPDATE_FREQUENCY
+        self.update_counter = self.reinit_rate + 1 # reinit_data when init
 
     async def start(self):
         # Run the update while we are allowed
@@ -314,8 +314,9 @@ class MIBTable(dict):
             # is less than our end value--it's a match.
             oid_key = remaining_oids[0]
             mib_entry = self[oid_key]
-            key1 = next(iter(mib_entry)) # get the first sub_id from the mib_etnry
-            if key1 is None:
+            try:
+                key1 = next(iter(mib_entry)) # get the first sub_id from the mib_etnry
+            except StopIteration:
                 # handler returned None, which implies there's no data, keep walking.
                 remaining_oids = remaining_oids[1:]
                 continue

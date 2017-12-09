@@ -13,7 +13,8 @@ class RouteUpdater(MIBUpdater):
         super().__init__()
         self.tos = 0 # ipCidrRouteTos
         self.db_conn = mibs.init_db()
-        self.update_data()
+        self.route_dest_map = {}
+        self.route_dest_list = []
 
     def update_data(self):
         """
