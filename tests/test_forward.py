@@ -35,7 +35,7 @@ class TestForwardMIB(TestCase):
         ips = ".".join(str(int(x)) for x in list(ipb))
         self.assertEqual(ips, "0.1.2.3")
 
-    def test_getnextpdu_first(self):
+    def test_getnextpdu_first_default(self):
         # oid.include = 1
         oid = ObjectIdentifier(10, 0, 1, 0, (1, 3, 6, 1, 2, 1, 4, 24, 4, 1))
         get_pdu = GetNextPDU(
@@ -125,7 +125,7 @@ class TestForwardMIB(TestCase):
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=(
-                ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 4, 24, 4, 1, 1, 1)),
+                ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 4, 24, 4, 1, 1, 255)),
             )
         )
 
@@ -136,4 +136,21 @@ class TestForwardMIB(TestCase):
         n = len(response.values)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.END_OF_MIB_VIEW)
+
+    def test_getpdu_first_loopback_status(self):
+        oid = ObjectIdentifier(10, 0, 1, 0, (1, 3, 6, 1, 2, 1, 4, 24, 4, 1, 16))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+
+        n = len(response.values)
+        # self.assertEqual(n, 7)
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.INTEGER)
+        self.assertEqual(str(value0.name), '.1.3.6.1.2.1.4.24.4.1.16.0.0.0.0.0.0.0.0.0.10.0.0.1')
+        self.assertEqual(value0.data, 1)
 
