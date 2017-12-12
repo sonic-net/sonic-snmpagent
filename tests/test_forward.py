@@ -152,14 +152,13 @@ class TestForwardMIB(TestCase):
 
         encoded = get_pdu.encode()
         response = get_pdu.make_response(self.lut)
-        print(response)
 
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(str(value0.name), str(oid))
         self.assertEqual(value0.data, 1)
 
-    def test_getpdu_first_default_status(self):
+    def test_getnextpdu_first_default_status(self):
         oid = ObjectIdentifier(10, 0, 1, 0, (1, 3, 6, 1, 2, 1, 4, 24, 4, 1, 16))
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
