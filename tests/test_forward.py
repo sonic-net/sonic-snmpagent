@@ -137,7 +137,29 @@ class TestForwardMIB(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.END_OF_MIB_VIEW)
 
-    def test_getpdu_first_loopback_status(self):
+    def test_getpdu_loopback_status(self):
+        loip_tuple = (10, 1, 0, 32) # ref: appl_db.json
+        lomask_tuple = (255, 255, 255, 255)
+        emptyip_tuple = (0, 0, 0, 0)
+
+        oid = ObjectIdentifier(24, 0, 1, 0
+            , (1, 3, 6, 1, 2, 1, 4, 24, 4, 1, 16) + loip_tuple + lomask_tuple + (0,) + emptyip_tuple
+            )
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.INTEGER)
+        self.assertEqual(str(value0.name), str(oid))
+        self.assertEqual(value0.data, 1)
+
+    def test_getpdu_first_default_status(self):
         oid = ObjectIdentifier(10, 0, 1, 0, (1, 3, 6, 1, 2, 1, 4, 24, 4, 1, 16))
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
