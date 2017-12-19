@@ -1,7 +1,8 @@
 from enum import Enum, unique
 from bisect import bisect_right
+import subprocess
 
-from swsssdk import ConfigDBConnector
+from swsssdk import SonicV2Connector
 from ax_interface import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry
 
 
@@ -25,37 +26,43 @@ class PhysicalClass(int, Enum):
 
 class PhysicalTableMIBUpdater(MIBUpdater):
 
-    DEVICE_METADATA = "DEVICE_METADATA"
+    DEVICE_METADATA = "DEVICE_METADATA|localhost"
     CHASSIS_ID = 1
 
     def __init__(self):
         super().__init__()
 
-        self.configdb = ConfigDBConnector()
-        self.configdb.connect()
+        self.statedb = SonicV2Connector()
+        self.statedb.connect(self.statedb.STATE_DB)
 
+        # List of available sub IDs.
         self.physical_classes = []
+        # Map sub ID to its data.
         self.physical_classes_map = {}
-
-        self.reinit_data()
 
     def reinit_data(self):
         """
         Re-initialize all data.
         """
-        device_metadata = self.configdb.get_table(self.DEVICE_METADATA)
-        self.physical_classes = [(self.CHASSIS_ID, )]
-        self.physical_classes_map = {
-            (self.CHASSIS_ID, ): (PhysicalClass.CHASSIS,
-                                  device_metadata["localhost"]["chassis_serial_number"])
-        }
+        device_metadata = self.statedb.get_all(self.statedb.STATE_DB, self.DEVICE_METADATA)
+
+        # TODO: Add support for unicode in swsssdk
+        chassis_serial_number = ""
+        if not device_metadata or not device_metadata.get(b"chassis_serial_number"):
+            chassis_serial_number = ""
+        else:
+            chassis_serial_number = device_metadata[b"chassis_serial_number"]
+            self.physical_classes = [(self.CHASSIS_ID, )]
+            self.physical_classes_map = {
+                    (self.CHASSIS_ID, ): (PhysicalClass.CHASSIS, chassis_serial_number.decode("utf-8"))
+                    }
 
     def update_data(self):
         """
-        Update сache.
+        Update cache.
         NOTE: Nothing to update right now. Implementation is required by framework.
         """
-        return
+        pass
 
     def get_next(self, sub_id):
         """
@@ -76,7 +83,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         """
         data = self.physical_classes_map.get(sub_id)
         if not data:
-            return
+            return None
 
         return data[0]
 
@@ -88,7 +95,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         """
         data = self.physical_classes_map.get(sub_id)
         if not data:
-            return
+            return None
 
         return data[1]
 
