@@ -29,7 +29,7 @@ class RouteUpdater(MIBUpdater):
         if not loopbacks:
             return
 
-        # collect only ipv4 lo interfaces
+        ## Collect only ipv4 lo interfaces
         for loopback in loopbacks:
             lostr = loopback.decode()
             loip = lostr[len("INTF_TABLE:lo:"):]
@@ -45,7 +45,7 @@ class RouteUpdater(MIBUpdater):
         self.route_dest_map = {}
         self.route_dest_list = []
 
-        # nexthop for loopbacks should be all zero
+        ## The nexthop for loopbacks should be all zero
         for loip in self.loips:
             sub_id = ip2tuple_v4(loip) + (255, 255, 255, 255) + (self.tos,) + (0, 0, 0, 0)
             self.route_dest_list.append(sub_id)
