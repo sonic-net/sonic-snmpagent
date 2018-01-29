@@ -55,7 +55,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
             self.physical_classes = [(self.CHASSIS_ID, )]
             self.physical_classes_map = {
                     (self.CHASSIS_ID, ): (PhysicalClass.CHASSIS, chassis_serial_number.decode("utf-8"))
-                    }
+                }
 
     def update_data(self):
         """
