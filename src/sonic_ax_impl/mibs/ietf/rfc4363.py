@@ -9,10 +9,10 @@ from bisect import bisect_right
 
 def fdb_vlanmac(db_conn, fdb):
     if 'vlan' in fdb:
-        return (int(fdb["vlan"]),) + mac_decimals(fdb["mac"])
+        vlan_id = fdb["vlan"]
     elif 'bvid' in fdb:
         vlan_id = port_util.get_vlan_id_from_bvid(db_conn, fdb["bvid"])
-        return (int(vlan_id),) + mac_decimals(fdb["mac"])
+    return (int(vlan_id),) + mac_decimals(fdb["mac"])
 
 class FdbUpdater(MIBUpdater):
     def __init__(self):
