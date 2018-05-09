@@ -44,8 +44,8 @@ class MIBUpdater:
             try:
                 self.update_data()
             except Exception:
-                # Any other exception or error, log it and keep running
-                logger.exception("MIBUpdater.start() caught an unexpected exception")
+                # Any unexpected exception or error, log it and keep running
+                logger.exception("MIBUpdater.start() caught an unexpected exception during update_data()")
 
             # wait based on our update frequency before executing again.
             # randomize to avoid concurrent update storms.
@@ -181,18 +181,32 @@ class SubtreeMIBEntry(MIBEntry):
     def __iter__(self):
         sub_id = ()
         while True:
-            sub_id = self.iterator.get_next(sub_id)
+            try:
+                sub_id = self.iterator.get_next(sub_id)
+            except Exception:
+                # Any unexpected exception or error, log it and keep running
+                logger.exception("SubtreeMIBEntry.__iter__() caught an unexpected exception during iterator.get_next()")
+                break
             if sub_id is None:
                 break
             yield sub_id
 
     def __call__(self, sub_id):
         assert isinstance(sub_id, tuple)
-        return self._callable_.__call__(sub_id, *self._callable_args)
+        try:
+            return self._callable_.__call__(sub_id, *self._callable_args)
+        except Exception:
+            # Any unexpected exception or error, log it and keep running
+            logger.exception("SubtreeMIBEntry.__call__() caught an unexpected exception during _callable_.__call__()")
+            return None
 
     def get_next(self, sub_id):
-        return self.iterator.get_next(sub_id)
-
+        try:
+            return self.iterator.get_next(sub_id)
+        except Exception:
+            # Any unexpected exception or error, log it and keep running
+            logger.exception("SubtreeMIBEntry.get_next() caught an unexpected exception during iterator.get_next()")
+            return None
 
 class MIBTable(dict):
     """
