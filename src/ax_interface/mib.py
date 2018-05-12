@@ -34,14 +34,15 @@ class MIBUpdater:
     async def start(self):
         # Run the update while we are allowed
         while self.run_event.is_set():
-            # reinit internal structures
-            if self.update_counter > self.reinit_rate:
-                self.reinit_data()
-                self.update_counter = 0
-            else:
-                self.update_counter += 1
-            # run the background update task
             try:
+                # reinit internal structures
+                if self.update_counter > self.reinit_rate:
+                    self.reinit_data()
+                    self.update_counter = 0
+                else:
+                    self.update_counter += 1
+
+                # run the background update task
                 self.update_data()
             except Exception:
                 # Any unexpected exception or error, log it and keep running
