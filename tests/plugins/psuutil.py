@@ -13,8 +13,9 @@ class PsuUtil():
 
     def __init__(self):
         """ For testing purpose only """
-        self.num_of_psus = 2
-        self.psu_status = { 1 : True, 2 : False }
+        self.num_of_psus = 3
+        self.psu_status = { 1: False, 2: True, 3: False }
+        self.psu_presence = { 1: False, 2: True, 3: True }
 
     def get_num_psus(self):
         """
@@ -37,7 +38,10 @@ class PsuUtil():
         if not isinstance(index, int):
             return False
         elif index > 0 and index <= self.num_of_psus:
-            return self.psu_status[index]
+            if self.psu_presence[index]:
+                return self.psu_status[index]
+            else:
+                raise ValueError(index)
         else:
             return False
 
@@ -53,6 +57,6 @@ class PsuUtil():
         if not isinstance(index, int):
             return False
         elif index > 0 and index <= self.num_of_psus:
-            return self.psu_status[index]
+            return self.psu_presence[index]
         else:
             return False

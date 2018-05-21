@@ -45,7 +45,14 @@ class PowerStatusHandler:
 
         psu_index = int(sub_id[0])
 
-        if psu_index < 1 or psu_index > self.psuutil.get_num_psus():
+        try:
+            num_psus = self.psuutil.get_num_psus()
+        except Exception:
+            # Any unexpected exception or error, log it and keep running
+            logger.exception("PowerStatusHandler._getPsuIndex() caught an unexpected exception during get_num_psus()")
+            return None
+
+        if psu_index < 1 or psu_index > num_psus:
             return None
 
         return psu_index
@@ -62,8 +69,15 @@ class PowerStatusHandler:
             return (1,)
 
         psu_index = self._getPsuIndex(sub_id)
+        try:
+            num_psus = self.psuutil.get_num_psus()
+        except Exception:
+            # Any unexpected exception or error, log it and keep running
+            logger.exception("PowerStatusHandler.get_next() caught an unexpected exception during get_num_psus()")
+            return None
 
-        if psu_index and psu_index + 1 <= self.psuutil.get_num_psus():
+
+        if psu_index and psu_index + 1 <= num_psus:
             return (psu_index + 1,)
 
         return None
@@ -74,6 +88,7 @@ class PowerStatusHandler:
         :return: the status of requested PSU according to cefcModuleOperStatus ModuleOperType
                  2 - PSU has correct functionalling - ok
                  7 - PSU has a problem with functionalling - failed
+                 8 - the module is provisioned, but it is missing. This is a failure state.
         :ref: https://www.cisco.com/c/en/us/td/docs/switches/wan/mgx/mgx_8850/software/mgx_r2-0-10/pxm/reference/guide/pxm/cscoent.html
         """
         psu_index = self._getPsuIndex(sub_id)
@@ -81,12 +96,27 @@ class PowerStatusHandler:
         if not psu_index:
             return None
 
-        psu_status = self.psuutil.get_psu_status(psu_index)
+        try:
+            psu_presence = self.psuutil.get_psu_presence(psu_index)
+        except Exception:
+            # Any unexpected exception or error, log it and keep running
+            logger.exception("PowerStatusHandler.getPsuStatus() caught an unexpected exception during get_psu_presence()")
+            return None
 
-        if psu_status:
-            return 2
+        if psu_presence:
+            try:
+                psu_status = self.psuutil.get_psu_status(psu_index)
+            except Exception:
+                # Any unexpected exception or error, log it and keep running
+                logger.exception("PowerStatusHandler.getPsuStatus() caught an unexpected exception during get_psu_status()")
+                return None
 
-        return 7
+            if psu_status:
+                return 2
+
+            return 7
+        else:
+            return 8
 
 
 class cefcFruPowerStatusTable(metaclass=MIBMeta, prefix='.1.3.6.1.4.1.9.9.117.1.1.2'):
