@@ -5,7 +5,7 @@ from enum import Enum, unique
 from bisect import bisect_right
 
 from sonic_ax_impl import mibs, logger
-from ax_interface import MIBMeta, SubtreeMIBEntry, MIBUpdater, ValueType
+from ax_interface import MIBMeta, SubtreeMIBEntry, MIBEntry, MIBUpdater, ValueType
 
 
 @unique
@@ -25,6 +25,18 @@ class LLDPRemoteTables(int, Enum):
     lldp_rem_sys_desc = 10
     lldp_rem_sys_cap_supported = 11
     lldp_rem_sys_cap_enabled = 12
+
+@unique
+class LLDPLocalChassis(int, Enum):
+    """
+    REDIS_KEY_NAME <--> OID_INDEX
+    """
+    lldp_loc_chassis_id_subtype = 1
+    lldp_loc_chassis_id = 2
+    lldp_loc_sys_name = 3
+    lldp_loc_sys_desc = 4
+    # *lldp_rem_sys_cap_supported = 5
+    # *lldp_rem_sys_cap_enabled = 6
 
 
 class LocPortUpdater(MIBUpdater):
@@ -121,6 +133,34 @@ class LocPortUpdater(MIBUpdater):
             return None
 
 
+class LLDPLocalSystemDataUpdater(MIBUpdater):
+    def __init__(self):
+        super().__init__()
+
+        self.db_conn = mibs.init_db()
+        self.loc_chassis_data = {}
+
+    def update_data(self):
+        """
+        Subclass update data routine.
+        """
+        # establish connection to application database.
+        self.db_conn.connect(mibs.APPL_DB)
+        self.loc_chassis_data = self.db_conn.get_all(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
+
+    def table_lookup(self, table_name):
+        try:
+            _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
+            return self.loc_chassis_data[_table_name]
+        except KeyError as e:
+            mibs.logger.warning(" 0 - b'LOC_CHASSIS' missing attribute '{}'.".format(e))
+            return None
+
+    def table_lookup_integer(self, table_name):
+        subtype_str = self.table_lookup(table_name)
+        return int(subtype_str) if subtype_str is not None else None
+
+
 class LLDPUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
@@ -212,6 +252,21 @@ class LLDPUpdater(MIBUpdater):
 
 _lldp_updater = LLDPUpdater()
 _port_updater = LocPortUpdater()
+_chassis_updater = LLDPLocalSystemDataUpdater()
+
+
+class LLDPLocalSystemData(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3'):
+    """
+
+    """
+    chassis_updater = _chassis_updater
+    lldpLocChassisIdSubtype = MIBEntry('1', ValueType.INTEGER, chassis_updater.table_lookup_integer, LLDPLocalChassis(1))
+
+    lldpLocChassisId = MIBEntry('2', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(2))
+
+    lldpLocSysName = MIBEntry('3', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(3))
+
+    lldpLocSysDesc = MIBEntry('4', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(4))
 
 
 class LLDPLocPortTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3.7'):

@@ -30,6 +30,7 @@ class SonicMIB(
     rfc4292.IpCidrRouteTable,
     ieee802_1ab.LLDPLocPortTable,
     ieee802_1ab.LLDPRemTable,
+    ieee802_1ab.LLDPLocalSystemData,
     dell.force10.SSeriesMIB,
     cisco.ciscoPfcExtMIB.cpfcIfTable,
     cisco.ciscoPfcExtMIB.cpfcIfPriorityTable,
