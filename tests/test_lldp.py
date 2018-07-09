@@ -5,6 +5,7 @@ modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from unittest import TestCase
+import tests.mock_tables.dbconnector
 
 from ax_interface import ValueType
 from ax_interface.pdu_implementations import GetPDU, GetNextPDU
@@ -14,7 +15,6 @@ from ax_interface.pdu import PDU, PDUHeader
 from ax_interface.mib import MIBTable
 from sonic_ax_impl.mibs import ieee802_1ab
 
-import tests.mock_tables.dbconnector
 
 class TestLLDPMIB(TestCase):
     @classmethod
@@ -29,8 +29,6 @@ class TestLLDPMIB(TestCase):
             updater.update_data()
 
     def test_getnextpdu_eth1(self):
-        # oid.include = 1
-        # import pdb; pdb.set_trace()
         oid = ObjectIdentifier(12, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, 7, 1))
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
@@ -41,9 +39,6 @@ class TestLLDPMIB(TestCase):
         encoded = get_pdu.encode()
         response = get_pdu.make_response(self.lut)
         print(response)
-
-        n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
         print("test_getnextpdu_exactmatch: ", str(oid))
@@ -62,9 +57,6 @@ class TestLLDPMIB(TestCase):
         encoded = get_pdu.encode()
         response = get_pdu.make_response(self.lut)
         print(response)
-
-        n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
         print("test_getnextpdu_exactmatch: ", str(oid))
@@ -107,8 +99,6 @@ class TestLLDPMIB(TestCase):
 
         encoded = get_pdu.encode()
         response = get_pdu.make_response(self.lut)
-
-        n = len(response.values)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
         self.assertEqual(str(value0.data), "Ethernet0")
@@ -147,9 +137,6 @@ class TestLLDPMIB(TestCase):
         encoded = get_pdu.encode()
         response = get_pdu.make_response(self.lut)
         print(response)
-
-        n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.END_OF_MIB_VIEW)
 
