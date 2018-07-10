@@ -3,12 +3,14 @@ MIB implementation defined in RFC 2737
 """
 
 from enum import Enum, unique
-from bisect import bisect_right
+from bisect import bisect_right, insort_right
 
 from swsssdk import SonicV2Connector, port_util
 from ax_interface import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry
 
 from sonic_ax_impl import mibs
+
+import threading
 
 @unique
 class PhysicalClass(int, Enum):
@@ -55,6 +57,8 @@ SENSOR_NAME_MAP = {
     "tx3bias"     : "TX Bias",
     "tx4bias"     : "TX Bias",
 }
+
+QSFP_LANES = (1, 2, 3, 4)
 
 
 def get_transceiver_data(xcvr_info):
@@ -108,7 +112,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
     """
 
     CHASSIS_ID = 1
-    TRANSCEIVER_KEY_PATTERN =  mibs.transceiver_info_table("*")
+    TRANSCEIVER_KEY_PATTERN = mibs.transceiver_info_table("*")
 
     def __init__(self):
         super().__init__()
@@ -129,6 +133,8 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_mfg_name_map = {}
         self.physical_model_name_map = {}
 
+        self.pubsub = None
+
     def reinit_data(self):
         """
         Re-initialize all data.
@@ -142,6 +148,10 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_mfg_name_map = {}
         self.physical_model_name_map = {}
 
+        # update interface maps
+        _, self.if_alias_map, _, _, _ = \
+            mibs.init_sync_d_interface_tables(SonicV2Connector())
+
         device_metadata = mibs.get_device_metadata(self.statedb)
         chassis_sub_id = (self.CHASSIS_ID, )
         self.physical_entities = [chassis_sub_id]
@@ -154,33 +164,46 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_classes_map[chassis_sub_id] = PhysicalClass.CHASSIS
         self.physical_serial_number_map[chassis_sub_id] = chassis_serial_number
 
-        # update interface maps
-        _, self.if_alias_map, _, _, _ = \
-            mibs.init_sync_d_interface_tables(SonicV2Connector())
+        # retrieve the initial list of transceivers that are present in the system
+        transceiver_info = self.statedb.keys(self.statedb.STATE_DB, self.TRANSCEIVER_KEY_PATTERN)
+        if transceiver_info:
+            self.transceiver_entries = [entry.decode() \
+                for entry in transceiver_info]
+        else:
+            self.transceiver_entries = []
+
+        # update cache with initial data
+        for transceiver_entry in self.transceiver_entries:
+            # extract interface name
+            interface = transceiver_entry.split(mibs.TABLE_NAME_SEPERATOR_VBAR)[-1]
+            self._update_transceiver_cache(interface)
 
     def update_data(self):
         """
         Update cache.
+        Here we listen to changes in STATE_DB TRANSCEIVER_INFO table
+        and update data only when there is a change (SET, DELETE)
         """
 
-        chassis_sub_id = (self.CHASSIS_ID, )
-        self.physical_entities = [chassis_sub_id]
+        # This code is not executed in unit test, since mockredis
+        # does not support pubsub
+        if not self.pubsub:
+            redis_client = self.statedb.get_redis_client(self.statedb.STATE_DB)
+            db = self.statedb.db_map[self.statedb.STATE_DB]["db"]
+            self.pubsub = redis_client.pubsub()
+            self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, self.TRANSCEIVER_KEY_PATTERN))
 
-        self.transceiver_entries = [entry.decode() \
-            for entry in self.statedb.keys(self.statedb.STATE_DB,
-                                           self.TRANSCEIVER_KEY_PATTERN)]
+        while True:
+            msg = self.pubsub.get_message()
 
-        if not self.transceiver_entries:
-            # nothing in DB
-            return
+            if not msg:
+                break
 
-        # update xcvr info from DB
-        # use port's name as key for transceiver info entries
-        for transceiver_entry in self.transceiver_entries:
+            transceiver_entry = msg["channel"].split(b":")[-1].decode()
+            data = msg['data'] # event data
+
             # extract interface name
             interface = transceiver_entry.split(mibs.TABLE_NAME_SEPERATOR_VBAR)[-1]
-
-            ifalias = self.if_alias_map.get(interface.encode(), b"").decode()
 
             # get interface from interface name
             ifindex = port_util.get_index_from_str(interface)
@@ -192,54 +215,89 @@ class PhysicalTableMIBUpdater(MIBUpdater):
                      in STATE_DB, skipping".format(transceiver_entry))
                 continue
 
-            # get transceiver information from transceiver info entry in STATE DB
-            transceiver_info = self.statedb.get_all(self.statedb.STATE_DB,
-                                                    transceiver_entry)
+            if b"set" in data:
+                self._update_transceiver_cache(interface)
+            elif b"del" in data:
+                # remove deleted transceiver
+                remove_sub_ids = [mibs.get_transceiver_sub_id(ifindex)]
 
-            if not transceiver_info:
+                # remove all sensor OIDs associated with removed transceiver
+                for sensor in SENSOR_NAME_MAP:
+                    remove_sub_ids.append(mibs.get_transceiver_sensor_sub_id(ifindex, sensor))
+
+                for sub_id in remove_sub_ids:
+                    if sub_id and sub_id in self.physical_entities:
+                        self.physical_entites.remove(sub_id)
+
+    def _update_transceiver_cache(self, interface):
+        """
+        Update data for single transceiver
+        :param: interface: Interface name associated with transceiver
+        """
+
+        # get interface from interface name
+        ifindex = port_util.get_index_from_str(interface)
+
+        # update xcvr info from DB
+        # use port's name as key for transceiver info entries
+        sub_id = mibs.get_transceiver_sub_id(ifindex)
+
+        # add interface to available OID list
+        insort_right(self.physical_entities, sub_id)
+
+        # get transceiver information from transceiver info entry in STATE DB
+        transceiver_info = self.statedb.get_all(self.statedb.STATE_DB,
+                                                mibs.transceiver_info_table(interface))
+
+        if not transceiver_info:
+            return
+
+        # physical class - network port
+        self.physical_classes_map[sub_id] = PhysicalClass.PORT
+
+        # save values into cache
+        sfp_type, \
+        self.physical_hw_version_map[sub_id],\
+        self.physical_serial_number_map[sub_id], \
+        self.physical_mfg_name_map[sub_id], \
+        self.physical_model_name_map[sub_id] = get_transceiver_data(transceiver_info)
+
+        ifalias = self.if_alias_map.get(interface.encode(), b"").decode()
+
+        # generate a description for this transceiver
+        self.physical_description_map[sub_id] = get_transceiver_description(sfp_type, ifalias)
+
+        # update transceiver sensor cache
+        self._update_transceiver_sensor_cache(interface)
+
+    def _update_transceiver_sensor_cache(self, interface):
+        """
+        Update sensor data for single transceiver
+        :param: interface: Interface name associated with transceiver
+        """
+
+        ifalias = self.if_alias_map.get(interface.encode(), b"").decode()
+        ifindex = port_util.get_index_from_str(interface)
+
+        # get transceiver sensors from transceiver dom entry in STATE DB
+        transceiver_dom_entry = self.statedb.get_all(self.statedb.STATE_DB,
+                                                     mibs.transceiver_dom_table(interface))
+
+        if not transceiver_dom_entry:
+            return
+
+        # go over transceiver sensors
+        for sensor in map(bytes.decode, transceiver_dom_entry):
+            if sensor not in SENSOR_NAME_MAP:
                 continue
+            sensor_sub_id = mibs.get_transceiver_sensor_sub_id(ifindex, sensor)
+            sensor_description = get_transceiver_sensor_description(sensor, ifalias)
 
-            # get sub OID based on interface index
-            sub_id = mibs.get_transceiver_sub_id(ifindex)
+            self.physical_classes_map[sensor_sub_id] = PhysicalClass.SENSOR
+            self.physical_description_map[sensor_sub_id] = sensor_description
 
-            # add interface to available OID list
-            self.physical_entities.append(sub_id)
-
-            # physical class - network port
-            self.physical_classes_map[sub_id] = PhysicalClass.PORT
-
-            # save values into cache
-            sfp_type, \
-            self.physical_hw_version_map[sub_id],\
-            self.physical_serial_number_map[sub_id], \
-            self.physical_mfg_name_map[sub_id], \
-            self.physical_model_name_map[sub_id] = get_transceiver_data(transceiver_info)
-
-            # generate a description for this transceiver
-            self.physical_description_map[sub_id] = get_transceiver_description(sfp_type, ifalias)
-
-            # get transceiver sensors from transceiver dom entry in STATE DB
-            transceiver_dom_entry = self.statedb.get_all(self.statedb.STATE_DB,
-                                                         mibs.transceiver_dom_table(interface))
-
-            if not transceiver_dom_entry:
-                continue
-
-            # go over transceiver sensors
-            for sensor in map(bytes.decode, transceiver_dom_entry):
-                if sensor not in SENSOR_NAME_MAP:
-                    continue
-                sensor_sub_id = mibs.get_transceiver_sensor_sub_id(ifindex, sensor)
-                sensor_description = get_transceiver_sensor_description(sensor, ifalias)
-
-                self.physical_classes_map[sensor_sub_id] = PhysicalClass.SENSOR
-                self.physical_description_map[sensor_sub_id] = sensor_description
-
-                # add to available OIDs list
-                self.physical_entities.append(sensor_sub_id)
-
-        self.physical_entities.sort()
-
+            # add to available OIDs list
+            insort_right(self.physical_entities, sensor_sub_id)
 
     def get_next(self, sub_id):
         """

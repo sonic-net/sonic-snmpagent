@@ -95,7 +95,7 @@ class SensorInterface:
         :param: cls: class instance
         :param: value: sensor's value as is from DB
         :param: converter: optional converter for a value in case it
-        is needed to convert value from one unit to anther
+        is needed to convert value from one unit to another
         :return: value converted for MIB
         """
 
@@ -104,7 +104,7 @@ class SensorInterface:
         precision = cls.PRECISION
 
         try:
-            value = converter(float(raw_value))
+            value = float(raw_value)
         except ValueError:
             # if raw_value is not able to be parsed as a float
             # the operational status of sensor is
@@ -117,6 +117,9 @@ class SensorInterface:
         else:
             # else the status is considered to be OK
             oper_status = EntitySensorStatus.OK
+
+            # convert
+            value = converter(value)
 
             value = value * 10 ** precision
             if value > EntitySensorValueRange.MAX:
@@ -258,7 +261,10 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
 
         transceiver_dom_encoded = self.statedb.keys(self.statedb.STATE_DB,
                                                     self.TRANSCEIVER_DOM_KEY_PATTERN)
-        self.transceiver_dom = [entry.decode() for entry in transceiver_dom_encoded]
+        if transceiver_dom_encoded:
+            self.transceiver_dom = [entry.decode() for entry in transceiver_dom_encoded]
+        else:
+            self.transceiver_dom = []
 
     def update_data(self):
         """
@@ -279,7 +285,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
             if ifindex is None:
                 mibs.logger.warning(
                     "Invalid interface name in {} \
-                     in STATE_DB, skipping".format(transceiver_entry))
+                     in STATE_DB, skipping".format(transceiver_dom_entry))
                 continue
 
             # get transceiver sensors from transceiver dom entry in STATE DB
@@ -298,13 +304,21 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
                 sensor = get_transceiver_sensor(sensor_key)
                 sub_id = mibs.get_transceiver_sensor_sub_id(ifindex, sensor_key)
 
-                self.ent_phy_sensor_type_map[sub_id], \
-                self.ent_phy_sensor_scale_map[sub_id], \
-                self.ent_phy_sensor_precision_map[sub_id], \
-                self.ent_phy_sensor_value_map[sub_id], \
-                self.ent_phy_sensor_oper_state_map[sub_id] = sensor.mib_values(raw_sensor_value)
+                try:
+                    mib_values = sensor.mib_values(raw_sensor_value)
+                except (ValueError, ArithmeticError):
+                    mibs.logger.error("Exception occured when converting"
+                                      "value for sensor {} interface {}".format(sensor, interface))
+                    # skip
+                    continue
+                else:
+                    self.ent_phy_sensor_type_map[sub_id], \
+                    self.ent_phy_sensor_scale_map[sub_id], \
+                    self.ent_phy_sensor_precision_map[sub_id], \
+                    self.ent_phy_sensor_value_map[sub_id], \
+                    self.ent_phy_sensor_oper_state_map[sub_id] = mib_values
 
-                self.sub_ids.append(sub_id)
+                    self.sub_ids.append(sub_id)
 
         self.sub_ids.sort()
 

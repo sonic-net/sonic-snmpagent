@@ -26,7 +26,6 @@ class TestSonicMIB(TestCase):
         # Update MIBs
         for updater in cls.lut.updater_instances:
             updater.reinit_data()
-            updater.update_data()
 
     def test_getnextpdu_chassis_class(self):
         """

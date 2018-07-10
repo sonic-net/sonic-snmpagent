@@ -21,7 +21,7 @@ from sonic_ax_impl.main import SonicMIB
 class TestSonicMIB(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.lut = MIBTable(SonicMIB)
+        cls.lut = MIBTable(rfc3433.PhysicalSensorTableMIB)
         cls.XCVR_SUB_ID = 1 * 1000
         cls.XCVR_CHANNELS = (1, 2, 3, 4)
 
