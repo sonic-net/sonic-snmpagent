@@ -40,6 +40,7 @@ class LLDPLocalChassis(int, Enum):
 
 
 class LocPortUpdater(MIBUpdater):
+
     def __init__(self):
         super().__init__()
 
@@ -54,6 +55,7 @@ class LocPortUpdater(MIBUpdater):
         # cache of port data
         # { if_name -> { 'key': 'value' } }
         self.loc_port_data = {}
+        self.pubsub = None
 
     def reinit_data(self):
         """
@@ -64,6 +66,27 @@ class LocPortUpdater(MIBUpdater):
         self.if_id_map, \
         self.oid_sai_map, \
         self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
+
+        # establish connection to application database.
+        self.db_conn.connect(mibs.APPL_DB)
+        self.if_range = []
+        # get local port kvs from APP_BD's PORT_TABLE
+        self.loc_port_data = {}
+        for if_oid, if_name in self.oid_name_map.items():
+            self.update_interface_data(if_name)
+            self.if_range.append((if_oid, ))
+        self.if_range.sort()
+        if not self.loc_port_data:
+            logger.warning("0 - b'PORT_TABLE' is empty. No local port information could be retrieved.")
+
+    def update_interface_data(self, if_name):
+        """
+        Update data from the DB for a single interface
+        """
+        loc_port_kvs = self.db_conn.get_all(mibs.APPL_DB, mibs.if_entry_table(bytes(if_name, 'utf-8')))
+        if not loc_port_kvs:
+            return
+        self.loc_port_data.update({if_name: loc_port_kvs})
 
     def get_next(self, sub_id):
         """
@@ -77,22 +100,36 @@ class LocPortUpdater(MIBUpdater):
 
     def update_data(self):
         """
-        Subclass update data routine. Updates available local port data.
+        Listen to updates in APP DB, update local cache
         """
-        # establish connection to application database.
-        self.db_conn.connect(mibs.APPL_DB)
-        self.if_range = []
-        # get local port kvs from APP_BD's PORT_TABLE
-        self.loc_port_data = {}
-        for if_oid, if_name in self.oid_name_map.items():
-            loc_port_kvs = self.db_conn.get_all(mibs.APPL_DB, mibs.if_entry_table(if_name))
-            if not loc_port_kvs:
+        if not self.pubsub:
+            redis_client = self.db_conn.get_redis_client(self.db_conn.APPL_DB)
+            db = self.db_conn.db_map[self.db_conn.APPL_DB]["db"]
+            self.pubsub = redis_client.pubsub()
+            self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, "LLDP_ENTRY_TABLE:*"))
+
+        while True:
+            msg = self.pubsub.get_message()
+
+            if not msg:
+                break
+
+            lldp_entry = msg["channel"].split(b":")[-1].decode()
+            data = msg['data'] # event data
+
+            # extract interface name
+            interface = lldp_entry.split('|')[-1]
+            # get interface from interface name
+            if_index = port_util.get_index_from_str(interface)
+
+            if if_index is None:
+                # interface name invalid, skip this entry
+                logger.warning("Invalid interface name in {} in APP_DB, skipping"
+                               .format(lldp_entry))
                 continue
-            self.if_range.append((if_oid, ))
-            self.loc_port_data.update({if_name: loc_port_kvs})
-        self.if_range.sort()
-        if not self.loc_port_data:
-            logger.warning("0 - b'PORT_TABLE' is empty. No local port information could be retrieved.")
+
+            if b"set" in data:
+                self.update_interface_data(interface.encode('utf-8'))
 
     def local_port_num(self, sub_id):
         if len(sub_id) <= 0:
@@ -129,7 +166,7 @@ class LocPortUpdater(MIBUpdater):
         try:
             return counters[_table_name]
         except KeyError as e:
-            mibs.logger.warning(" 0 - b'PORT_TABLE' missing attribute '{}'.".format(e))
+            logger.warning(" 0 - b'PORT_TABLE' missing attribute '{}'.".format(e))
             return None
 
 
@@ -140,7 +177,7 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
         self.db_conn = mibs.init_db()
         self.loc_chassis_data = {}
 
-    def update_data(self):
+    def reinit_data(self):
         """
         Subclass update data routine.
         """
