@@ -56,6 +56,10 @@ SENSOR_NAME_MAP = {
     "tx2bias"     : "TX Bias",
     "tx3bias"     : "TX Bias",
     "tx4bias"     : "TX Bias",
+    "tx1power"    : "TX Power",
+    "tx2power"    : "TX Power",
+    "tx3power"    : "TX Power",
+    "tx4power"    : "TX Power",
 }
 
 QSFP_LANES = (1, 2, 3, 4)

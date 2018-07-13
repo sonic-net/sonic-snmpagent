@@ -107,6 +107,10 @@ class TestSonicMIB(TestCase):
             1000 * 1 + 22: "DOM TX Bias Sensor for Ethernet0/2",
             1000 * 1 + 32: "DOM TX Bias Sensor for Ethernet0/3",
             1000 * 1 + 42: "DOM TX Bias Sensor for Ethernet0/4",
+            1000 * 1 + 13: "DOM TX Power Sensor for Ethernet0/1",
+            1000 * 1 + 23: "DOM TX Power Sensor for Ethernet0/2",
+            1000 * 1 + 33: "DOM TX Power Sensor for Ethernet0/3",
+            1000 * 1 + 43: "DOM TX Power Sensor for Ethernet0/4",
         }
 
         phyDescr, phyClass = 2, 5
@@ -139,3 +143,4 @@ class TestSonicMIB(TestCase):
             self.assertEqual(str(value.name), str(expected_oid))
             self.assertEqual(value.type_, expected_type)
             self.assertEqual(str(value.data), str(expected_value))
+

@@ -19,6 +19,10 @@
   	"rx1power": "-inf",
   	"rx2power": -0.97,
   	"rx3power": -0.97,
-  	"rx4power": -0.97
+  	"rx4power": -0.97,
+  	"tx1power": -5.4,
+  	"tx2power": -5.4,
+  	"tx3power": -5.4,
+  	"tx4power": -5.4
   }
 }

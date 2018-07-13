@@ -125,6 +125,23 @@ class TestSonicMIB(TestCase):
         for channel in (2, 3, 4):
             self._test_getpdu_xcvr_sensor(self.XCVR_SUB_ID + 10 * channel + 1, expected_values)
 
+    def test_getpdu_xcvr_tx_power_sensor(self):
+        """
+        Test case for correct transceiver rx power sensor MIB values
+        """
+
+        expected_values = [
+            rfc3433.EntitySensorDataType.WATTS,
+            rfc3433.EntitySensorDataScale.MILLI,
+            4, # precision
+            2884, # expected sensor value
+            rfc3433.EntitySensorStatus.OK
+        ]
+
+        # test for each channel except first, we already test above
+        for channel in (1, 2, 3, 4):
+            self._test_getpdu_xcvr_sensor(self.XCVR_SUB_ID + 10 * channel + 3, expected_values)
+
     def test_getpdu_xcvr_tx_bias_sensor_unknown(self):
         """
         Test case for correct transceiver tx bias sensor MIB values, when

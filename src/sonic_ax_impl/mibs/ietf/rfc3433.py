@@ -78,6 +78,13 @@ class EntitySensorValueRange(int, Enum):
     MAX = 1E9
 
 
+class Converters:
+    """ """
+
+    # dBm to milli watts converter function
+    CONV_dBm_mW = lambda x: 10 ** (x/10)
+
+
 class SensorInterface:
     """
     Sensor interface.
@@ -87,10 +94,11 @@ class SensorInterface:
     SCALE = None
     TYPE = None
     PRECISION = None
+    CONVERTER = None
 
 
     @classmethod
-    def mib_values(cls, raw_value, converter=lambda x: x):
+    def mib_values(cls, raw_value):
         """
         :param: cls: class instance
         :param: value: sensor's value as is from DB
@@ -118,8 +126,9 @@ class SensorInterface:
             # else the status is considered to be OK
             oper_status = EntitySensorStatus.OK
 
-            # convert
-            value = converter(value)
+            # convert if converter is defined
+            if cls.CONVERTER:
+                value = cls.CONVERTER(value)
 
             value = value * 10 ** precision
             if value > EntitySensorValueRange.MAX:
@@ -168,18 +177,7 @@ class XcvrRxPowerSensor(SensorInterface):
     TYPE = EntitySensorDataType.WATTS
     SCALE = EntitySensorDataScale.MILLI
     PRECISION = 4
-
-    @classmethod
-    def mib_values(cls, raw_value):
-        """
-        NOTE: Here we convert rx power value from dB to mW.
-        Actually, rx power value in transceiver EEPROM is in watts,
-        but the value in STATE DB is in dB, so converting back.
-        """
-
-        # dBm -> mW convertion
-        conv_dBm_mW = lambda x: 10 ** (x/10)
-        return super().mib_values(raw_value, converter=conv_dBm_mW)
+    CONVERTER = Converters.CONV_dBm_mW
 
 
 class XcvrTxBiasSensor(SensorInterface):
@@ -194,6 +192,19 @@ class XcvrTxBiasSensor(SensorInterface):
     PRECISION = 3
 
 
+class XcvrTxPowerSensor(SensorInterface):
+    """
+    Transceiver tx power sensor.
+    (TYPE, SCALE, PRECISION) set according to SFF-8472
+    Sensor measures in range (0 W, +6.5535 mW) with step 1E-4 mW.
+    """
+
+    TYPE = EntitySensorDataType.WATTS
+    SCALE = EntitySensorDataScale.MILLI
+    PRECISION = 4
+    CONVERTER = Converters.CONV_dBm_mW
+
+
 # mapping between DB key and Sensor object
 TRANSCEIVER_SENSOR_MAP = {
     "temperature": XcvrTempSensor,
@@ -206,6 +217,10 @@ TRANSCEIVER_SENSOR_MAP = {
     "tx2bias":     XcvrTxBiasSensor,
     "tx3bias":     XcvrTxBiasSensor,
     "tx4bias":     XcvrTxBiasSensor,
+    "tx1power":    XcvrTxPowerSensor,
+    "tx2power":    XcvrTxPowerSensor,
+    "tx3power":    XcvrTxPowerSensor,
+    "tx4power":    XcvrTxPowerSensor,
 }
 
 

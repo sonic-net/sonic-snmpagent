@@ -29,6 +29,10 @@ SENSOR_PART_ID_MAP = {
     "tx2bias":      22,
     "tx3bias":      32,
     "tx4bias":      42,
+    "tx1power":     13,
+    "tx2power":     23,
+    "tx3power":     33,
+    "tx4power":     43,
 }
 
 # IfIndex to OID multiplier for transceiver
