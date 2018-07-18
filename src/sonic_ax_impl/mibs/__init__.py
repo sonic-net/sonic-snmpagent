@@ -14,8 +14,8 @@ APPL_DB = 'APPL_DB'
 ASIC_DB = 'ASIC_DB'
 COUNTERS_DB = 'COUNTERS_DB'
 
-TABLE_NAME_SEPERATOR_COLON = ':'
-TABLE_NAME_SEPERATOR_VBAR = '|'
+TABLE_NAME_SEPARATOR_COLON = ':'
+TABLE_NAME_SEPARATOR_VBAR = '|'
 
 # This is used in both rfc2737 and rfc3433
 SENSOR_PART_ID_MAP = {
@@ -63,7 +63,7 @@ def transceiver_info_table(port_name):
     :return: transceiver info entry for this port
     """
 
-    return "TRANSCEIVER_INFO" + TABLE_NAME_SEPERATOR_VBAR + port_name
+    return "TRANSCEIVER_INFO" + TABLE_NAME_SEPARATOR_VBAR + port_name
 
 def transceiver_dom_table(port_name):
     """
@@ -71,7 +71,7 @@ def transceiver_dom_table(port_name):
     :return: transceiver dom entry for this port
     """
 
-    return "TRANSCEIVER_DOM_SENSOR" + TABLE_NAME_SEPERATOR_VBAR + port_name
+    return "TRANSCEIVER_DOM_SENSOR" + TABLE_NAME_SEPARATOR_VBAR + port_name
 
 def lldp_entry_table(if_name):
     """

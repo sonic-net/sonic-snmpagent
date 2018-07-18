@@ -294,7 +294,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         # update transceiver sensors cache
         for transceiver_dom_entry in self.transceiver_dom:
             # extract interface name
-            interface = transceiver_dom_entry.split(mibs.TABLE_NAME_SEPERATOR_VBAR)[-1]
+            interface = transceiver_dom_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
             ifindex = port_util.get_index_from_str(interface)
 
             if ifindex is None:

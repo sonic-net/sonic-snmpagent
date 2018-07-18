@@ -179,7 +179,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         # update cache with initial data
         for transceiver_entry in self.transceiver_entries:
             # extract interface name
-            interface = transceiver_entry.split(mibs.TABLE_NAME_SEPERATOR_VBAR)[-1]
+            interface = transceiver_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
             self._update_transceiver_cache(interface)
 
     def update_data(self):
@@ -207,7 +207,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
             data = msg['data'] # event data
 
             # extract interface name
-            interface = transceiver_entry.split(mibs.TABLE_NAME_SEPERATOR_VBAR)[-1]
+            interface = transceiver_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
 
             # get interface from interface name
             ifindex = port_util.get_index_from_str(interface)
