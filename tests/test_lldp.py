@@ -5,6 +5,7 @@ modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from unittest import TestCase
+import tests.mock_tables.dbconnector
 
 from ax_interface import ValueType
 from ax_interface.pdu_implementations import GetPDU, GetNextPDU
@@ -22,9 +23,12 @@ class TestLLDPMIB(TestCase):
             pass
 
         cls.lut = MIBTable(LLDPMIB)
+        for updater in cls.lut.updater_instances:
+            updater.update_data()
+            updater.reinit_data()
+            updater.update_data()
 
     def test_getnextpdu_eth1(self):
-        # oid.include = 1
         oid = ObjectIdentifier(12, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, 7, 1))
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
@@ -35,9 +39,6 @@ class TestLLDPMIB(TestCase):
         encoded = get_pdu.encode()
         response = get_pdu.make_response(self.lut)
         print(response)
-
-        n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
         print("test_getnextpdu_exactmatch: ", str(oid))
@@ -56,18 +57,22 @@ class TestLLDPMIB(TestCase):
         encoded = get_pdu.encode()
         response = get_pdu.make_response(self.lut)
         print(response)
-
-        n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
         print("test_getnextpdu_exactmatch: ", str(oid))
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, 7, 5))))
         self.assertEqual(str(value0.data), "Ethernet2")
 
-    def test_subtype(self):
-        for entry in range(4, 11):
+    def test_subtype_lldp_rem_table(self):
+        for entry in range(2, 13):
             mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, entry)]
+            ret = mib_entry(sub_id=(1,))
+            self.assertIsNotNone(ret)
+            print(ret)
+
+    def test_subtype_lldp_loc_port_table(self):
+        for entry in range(1, 5):
+            mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 3, 7, 1, entry)]
             ret = mib_entry(sub_id=(1,))
             self.assertIsNotNone(ret)
             print(ret)
@@ -77,6 +82,12 @@ class TestLLDPMIB(TestCase):
         ret = mib_entry(sub_id=(1,))
         self.assertEquals(ret, b'Ethernet0')
         print(ret)
+
+    def test_local_port_num(self):
+        mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, 2)]
+        for num in range(1, 126, 4):
+            ret = mib_entry(sub_id=(num,))
+            self.assertEqual(ret, num)
 
     def test_getnextpdu_local_port_identification(self):
         # oid.include = 1
@@ -88,9 +99,6 @@ class TestLLDPMIB(TestCase):
 
         encoded = get_pdu.encode()
         response = get_pdu.make_response(self.lut)
-
-        n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
         self.assertEqual(str(value0.data), "Ethernet0")
@@ -129,9 +137,6 @@ class TestLLDPMIB(TestCase):
         encoded = get_pdu.encode()
         response = get_pdu.make_response(self.lut)
         print(response)
-
-        n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.END_OF_MIB_VIEW)
 
