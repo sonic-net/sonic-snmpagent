@@ -46,6 +46,7 @@ class LocPortUpdater(MIBUpdater):
         super().__init__()
 
         self.db_conn = mibs.init_db()
+        self.db_conn.connect(mibs.APPL_DB)
         self.if_name_map = {}
         self.if_alias_map = {}
         self.if_id_map = {}
