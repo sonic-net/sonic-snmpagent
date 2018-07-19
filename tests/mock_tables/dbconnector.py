@@ -2,6 +2,7 @@
 import json
 import os
 
+import unittest.mock
 import mockredis
 import swsssdk.interface
 from swsssdk.interface import redis
@@ -15,7 +16,19 @@ def config_set(self, *args):
     pass
 
 
+class MockPubSub:
+    def get_message(self):
+        return None
+
+    def psubscribe(self, *args, **kwargs):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        return self
+
+
 INPUT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 class SwssSyncClient(mockredis.MockRedis):
     def __init__(self, *args, **kwargs):
@@ -31,6 +44,7 @@ class SwssSyncClient(mockredis.MockRedis):
             fname = 'state_db.json'
         else:
             raise ValueError("Invalid db")
+        self.pubsub = MockPubSub()
 
         fname = os.path.join(INPUT_DIR, fname)
         with open(fname) as f:
