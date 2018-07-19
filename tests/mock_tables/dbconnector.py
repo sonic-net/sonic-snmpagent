@@ -2,7 +2,6 @@
 import json
 import os
 
-import unittest.mock
 import mockredis
 import swsssdk.interface
 from swsssdk.interface import redis
@@ -28,6 +27,7 @@ class MockPubSub:
 
 
 INPUT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 class SwssSyncClient(mockredis.MockRedis):
     def __init__(self, *args, **kwargs):

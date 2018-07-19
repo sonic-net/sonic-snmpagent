@@ -27,6 +27,7 @@ class LLDPRemoteTables(int, Enum):
     lldp_rem_sys_cap_supported = 11
     lldp_rem_sys_cap_enabled = 12
 
+
 @unique
 class LLDPLocalChassis(int, Enum):
     """
@@ -117,11 +118,12 @@ class LocPortUpdater(MIBUpdater):
                 break
 
             lldp_entry = msg["channel"].split(b":")[-1].decode()
-            data = msg['data'] # event data
+            data = msg['data']  # event data
 
             # extract interface name
             interface = lldp_entry.split('|')[-1]
-            #ignore management interface
+
+            # ignore management interface
             if interface == "eth0":
                 continue
             # get interface from interface name
@@ -488,4 +490,3 @@ class LLDPRemTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.4.1'):
     lldpRemSysCapEnabled = \
         SubtreeMIBEntry('1.12', lldp_updater, ValueType.OCTET_STRING, lldp_updater.lldp_table_lookup,
                         LLDPRemoteTables(12))
-
