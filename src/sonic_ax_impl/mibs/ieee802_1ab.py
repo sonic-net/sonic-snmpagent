@@ -4,6 +4,7 @@ http://www.ieee802.org/1/files/public/MIBs/LLDP-MIB-200505060000Z.txt
 from enum import Enum, unique
 from bisect import bisect_right
 
+from swsssdk import port_util
 from sonic_ax_impl import mibs, logger
 from ax_interface import MIBMeta, SubtreeMIBEntry, MIBEntry, MIBUpdater, ValueType
 
@@ -26,6 +27,7 @@ class LLDPRemoteTables(int, Enum):
     lldp_rem_sys_cap_supported = 11
     lldp_rem_sys_cap_enabled = 12
 
+
 @unique
 class LLDPLocalChassis(int, Enum):
     """
@@ -45,6 +47,7 @@ class LocPortUpdater(MIBUpdater):
         super().__init__()
 
         self.db_conn = mibs.init_db()
+        self.db_conn.connect(mibs.APPL_DB)
         self.if_name_map = {}
         self.if_alias_map = {}
         self.if_id_map = {}
@@ -83,7 +86,7 @@ class LocPortUpdater(MIBUpdater):
         """
         Update data from the DB for a single interface
         """
-        loc_port_kvs = self.db_conn.get_all(mibs.APPL_DB, mibs.if_entry_table(bytes(if_name, 'utf-8')))
+        loc_port_kvs = self.db_conn.get_all(mibs.APPL_DB, mibs.if_entry_table(if_name))
         if not loc_port_kvs:
             return
         self.loc_port_data.update({if_name: loc_port_kvs})
@@ -115,10 +118,14 @@ class LocPortUpdater(MIBUpdater):
                 break
 
             lldp_entry = msg["channel"].split(b":")[-1].decode()
-            data = msg['data'] # event data
+            data = msg['data']  # event data
 
             # extract interface name
             interface = lldp_entry.split('|')[-1]
+
+            # ignore management interface
+            if interface == "eth0":
+                continue
             # get interface from interface name
             if_index = port_util.get_index_from_str(interface)
 
@@ -184,6 +191,13 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
         # establish connection to application database.
         self.db_conn.connect(mibs.APPL_DB)
         self.loc_chassis_data = self.db_conn.get_all(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
+
+    def update_data(self):
+        """
+        Avoid NotImplementedError
+        The data is mostly static, reinit it once a minute is enough.
+        """
+        pass
 
     def table_lookup(self, table_name):
         try:
@@ -476,4 +490,3 @@ class LLDPRemTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.4.1'):
     lldpRemSysCapEnabled = \
         SubtreeMIBEntry('1.12', lldp_updater, ValueType.OCTET_STRING, lldp_updater.lldp_table_lookup,
                         LLDPRemoteTables(12))
-
