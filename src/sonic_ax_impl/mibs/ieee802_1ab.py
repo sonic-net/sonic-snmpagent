@@ -70,6 +70,7 @@ class ManAddrConst(Enum):
     """
     man_addr_oid = (1, 3, 6, 1, 2, 1, 2, 2, 1, 1)
 
+
 def poll_lldp_entry_updates(pubsub):
     msg = pubsub.get_message()
 
@@ -77,7 +78,7 @@ def poll_lldp_entry_updates(pubsub):
         return None, None, None
 
     lldp_entry = msg["channel"].split(b":")[-1].decode()
-    data = msg['data'] # event data
+    data = msg['data']
 
     # extract interface name
     interface = lldp_entry.split('|')[-1]
@@ -86,11 +87,12 @@ def poll_lldp_entry_updates(pubsub):
     if_index = port_util.get_index_from_str(interface)
 
     if if_index is None:
-         # interface name invalid, skip this entry
-         logger.warning("Invalid interface name in {} in APP_DB, skipping"
-                        .format(lldp_entry))
-         return None, None, None
+        # interface name invalid, skip this entry
+        logger.warning("Invalid interface name in {} in APP_DB, skipping"
+                       .format(lldp_entry))
+        return None, None, None
     return data, interface, if_index
+
 
 class LLDPLocalSystemDataUpdater(MIBUpdater):
     def __init__(self):
@@ -243,7 +245,6 @@ class LocPortUpdater(MIBUpdater):
             logger.warning(" 0 - b'PORT_TABLE' missing attribute '{}'.".format(e))
             return None
 
-
     def local_port_num(self, sub_id):
         if len(sub_id) <= 0:
             return None
@@ -301,7 +302,7 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         self.mgmt_ip_str = self.db_conn.get(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE,
                                             b'lldp_loc_man_addr').decode('utf-8')
         logger.debug("Got mgmt ip from db : {}".format(self.mgmt_ip_str))
-    
+
         try:
             mgmt_ip_sub_oid = tuple([int(i) for i in self.mgmt_ip_str.split('.')])
         except ValueError:
@@ -339,10 +340,13 @@ class LLDPLocManAddrUpdater(MIBUpdater):
 
     @staticmethod
     def man_addr_len(sub_id): return ManAddrConst.man_addr_len.value
+
     @staticmethod
     def man_addr_if_subtype(sub_id): return ManAddrConst.man_addr_if_subtype.value
+
     @staticmethod
     def man_addr_if_id(sub_id): return ManAddrConst.man_addr_if_id.value
+
     @staticmethod
     def man_addr_OID(sub_id): return ManAddrConst.man_addr_oid.value
 
@@ -451,25 +455,24 @@ class LLDPRemManAddrUpdater(MIBUpdater):
 
     def update_rem_if_mgmt(self, if_oid, if_name):
         mgmt_ip_bytes = self.db_conn.get(mibs.APPL_DB, mibs.lldp_entry_table(if_name),
-                                           b'lldp_rem_man_addr')
+                                         b'lldp_rem_man_addr')
         if not mgmt_ip_bytes:
             return
         mgmt_ip_str = mgmt_ip_bytes.decode('utf-8')
         subtype = self.get_subtype(mgmt_ip_str)
         ip_hex = self.get_ip_hex(mgmt_ip_str, subtype)
         mgmt_ip_sub_oid = None
-        if subtype == 1:
+        if subtype == ManAddrConst.man_addr_subtype_ipv4.value:
             mgmt_ip_sub_oid = tuple(int(i) for i in mgmt_ip_str.split('.'))
-        elif subtype ==2:
+        elif subtype == ManAddrConst.man_addr_subtype_ipv6.value:
             mgmt_ip_sub_oid = tuple(int(i, 16) if i else 0 for i in mgmt_ip_str.split(':'))
         else:
             logger.warning("Ivalid management IP {}".format(mgmt_ip_str))
             return
         self.if_range.append((if_oid, *mgmt_ip_sub_oid))
-        self.mgmt_ips.update({if_name:
-                                  {"ip_str": mgmt_ip_str,
-                                   "addr_subtype": subtype,
-                                   "addr_hex": ip_hex}})
+        self.mgmt_ips.update({if_name: {"ip_str": mgmt_ip_str,
+                                        "addr_subtype": subtype,
+                                        "addr_hex": ip_hex}})
         self.if_range.sort()
 
     def update_data(self):
@@ -562,8 +565,10 @@ class LLDPRemManAddrUpdater(MIBUpdater):
 
     @staticmethod
     def man_addr_if_subtype(sub_id, _): return ManAddrConst.man_addr_if_subtype.value
+
     @staticmethod
     def man_addr_if_id(sub_id, _): return ManAddrConst.man_addr_if_id.value
+
     @staticmethod
     def man_addr_OID(sub_id, _): return ManAddrConst.man_addr_oid.value
 
@@ -590,9 +595,9 @@ class LLDPLocalSystemData(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3'):
 
     lldpLocSysDesc = MIBEntry('4', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(4))
 
-    #lldpLocSysCapSupported = MIBEntry('5', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(5))
+    # lldpLocSysCapSupported = MIBEntry('5', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(5))
 
-    #lldpLocSysCapEnabled = MIBEntry('6', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(6))
+    # lldpLocSysCapEnabled = MIBEntry('6', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(6))
 
     class LLDPLocPortTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3.7'):
         """
@@ -823,4 +828,3 @@ class LLDPRemManAddrTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.4.2'):
 
     lldpRemManAddrOID = SubtreeMIBEntry('1.5', updater, ValueType.OBJECT_IDENTIFIER,
                                         updater.lookup, updater.man_addr_OID)
-
