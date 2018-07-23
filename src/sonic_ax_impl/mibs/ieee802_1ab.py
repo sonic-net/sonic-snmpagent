@@ -28,6 +28,7 @@ class LLDPRemoteTables(int, Enum):
     lldp_rem_sys_cap_supported = 11
     lldp_rem_sys_cap_enabled = 12
 
+
 @unique
 class LLDPLocalChassis(int, Enum):
     """
@@ -133,7 +134,7 @@ class LocPortUpdater(MIBUpdater):
 
         self.db_conn = mibs.init_db()
         # establish connection to application database.
-        self.db_conn.connect(self.db_conn.APPL_DB)
+        self.db_conn.connect(mibs.APPL_DB)
         self.if_name_map = {}
         self.if_alias_map = {}
         self.if_id_map = {}
@@ -300,6 +301,7 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         self.mgmt_ip_str = self.db_conn.get(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE,
                                             b'lldp_loc_man_addr').decode('utf-8')
         logger.debug("Got mgmt ip from db : {}".format(self.mgmt_ip_str))
+    
         try:
             mgmt_ip_sub_oid = tuple([int(i) for i in self.mgmt_ip_str.split('.')])
         except ValueError:
@@ -821,3 +823,4 @@ class LLDPRemManAddrTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.4.2'):
 
     lldpRemManAddrOID = SubtreeMIBEntry('1.5', updater, ValueType.OBJECT_IDENTIFIER,
                                         updater.lookup, updater.man_addr_OID)
+
