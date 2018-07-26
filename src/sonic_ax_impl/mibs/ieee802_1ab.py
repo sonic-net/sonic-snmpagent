@@ -38,8 +38,8 @@ class LLDPLocalChassis(int, Enum):
     lldp_loc_chassis_id = 2
     lldp_loc_sys_name = 3
     lldp_loc_sys_desc = 4
-    # *lldp_loc_sys_cap_supported = 5
-    # *lldp_loc_sys_cap_enabled = 6
+    lldp_loc_sys_cap_supported = 5
+    lldp_loc_sys_cap_enabled = 6
 
 
 class ManAddrConst(Enum):
@@ -595,9 +595,9 @@ class LLDPLocalSystemData(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3'):
 
     lldpLocSysDesc = MIBEntry('4', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(4))
 
-    # lldpLocSysCapSupported = MIBEntry('5', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(5))
+    lldpLocSysCapSupported = MIBEntry('5', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(5))
 
-    # lldpLocSysCapEnabled = MIBEntry('6', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(6))
+    lldpLocSysCapEnabled = MIBEntry('6', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(6))
 
     class LLDPLocPortTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3.7'):
         """
