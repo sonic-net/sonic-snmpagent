@@ -72,16 +72,18 @@ class ManAddrConst(Enum):
 
 
 def poll_lldp_entry_updates(pubsub):
+    ret = None, None, None
     msg = pubsub.get_message()
-
     if not msg:
-        return None, None, None
+        return ret
 
-    lldp_entry = msg["channel"].split(b":")[-1].decode()
-    data = msg['data']
-
-    # extract interface name
-    interface = lldp_entry.split('|')[-1]
+    try:
+        interface = msg["channel"].split(b":")[-1].decode()
+        data = msg['data']
+    except (KeyError, AttributeError) as e:
+        logger.error("Invalid msg when polling for lldp updates: {}\n"
+                     "The error seems to be: {}".format(msg, e))
+        return ret
 
     # get interface from interface name
     if_index = port_util.get_index_from_str(interface)
@@ -89,8 +91,8 @@ def poll_lldp_entry_updates(pubsub):
     if if_index is None:
         # interface name invalid, skip this entry
         logger.warning("Invalid interface name in {} in APP_DB, skipping"
-                       .format(lldp_entry))
-        return None, None, None
+                       .format(interface))
+        return ret
     return data, interface, if_index
 
 
@@ -121,7 +123,7 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
             _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
             return self.loc_chassis_data[_table_name]
         except KeyError as e:
-            mibs.logger.warning(" 0 - b'LOC_CHASSIS' missing attribute '{}'.".format(e))
+            logger.warning(" 0 - b'LOC_CHASSIS' missing attribute '{}'.".format(e))
             return None
 
     def table_lookup_integer(self, table_name):
@@ -208,7 +210,7 @@ class LocPortUpdater(MIBUpdater):
                 self.update_interface_data(interface.encode('utf-8'))
 
     def local_port_num(self, sub_id):
-        if len(sub_id) <= 0:
+        if len(sub_id) == 0:
             return None
         sub_id = sub_id[0]
         if sub_id not in self.oid_name_map:
@@ -216,7 +218,7 @@ class LocPortUpdater(MIBUpdater):
         return int(sub_id)
 
     def local_port_id(self, sub_id):
-        if len(sub_id) <= 0:
+        if len(sub_id) == 0:
             return None
         sub_id = sub_id[0]
         if sub_id not in self.oid_name_map:
@@ -228,7 +230,7 @@ class LocPortUpdater(MIBUpdater):
         return self.if_alias_map[if_name]
 
     def port_table_lookup(self, sub_id, table_name):
-        if len(sub_id) <= 0:
+        if len(sub_id) == 0:
             return None
         sub_id = sub_id[0]
         if sub_id not in self.oid_name_map:
@@ -246,7 +248,7 @@ class LocPortUpdater(MIBUpdater):
             return None
 
     def local_port_num(self, sub_id):
-        if len(sub_id) <= 0:
+        if len(sub_id) == 0:
             return None
         sub_id = sub_id[0]
         if sub_id not in self.oid_name_map:
@@ -254,19 +256,19 @@ class LocPortUpdater(MIBUpdater):
         return int(sub_id)
 
     def local_port_id(self, sub_id):
-        if len(sub_id) <= 0:
+        if len(sub_id) == 0:
             return None
         sub_id = sub_id[0]
         if sub_id not in self.oid_name_map:
             return None
         if_name = self.oid_name_map[sub_id]
         if if_name not in self.loc_port_data:
-            # no LLDP data for this interface--we won't report the local interface
+            # no LLDP data for this interface
             return None
         return self.if_alias_map[if_name]
 
     def port_table_lookup(self, sub_id, table_name):
-        if len(sub_id) <= 0:
+        if len(sub_id) == 0:
             return None
         sub_id = sub_id[0]
         if sub_id not in self.oid_name_map:
@@ -323,7 +325,7 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         return self.man_addr_list[right]
 
     def lookup(self, sub_id, callable):
-        if len(sub_id) <= 0:
+        if len(sub_id) == 0:
             return None
         return callable(sub_id)
 
@@ -405,7 +407,7 @@ class LLDPRemTableUpdater(MIBUpdater):
         self.if_range.sort()
 
     def local_port_num(self, sub_id):
-        if len(sub_id) <= 0:
+        if len(sub_id) == 0:
             return None
         sub_id = sub_id[0]
         if sub_id not in self.oid_name_map:
@@ -413,7 +415,7 @@ class LLDPRemTableUpdater(MIBUpdater):
         return int(sub_id)
 
     def lldp_table_lookup(self, sub_id, table_name):
-        if len(sub_id) <= 0:
+        if len(sub_id) == 0:
             return None
         sub_id = sub_id[0]
         if sub_id not in self.oid_name_map:
@@ -483,7 +485,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
             redis_client = self.db_conn.get_redis_client(self.db_conn.APPL_DB)
             db = self.db_conn.db_map[self.db_conn.APPL_DB]["db"]
             self.pubsub = redis_client.pubsub()
-            self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'Ethernet*')))
+            self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
 
         while True:
             data, interface, if_index = poll_lldp_entry_updates(self.pubsub)
@@ -518,7 +520,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         return self.if_range[right]
 
     def lookup(self, sub_id, callable):
-        if len(sub_id) <= 0:
+        if len(sub_id) == 0:
             return None
         sub_id = sub_id[0]
         if sub_id not in self.oid_name_map:
