@@ -198,7 +198,7 @@ class LocPortUpdater(MIBUpdater):
             redis_client = self.db_conn.get_redis_client(self.db_conn.APPL_DB)
             db = self.db_conn.db_map[self.db_conn.APPL_DB]["db"]
             self.pubsub = redis_client.pubsub()
-            self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'Ethernet*')))
+            self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
 
         while True:
             data, interface, if_id = poll_lldp_entry_updates(self.pubsub)
@@ -228,24 +228,6 @@ class LocPortUpdater(MIBUpdater):
             # no LLDP data for this interface--we won't report the local interface
             return None
         return self.if_alias_map[if_name]
-
-    def port_table_lookup(self, sub_id, table_name):
-        if len(sub_id) == 0:
-            return None
-        sub_id = sub_id[0]
-        if sub_id not in self.oid_name_map:
-            return None
-        if_name = self.oid_name_map[sub_id]
-        if if_name not in self.loc_port_data:
-            # no data for this interface
-            return None
-        counters = self.loc_port_data[if_name]
-        _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
-        try:
-            return counters[_table_name]
-        except KeyError as e:
-            logger.warning(" 0 - b'PORT_TABLE' missing attribute '{}'.".format(e))
-            return None
 
     def local_port_num(self, sub_id):
         if len(sub_id) == 0:
