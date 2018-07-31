@@ -225,26 +225,6 @@ class LocPortUpdater(MIBUpdater):
             return None
         if_name = self.oid_name_map[sub_id]
         if if_name not in self.loc_port_data:
-            # no LLDP data for this interface--we won't report the local interface
-            return None
-        return self.if_alias_map[if_name]
-
-    def local_port_num(self, sub_id):
-        if len(sub_id) == 0:
-            return None
-        sub_id = sub_id[0]
-        if sub_id not in self.oid_name_map:
-            return None
-        return int(sub_id)
-
-    def local_port_id(self, sub_id):
-        if len(sub_id) == 0:
-            return None
-        sub_id = sub_id[0]
-        if sub_id not in self.oid_name_map:
-            return None
-        if_name = self.oid_name_map[sub_id]
-        if if_name not in self.loc_port_data:
             # no LLDP data for this interface
             return None
         return self.if_alias_map[if_name]
