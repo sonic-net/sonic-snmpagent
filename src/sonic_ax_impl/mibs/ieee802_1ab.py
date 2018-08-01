@@ -42,7 +42,7 @@ class LLDPLocalChassis(int, Enum):
     lldp_loc_sys_cap_enabled = 6
 
 
-class ManAddrConst(Enum):
+class ManAddrConst:
     man_addr_if_id = 0
     """
     Reference [RFC2453][RFC2677][RFC2858]
@@ -292,7 +292,7 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         return callable(sub_id)
 
     @staticmethod
-    def man_addr_subtype(sub_id): return ManAddrConst.man_addr_subtype_ipv4.value
+    def man_addr_subtype(sub_id): return ManAddrConst.man_addr_subtype_ipv4
 
     def man_addr(self, sub_id):
         """
@@ -303,16 +303,16 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         return hex_ip
 
     @staticmethod
-    def man_addr_len(sub_id): return ManAddrConst.man_addr_len.value
+    def man_addr_len(sub_id): return ManAddrConst.man_addr_len
 
     @staticmethod
-    def man_addr_if_subtype(sub_id): return ManAddrConst.man_addr_if_subtype.value
+    def man_addr_if_subtype(sub_id): return ManAddrConst.man_addr_if_subtype
 
     @staticmethod
-    def man_addr_if_id(sub_id): return ManAddrConst.man_addr_if_id.value
+    def man_addr_if_id(sub_id): return ManAddrConst.man_addr_if_id
 
     @staticmethod
-    def man_addr_OID(sub_id): return ManAddrConst.man_addr_oid.value
+    def man_addr_OID(sub_id): return ManAddrConst.man_addr_oid
 
 
 class LLDPRemTableUpdater(MIBUpdater):
@@ -426,9 +426,9 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         subtype = self.get_subtype(mgmt_ip_str)
         ip_hex = self.get_ip_hex(mgmt_ip_str, subtype)
         mgmt_ip_sub_oid = None
-        if subtype == ManAddrConst.man_addr_subtype_ipv4.value:
+        if subtype == ManAddrConst.man_addr_subtype_ipv4:
             mgmt_ip_sub_oid = tuple(int(i) for i in mgmt_ip_str.split('.'))
-        elif subtype == ManAddrConst.man_addr_subtype_ipv6.value:
+        elif subtype == ManAddrConst.man_addr_subtype_ipv6:
             mgmt_ip_sub_oid = tuple(int(i, 16) if i else 0 for i in mgmt_ip_str.split(':'))
         else:
             logger.warning("Ivalid management IP {}".format(mgmt_ip_str))
@@ -494,9 +494,9 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         return callable(sub_id, if_name)
 
     def get_ip_hex(self, mgmt_ip_str, subtype):
-        if subtype == ManAddrConst.man_addr_subtype_ipv4.value:
+        if subtype == ManAddrConst.man_addr_subtype_ipv4:
             hex_ip = " ".join([format(int(i), '02X') for i in mgmt_ip_str.split('.')])
-        elif subtype == ManAddrConst.man_addr_subtype_ipv6.value:
+        elif subtype == ManAddrConst.man_addr_subtype_ipv6:
             hex_ip = " ".join([format(int(i, 16), 'x') if i else "0" for i in mgmt_ip_str.split(':')])
         else:
             hex_ip = None
@@ -505,13 +505,13 @@ class LLDPRemManAddrUpdater(MIBUpdater):
     def get_subtype(self, ip_str):
         try:
             ipaddress.IPv4Address(ip_str)
-            return ManAddrConst.man_addr_subtype_ipv4.value
+            return ManAddrConst.man_addr_subtype_ipv4
         except ipaddress.AddressValueError:
             # not a valid IPv4
             pass
         try:
             ipaddress.IPv6Address(ip_str)
-            return ManAddrConst.man_addr_subtype_ipv6.value
+            return ManAddrConst.man_addr_subtype_ipv6
         except ipaddress.AddressValueError:
             # not a valid IPv6
             logger.warning("Invalid mgmt IP {}".format(ip_str))
@@ -528,13 +528,13 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         return self.mgmt_ips[if_name]['addr_hex']
 
     @staticmethod
-    def man_addr_if_subtype(sub_id, _): return ManAddrConst.man_addr_if_subtype.value
+    def man_addr_if_subtype(sub_id, _): return ManAddrConst.man_addr_if_subtype
 
     @staticmethod
-    def man_addr_if_id(sub_id, _): return ManAddrConst.man_addr_if_id.value
+    def man_addr_if_id(sub_id, _): return ManAddrConst.man_addr_if_id
 
     @staticmethod
-    def man_addr_OID(sub_id, _): return ManAddrConst.man_addr_oid.value
+    def man_addr_OID(sub_id, _): return ManAddrConst.man_addr_oid
 
 
 _lldp_updater = LLDPRemTableUpdater()
