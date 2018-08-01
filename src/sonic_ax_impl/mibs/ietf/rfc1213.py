@@ -142,6 +142,9 @@ class IpMib(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.4'):
         SubtreeMIBEntry('22.1.2', arp_updater, ValueType.OCTET_STRING, arp_updater.arp_dest)
 
 class InterfacesUpdater(MIBUpdater):
+
+    RFC1213_MAX_SPEED = 4294967295
+    
     def __init__(self):
         super().__init__()
         self.db_conn = mibs.init_db()
@@ -336,10 +339,10 @@ class InterfacesUpdater(MIBUpdater):
 
         return int(entry.get(b"mtu", 0))
 
-    def get_speed(self, sub_id):
+    def get_speed_bps(self, sub_id):
         """
         :param sub_id: The 1-based sub-identifier query.
-        :return: min of 4294967295 or speed value for the respective sub_id.
+        :return: min of RFC1213_MAX_SPEED or speed value for the respective sub_id.
         """
         entry = self._get_if_entry(sub_id)
         if not entry:
@@ -347,8 +350,7 @@ class InterfacesUpdater(MIBUpdater):
 
         speed = int(entry.get(b"speed", 0))
         # speed is reported in Mbps in the db 
-        return min(4294967295, speed * 1000000)
-
+        return min(RFC1213_MAX_SPEED, speed * 1000000)
 
 class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
     """
@@ -379,7 +381,7 @@ class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
         SubtreeMIBEntry('2.1.4', if_updater, ValueType.INTEGER, if_updater.get_mtu)
 
     ifSpeed = \
-        SubtreeMIBEntry('2.1.5', if_updater, ValueType.GAUGE_32, if_updater.get_speed)
+        SubtreeMIBEntry('2.1.5', if_updater, ValueType.GAUGE_32, if_updater.get_speed_bps)
 
     # FIXME Placeholder.
     ifPhysAddress = \
