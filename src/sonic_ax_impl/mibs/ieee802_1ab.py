@@ -588,8 +588,8 @@ class LLDPLocalSystemData(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3'):
 
         lldpLocPortNum = SubtreeMIBEntry('1.1', port_updater, ValueType.INTEGER, port_updater.local_port_num)
 
-        # We're using interface name as port id, so according to textual convention, the subtype is 5
-        lldpLocPortIdSubtype = SubtreeMIBEntry('1.2', port_updater, ValueType.INTEGER, lambda _: 5)
+        # We're using locally assigned name, so according to textual convention, the subtype is 7
+        lldpLocPortIdSubtype = SubtreeMIBEntry('1.2', port_updater, ValueType.INTEGER, lambda _: 7)
 
         lldpLocPortId = SubtreeMIBEntry('1.3', port_updater, ValueType.OCTET_STRING, port_updater.local_port_id)
 
