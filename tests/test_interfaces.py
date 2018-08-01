@@ -147,8 +147,6 @@ class TestGetNextPDU(TestCase):
         response = get_pdu.make_response(self.lut)
         print(response)
 
-        n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.GAUGE_32)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 5, 117))))
@@ -168,8 +166,6 @@ class TestGetNextPDU(TestCase):
         response = get_pdu.make_response(self.lut)
         print(response)
 
-        n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.GAUGE_32)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 5, 5))))
@@ -189,8 +185,6 @@ class TestGetNextPDU(TestCase):
         response = get_pdu.make_response(self.lut)
         print(response)
 
-        n = len(response.values)
-        # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.GAUGE_32)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 5, 121))))

@@ -144,7 +144,7 @@ class IpMib(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.4'):
 class InterfacesUpdater(MIBUpdater):
 
     RFC1213_MAX_SPEED = 4294967295
-    
+
     def __init__(self):
         super().__init__()
         self.db_conn = mibs.init_db()
@@ -285,13 +285,13 @@ class InterfacesUpdater(MIBUpdater):
         if not oid:
             return
 
-        table = ""
+        if_table = ""
         if oid in self.oid_lag_name_map:
-            table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
+            if_table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
         else:
-            table = mibs.if_entry_table(self.oid_name_map[oid])
+            if_table = mibs.if_entry_table(self.oid_name_map[oid])
 
-        return self.db_conn.get_all(mibs.APPL_DB, table, blocking=True)
+        return self.db_conn.get_all(mibs.APPL_DB, if_table, blocking=True)
 
     def _get_status(self, sub_id, key):
         """
@@ -349,7 +349,7 @@ class InterfacesUpdater(MIBUpdater):
             return
 
         speed = int(entry.get(b"speed", 0))
-        # speed is reported in Mbps in the db 
+        # speed is reported in Mbps in the db
         return min(RFC1213_MAX_SPEED, speed * 1000000)
 
 class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
