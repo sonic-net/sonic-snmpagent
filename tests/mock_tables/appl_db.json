@@ -532,7 +532,6 @@
     "speed": 100000
   },
   "PORT_TABLE:Ethernet116": {
-    "description": "snowflake",
     "speed": 1000
   },
   "PORT_TABLE:Ethernet120": {
@@ -659,7 +658,6 @@
     "speed": 100000
   },
   "PORT_TABLE:Ethernet116": {
-    "description": "snowflake",
     "speed": 1000
   },
   "PORT_TABLE:Ethernet120": {
