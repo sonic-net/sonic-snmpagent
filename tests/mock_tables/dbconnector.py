@@ -2,6 +2,7 @@
 import json
 import os
 
+import unittest.mock
 import mockredis
 import swsssdk.interface
 from swsssdk.interface import redis

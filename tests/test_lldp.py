@@ -19,7 +19,11 @@ from sonic_ax_impl.mibs import ieee802_1ab
 class TestLLDPMIB(TestCase):
     @classmethod
     def setUpClass(cls):
-        class LLDPMIB(ieee802_1ab.LLDPRemTable, ieee802_1ab.LLDPLocPortTable):
+        class LLDPMIB(ieee802_1ab.LLDPLocalSystemData,
+                      ieee802_1ab.LLDPLocalSystemData.LLDPLocPortTable,
+                      ieee802_1ab.LLDPLocalSystemData.LLDPLocManAddrTable,
+                      ieee802_1ab.LLDPRemTable,
+                      ieee802_1ab.LLDPRemManAddrTable):
             pass
 
         cls.lut = MIBTable(LLDPMIB)
@@ -76,6 +80,55 @@ class TestLLDPMIB(TestCase):
             ret = mib_entry(sub_id=(1,))
             self.assertIsNotNone(ret)
             print(ret)
+
+    def test_subtype_lldp_loc_sys_data(self):
+        for entry in range(1, 5):
+            mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 3, entry)]
+            ret = mib_entry(sub_id=(1,))
+            self.assertIsNotNone(ret)
+            print(ret)
+
+    def test_subtype_lldp_loc_man_addr_table(self):
+        for entry in range(1, 7):
+            mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 3, 8, 1, entry)]
+            ret = mib_entry(sub_id=(1,))
+            self.assertIsNotNone(ret)
+            print(ret)
+
+    def test_subtype_lldp_rem_man_addr_table(self):
+        for entry in range(1, 6):
+            mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, entry)]
+            ret = mib_entry(sub_id=(1,))
+            self.assertIsNotNone(ret)
+            print(ret)
+
+    def test_ipv4_rem_man_addr(self):
+        # ethernet0 has IPv4 remote management address
+        interface_number = 1
+        mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 2)]
+        ret = mib_entry(sub_id=(interface_number,))
+        self.assertEquals(ret, "0A E0 19 64")
+        print(ret)
+        # test remManAddrSubtype
+        mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 1)]
+        ret = mib_entry(sub_id=(interface_number,))
+        # subtype 1 means IPv4
+        self.assertEquals(ret, 1)
+        print(ret)
+
+    def test_ipv6_rem_man_addr(self):
+        # ethernet4 has IPv6 remote management address
+        interface_number = 5
+        mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 2)]
+        ret = mib_entry(sub_id=(interface_number,))
+        self.assertEquals(ret, "fe80 0 268a 7ff fe3f 834c")
+        print(ret)
+        # test remManAddrSubtype
+        mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 1)]
+        ret = mib_entry(sub_id=(interface_number,))
+        # subtype 2 means IPv6
+        self.assertEquals(ret, 2)
+        print(ret)
 
     def test_local_port_identification(self):
         mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 3, 7, 1, 3)]
