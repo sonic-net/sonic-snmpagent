@@ -85,6 +85,9 @@ def poll_lldp_entry_updates(pubsub):
                      "The error seems to be: {}".format(msg, e))
         return ret
 
+    if interface == 'eth0':
+        return ret
+
     # get interface from interface name
     if_index = port_util.get_index_from_str(interface)
 
