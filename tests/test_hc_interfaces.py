@@ -47,7 +47,7 @@ class TestGetNextPDU(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 1))))
-        self.assertEqual(str(value0.data), 'Ethernet0')
+        self.assertEqual(str(value0.data), 'snowflake')
 
     def test_get_next_alias(self):
         if_alias = b'\x01\x06\x10\x00\x00\x00\x00o\x00\x01\xcc4\x00\x01\xcc5\x00\x00\x000\x07\x02\x00\x00\x00\x00\x00\x01\x00\x00\x00\x1f\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x11\x00\x00\x00}\x03\x02\x00\x00\x00\x00\x00\x01\x00\x00\x00\x1f\x00\x00\x00\x02'
@@ -72,3 +72,24 @@ class TestGetNextPDU(TestCase):
         pdu = PDU.decode(payload)
         resp = pdu.make_response(self.lut)
         print(resp)
+
+    def test_no_description(self):
+        """
+        For a port with no speed in the db the result should be 40000
+        """
+        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 113))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        n = len(response.values)
+        # self.assertEqual(n, 7)
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.OCTET_STRING)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 117))))
+        self.assertEqual(str(value0.data), '')

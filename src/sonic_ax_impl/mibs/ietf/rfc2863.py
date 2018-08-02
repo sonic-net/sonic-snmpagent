@@ -128,18 +128,16 @@ class InterfaceMIBUpdater(MIBUpdater):
 
     def interface_alias(self, sub_id):
         """
-        ifAlias specific - this is not the "Alias map". This simply returns the SONiC name.
+        ifAlias specific - this is not the "Alias map".
+        To be homogenous with what is available in the wild this should return the interface 'description'.
         :param sub_id: The 1-based sub-identifier query.
-        :return: The  SONiC name.
+        :return: The  SONiC interface description, empty string if not defined.
         """
-        oid = self.get_oid(sub_id)
-        if not oid:
+        entry = self._get_if_entry(sub_id)
+        if not entry:
             return
 
-        if oid in self.oid_lag_name_map:
-            return self.oid_lag_name_map[oid]
-
-        return self.oid_name_map[oid]
+        return entry.get(b"description", "")
 
     def get_counter32(self, sub_id, table_name):
         oid = self.get_oid(sub_id)
@@ -181,6 +179,23 @@ class InterfaceMIBUpdater(MIBUpdater):
         except KeyError as e:
             mibs.logger.warning("SyncD 'COUNTERS_DB' missing attribute '{}'.".format(e))
             return None
+
+    def _get_if_entry(self, sub_id):
+        """
+        :param oid: The 1-based sub-identifier query.
+        :return: the DB entry for the respective sub_id.
+        """
+        oid = self.get_oid(sub_id)
+        if not oid:
+            return
+
+        table = ""
+        if oid in self.oid_lag_name_map:
+            table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
+        else:
+            table = mibs.if_entry_table(self.oid_name_map[oid])
+
+        return self.db_conn.get_all(mibs.APPL_DB, table, blocking=True)
 
 
 class InterfaceMIBObjects(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.31.1'):
