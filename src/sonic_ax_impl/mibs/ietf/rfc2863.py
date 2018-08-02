@@ -189,14 +189,13 @@ class InterfaceMIBUpdater(MIBUpdater):
         if not oid:
             return
 
-        table = ""
+        if_table = ""
         if oid in self.oid_lag_name_map:
-            table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
+            if_table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
         else:
-            table = mibs.if_entry_table(self.oid_name_map[oid])
+            if_table = mibs.if_entry_table(self.oid_name_map[oid])
 
-        return self.db_conn.get_all(mibs.APPL_DB, table, blocking=True)
-
+        return self.db_conn.get_all(mibs.APPL_DB, if_table, blocking=True)
 
 class InterfaceMIBObjects(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.31.1'):
     """
