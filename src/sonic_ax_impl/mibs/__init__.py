@@ -15,6 +15,30 @@ APPL_DB = 'APPL_DB'
 ASIC_DB = 'ASIC_DB'
 COUNTERS_DB = 'COUNTERS_DB'
 
+TABLE_NAME_SEPARATOR_COLON = ':'
+TABLE_NAME_SEPARATOR_VBAR = '|'
+
+# This is used in both rfc2737 and rfc3433
+SENSOR_PART_ID_MAP = {
+    "temperature":  1,
+    "voltage":      2,
+    "rx1power":     11,
+    "rx2power":     21,
+    "rx3power":     31,
+    "rx4power":     41,
+    "tx1bias":      12,
+    "tx2bias":      22,
+    "tx3bias":      32,
+    "tx4bias":      42,
+    "tx1power":     13,
+    "tx2power":     23,
+    "tx3power":     33,
+    "tx4power":     43,
+}
+
+# IfIndex to OID multiplier for transceiver
+IFINDEX_SUB_ID_MULTIPLIER = 1000
+
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
 
 def counter_table(sai_id):
@@ -34,6 +58,21 @@ def queue_table(sai_id):
 def queue_key(port_index, queue_index):
     return str(port_index) + ':' + str(queue_index)
 
+def transceiver_info_table(port_name):
+    """
+    :param: port_name: port name
+    :return: transceiver info entry for this port
+    """
+
+    return "TRANSCEIVER_INFO" + TABLE_NAME_SEPARATOR_VBAR + port_name
+
+def transceiver_dom_table(port_name):
+    """
+    :param: port_name: port name
+    :return: transceiver dom entry for this port
+    """
+
+    return "TRANSCEIVER_DOM_SENSOR" + TABLE_NAME_SEPARATOR_VBAR + port_name
 
 def lldp_entry_table(if_name):
     """
@@ -225,3 +264,49 @@ def init_sync_d_queue_tables(db_conn):
 
     return port_queues_map, queue_stat_map, port_queue_list_map
 
+def get_device_metadata(db_conn):
+    """
+    :param db_conn: Sonic DB connector
+    :return: device metadata
+    """
+
+    DEVICE_METADATA = "DEVICE_METADATA|localhost"
+    db_conn.connect(db_conn.STATE_DB)
+
+    device_metadata = db_conn.get_all(db_conn.STATE_DB, DEVICE_METADATA)
+    return device_metadata
+
+def get_transceiver_sub_id(ifindex):
+    """
+    Returns sub OID for transceiver. Sub OID is calculated as folows:
+    +------------+------------+
+    |Interface   |Index       |
+    +------------+------------+
+    |Ethernet[X] |X * 1000    |
+    +------------+------------+
+    ()
+    :param ifindex: interface index
+    :return: sub OID of a port calculated as sub OID = {{index}} * 1000
+    """
+
+    return (ifindex * IFINDEX_SUB_ID_MULTIPLIER, )
+
+def get_transceiver_sensor_sub_id(ifindex, sensor):
+    """
+    Returns sub OID for transceiver sensor. Sub OID is calculated as folows:
+    +-------------------------------------+------------------------------+
+    |Sensor                               |Index                         |
+    +-------------------------------------+------------------------------+
+    |RX Power for Ethernet[X]/[LANEID]    |X * 1000 + LANEID * 10 + 1    |
+    |TX Bias for Ethernet[X]/[LANEID]     |X * 1000 + LANEID * 10 + 2    |
+    |Temperature for Ethernet[X]          |X * 1000 + 1                  |
+    |Voltage for Ethernet[X]/[LANEID]     |X * 1000 + 2                  |
+    +-------------------------------------+------------------------------+
+    ()
+    :param ifindex: interface index
+    :param sensor: sensor key
+    :return: sub OID = {{index}} * 1000 + {{lane}} * 10 + sensor id
+    """
+
+    transceiver_oid, = get_transceiver_sub_id(ifindex)
+    return (transceiver_oid + SENSOR_PART_ID_MAP[sensor], )
