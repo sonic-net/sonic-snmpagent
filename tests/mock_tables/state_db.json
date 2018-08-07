@@ -1,5 +1,28 @@
 {
   "DEVICE_METADATA|localhost": {
     "chassis_serial_number": "SAMPLETESTSN"
+  },
+  "TRANSCEIVER_INFO|Ethernet0": {
+  	"type": "QSFP+",
+  	"hardwarerev" : "A1",
+  	"serialnum": "SERIAL_NUM",
+  	"manufacturename": "VENDOR_NAME",
+  	"modelname": "MODEL_NAME"
+  },
+  "TRANSCEIVER_DOM_SENSOR|Ethernet0": {
+  	"temperature": 25.39,
+  	"voltage": 3.37,
+  	"tx1bias": "N/A",
+  	"tx2bias": 4.44,
+  	"tx3bias": "inf",
+  	"tx4bias": 4.44,
+  	"rx1power": "-inf",
+  	"rx2power": -0.97,
+  	"rx3power": -0.97,
+  	"rx4power": -0.97,
+  	"tx1power": -5.4,
+  	"tx2power": -5.4,
+  	"tx3power": -5.4,
+  	"tx4power": -5.4
   }
 }

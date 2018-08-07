@@ -132,3 +132,60 @@ class TestGetNextPDU(TestCase):
         pdu = PDU.decode(resp)
         resp = pdu.make_response(self.lut)
         print(resp)
+
+    def test_low_speed(self):
+        """
+        For an interface with a speed inside the 32 bit counter returns the speed of the interface in bps
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 5, 113))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.GAUGE_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 5, 117))))
+        self.assertEqual(value0.data, 1000000000)
+
+    def test_high_speed(self):
+        """
+        For a speed higher than 4,294,967,295 the retrun should be 4294967295
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 5, 1))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.GAUGE_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 5, 5))))
+        self.assertEqual(value0.data, 4294967295)
+
+    def test_no_speed(self):
+        """
+        For a port with no speed in the db the result should be 0
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 5, 117))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.GAUGE_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 5, 121))))
+        self.assertEqual(value0.data, 0)

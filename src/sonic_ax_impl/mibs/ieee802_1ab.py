@@ -1,6 +1,7 @@
 """
 http://www.ieee802.org/1/files/public/MIBs/LLDP-MIB-200505060000Z.txt
 """
+import ipaddress
 from enum import Enum, unique
 from bisect import bisect_right
 
@@ -37,8 +38,100 @@ class LLDPLocalChassis(int, Enum):
     lldp_loc_chassis_id = 2
     lldp_loc_sys_name = 3
     lldp_loc_sys_desc = 4
-    # *lldp_rem_sys_cap_supported = 5
-    # *lldp_rem_sys_cap_enabled = 6
+    lldp_loc_sys_cap_supported = 5
+    lldp_loc_sys_cap_enabled = 6
+
+
+class ManAddrConst:
+    man_addr_if_id = 0
+    """
+    Reference [RFC2453][RFC2677][RFC2858]
+    Address Family Numbers
+    1	IP (IP version 4)
+    2	IP6 (IP version 6)
+    """
+    man_addr_subtype_ipv4 = 1
+    man_addr_subtype_ipv6 = 2
+    """
+    The enumeration 'ifIndex(2)' represents interface identifier
+    based on the ifIndex MIB object.
+    """
+    man_addr_if_subtype = 2
+    """
+    "The total length of the management address subtype and the
+    management address fields in LLDPDUs transmitted by the
+    local LLDP agent.
+    """
+    man_addr_len = 5
+    """
+    "The OID value used to identify the type of hardware component
+    or protocol entity associated with the management address
+    advertised by the local system agent."
+    """
+    man_addr_oid = (1, 3, 6, 1, 2, 1, 2, 2, 1, 1)
+
+
+def poll_lldp_entry_updates(pubsub):
+    ret = None, None, None
+    msg = pubsub.get_message()
+    if not msg:
+        return ret
+
+    try:
+        interface = msg["channel"].split(b":")[-1].decode()
+        data = msg['data']
+    except (KeyError, AttributeError) as e:
+        logger.error("Invalid msg when polling for lldp updates: {}\n"
+                     "The error seems to be: {}".format(msg, e))
+        return ret
+
+    if interface == 'eth0':
+        return ret
+
+    # get interface from interface name
+    if_index = port_util.get_index_from_str(interface)
+
+    if if_index is None:
+        # interface name invalid, skip this entry
+        logger.warning("Invalid interface name in {} in APP_DB, skipping"
+                       .format(interface))
+        return ret
+    return data, interface, if_index
+
+
+class LLDPLocalSystemDataUpdater(MIBUpdater):
+    def __init__(self):
+        super().__init__()
+
+        self.db_conn = mibs.init_db()
+        self.loc_chassis_data = {}
+
+    def reinit_data(self):
+        """
+        Subclass update data routine.
+        """
+        # establish connection to application database.
+        self.db_conn.connect(mibs.APPL_DB)
+        self.loc_chassis_data = self.db_conn.get_all(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
+
+    def update_data(self):
+        """
+        Avoid NotImplementedError
+        The data is mostly static, reinit it once a minute is enough.
+        """
+        pass
+
+    def table_lookup(self, table_name):
+        try:
+            _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
+            return self.loc_chassis_data[_table_name]
+        except KeyError as e:
+            logger.warning(" 0 - b'LOC_CHASSIS' missing attribute '{}'.".format(e))
+            return None
+
+    def table_lookup_integer(self, table_name):
+        subtype_str = self.table_lookup(table_name)
+        return int(subtype_str) if subtype_str is not None else None
 
 
 class LocPortUpdater(MIBUpdater):
@@ -47,6 +140,7 @@ class LocPortUpdater(MIBUpdater):
         super().__init__()
 
         self.db_conn = mibs.init_db()
+        # establish connection to application database.
         self.db_conn.connect(mibs.APPL_DB)
         self.if_name_map = {}
         self.if_alias_map = {}
@@ -70,8 +164,6 @@ class LocPortUpdater(MIBUpdater):
         self.oid_sai_map, \
         self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
 
-        # establish connection to application database.
-        self.db_conn.connect(mibs.APPL_DB)
         self.if_range = []
         # get local port kvs from APP_BD's PORT_TABLE
         self.loc_port_data = {}
@@ -109,37 +201,19 @@ class LocPortUpdater(MIBUpdater):
             redis_client = self.db_conn.get_redis_client(self.db_conn.APPL_DB)
             db = self.db_conn.db_map[self.db_conn.APPL_DB]["db"]
             self.pubsub = redis_client.pubsub()
-            self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, "LLDP_ENTRY_TABLE:*"))
+            self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
 
         while True:
-            msg = self.pubsub.get_message()
+            data, interface, if_id = poll_lldp_entry_updates(self.pubsub)
 
-            if not msg:
+            if not data:
                 break
-
-            lldp_entry = msg["channel"].split(b":")[-1].decode()
-            data = msg['data']  # event data
-
-            # extract interface name
-            interface = lldp_entry.split('|')[-1]
-
-            # ignore management interface
-            if interface == "eth0":
-                continue
-            # get interface from interface name
-            if_index = port_util.get_index_from_str(interface)
-
-            if if_index is None:
-                # interface name invalid, skip this entry
-                logger.warning("Invalid interface name in {} in APP_DB, skipping"
-                               .format(lldp_entry))
-                continue
 
             if b"set" in data:
                 self.update_interface_data(interface.encode('utf-8'))
 
     def local_port_num(self, sub_id):
-        if len(sub_id) <= 0:
+        if len(sub_id) == 0:
             return None
         sub_id = sub_id[0]
         if sub_id not in self.oid_name_map:
@@ -147,19 +221,19 @@ class LocPortUpdater(MIBUpdater):
         return int(sub_id)
 
     def local_port_id(self, sub_id):
-        if len(sub_id) <= 0:
+        if len(sub_id) == 0:
             return None
         sub_id = sub_id[0]
         if sub_id not in self.oid_name_map:
             return None
         if_name = self.oid_name_map[sub_id]
         if if_name not in self.loc_port_data:
-            # no LLDP data for this interface--we won't report the local interface
+            # no LLDP data for this interface
             return None
         return self.if_alias_map[if_name]
 
     def port_table_lookup(self, sub_id, table_name):
-        if len(sub_id) <= 0:
+        if len(sub_id) == 0:
             return None
         sub_id = sub_id[0]
         if sub_id not in self.oid_name_map:
@@ -177,12 +251,14 @@ class LocPortUpdater(MIBUpdater):
             return None
 
 
-class LLDPLocalSystemDataUpdater(MIBUpdater):
+class LLDPLocManAddrUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
 
         self.db_conn = mibs.init_db()
         self.loc_chassis_data = {}
+        self.man_addr_list = []
+        self.mgmt_ip_str = None
 
     def reinit_data(self):
         """
@@ -190,7 +266,15 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
         """
         # establish connection to application database.
         self.db_conn.connect(mibs.APPL_DB)
-        self.loc_chassis_data = self.db_conn.get_all(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
+        self.mgmt_ip_str = self.db_conn.get(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE,
+                                            b'lldp_loc_man_addr').decode('utf-8')
+        logger.debug("Got mgmt ip from db : {}".format(self.mgmt_ip_str))
+
+        try:
+            mgmt_ip_sub_oid = tuple([int(i) for i in self.mgmt_ip_str.split('.')])
+        except ValueError:
+            logger.error("Invalid local mgmt IP {}".format(self.mgmt_ip_str))
+        self.man_addr_list.append(mgmt_ip_sub_oid)
 
     def update_data(self):
         """
@@ -199,20 +283,42 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
         """
         pass
 
-    def table_lookup(self, table_name):
-        try:
-            _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
-            return self.loc_chassis_data[_table_name]
-        except KeyError as e:
-            mibs.logger.warning(" 0 - b'LOC_CHASSIS' missing attribute '{}'.".format(e))
+    def get_next(self, sub_id):
+        right = bisect_right(self.man_addr_list, sub_id)
+        if right == len(self.man_addr_list):
             return None
+        return self.man_addr_list[right]
 
-    def table_lookup_integer(self, table_name):
-        subtype_str = self.table_lookup(table_name)
-        return int(subtype_str) if subtype_str is not None else None
+    def lookup(self, sub_id, callable):
+        if len(sub_id) == 0:
+            return None
+        return callable(sub_id)
+
+    @staticmethod
+    def man_addr_subtype(sub_id): return ManAddrConst.man_addr_subtype_ipv4
+
+    def man_addr(self, sub_id):
+        """
+        :param sub_id:
+        :return: MGMT IP in HEX
+        """
+        hex_ip = " ".join([format(int(i), '02X') for i in self.mgmt_ip_str.split('.')])
+        return hex_ip
+
+    @staticmethod
+    def man_addr_len(sub_id): return ManAddrConst.man_addr_len
+
+    @staticmethod
+    def man_addr_if_subtype(sub_id): return ManAddrConst.man_addr_if_subtype
+
+    @staticmethod
+    def man_addr_if_id(sub_id): return ManAddrConst.man_addr_if_id
+
+    @staticmethod
+    def man_addr_OID(sub_id): return ManAddrConst.man_addr_oid
 
 
-class LLDPUpdater(MIBUpdater):
+class LLDPRemTableUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
 
@@ -266,7 +372,7 @@ class LLDPUpdater(MIBUpdater):
         self.if_range.sort()
 
     def local_port_num(self, sub_id):
-        if len(sub_id) <= 0:
+        if len(sub_id) == 0:
             return None
         sub_id = sub_id[0]
         if sub_id not in self.oid_name_map:
@@ -274,7 +380,7 @@ class LLDPUpdater(MIBUpdater):
         return int(sub_id)
 
     def lldp_table_lookup(self, sub_id, table_name):
-        if len(sub_id) <= 0:
+        if len(sub_id) == 0:
             return None
         sub_id = sub_id[0]
         if sub_id not in self.oid_name_map:
@@ -288,7 +394,7 @@ class LLDPUpdater(MIBUpdater):
         try:
             return counters[_table_name]
         except KeyError as e:
-            mibs.logger.warning(" 0 - b'LLDP_ENTRY_TABLE' missing attribute '{}'.".format(e))
+            logger.warning(" 0 - b'LLDP_ENTRY_TABLE' missing attribute '{}'.".format(e))
             return None
 
     def lldp_table_lookup_integer(self, sub_id, table_name):
@@ -301,16 +407,153 @@ class LLDPUpdater(MIBUpdater):
         return int(subtype_str) if subtype_str is not None else None
 
 
-_lldp_updater = LLDPUpdater()
+class LLDPRemManAddrUpdater(MIBUpdater):
+    def __init__(self):
+        super().__init__()
+
+        self.db_conn = mibs.init_db()
+        # establish connection to application database.
+        self.db_conn.connect(self.db_conn.APPL_DB)
+        self.if_range = []
+        self.mgmt_ips = {}
+        self.oid_name_map = {}
+        self.mgmt_ip_str = None
+        self.pubsub = None
+
+    def update_rem_if_mgmt(self, if_oid, if_name):
+        mgmt_ip_bytes = self.db_conn.get(mibs.APPL_DB, mibs.lldp_entry_table(if_name),
+                                         b'lldp_rem_man_addr')
+        if not mgmt_ip_bytes:
+            return
+        mgmt_ip_str = mgmt_ip_bytes.decode('utf-8')
+        subtype = self.get_subtype(mgmt_ip_str)
+        ip_hex = self.get_ip_hex(mgmt_ip_str, subtype)
+        mgmt_ip_sub_oid = None
+        if subtype == ManAddrConst.man_addr_subtype_ipv4:
+            mgmt_ip_sub_oid = tuple(int(i) for i in mgmt_ip_str.split('.'))
+        elif subtype == ManAddrConst.man_addr_subtype_ipv6:
+            mgmt_ip_sub_oid = tuple(int(i, 16) if i else 0 for i in mgmt_ip_str.split(':'))
+        else:
+            logger.warning("Ivalid management IP {}".format(mgmt_ip_str))
+            return
+        self.if_range.append((if_oid, *mgmt_ip_sub_oid))
+        self.mgmt_ips.update({if_name: {"ip_str": mgmt_ip_str,
+                                        "addr_subtype": subtype,
+                                        "addr_hex": ip_hex}})
+        self.if_range.sort()
+
+    def update_data(self):
+        """
+        Listen to updates in APP DB, update local cache
+        """
+        if not self.pubsub:
+            redis_client = self.db_conn.get_redis_client(self.db_conn.APPL_DB)
+            db = self.db_conn.db_map[self.db_conn.APPL_DB]["db"]
+            self.pubsub = redis_client.pubsub()
+            self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
+
+        while True:
+            data, interface, if_index = poll_lldp_entry_updates(self.pubsub)
+
+            if not data:
+                break
+
+            if b"set" in data:
+                self.update_rem_if_mgmt(if_index, interface.encode('utf-8'))
+            elif b"del" in data:
+                # some remote data about that neighbor is gone, del it and try to query again
+                self.if_range = [sub_oid for sub_oid in self.if_range if sub_oid[0] != if_index]
+                self.update_rem_if_mgmt(if_index, interface.encode('utf-8'))
+
+    def reinit_data(self):
+        """
+        Subclass reinit data routine.
+        """
+        _, _, _, _, self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
+        # establish connection to application database.
+        self.db_conn.connect(mibs.APPL_DB)
+
+        self.if_range = []
+        self.mgmt_ips = {}
+        for if_oid, if_name in self.oid_name_map.items():
+            self.update_rem_if_mgmt(if_oid, if_name)
+
+    def get_next(self, sub_id):
+        right = bisect_right(self.if_range, sub_id)
+        if right == len(self.if_range):
+            return None
+        return self.if_range[right]
+
+    def lookup(self, sub_id, callable):
+        if len(sub_id) == 0:
+            return None
+        sub_id = sub_id[0]
+        if sub_id not in self.oid_name_map:
+            return None
+        if_name = self.oid_name_map[sub_id]
+        if if_name not in self.mgmt_ips:
+            # no data for this interface
+            return None
+        return callable(sub_id, if_name)
+
+    def get_ip_hex(self, mgmt_ip_str, subtype):
+        if subtype == ManAddrConst.man_addr_subtype_ipv4:
+            hex_ip = " ".join([format(int(i), '02X') for i in mgmt_ip_str.split('.')])
+        elif subtype == ManAddrConst.man_addr_subtype_ipv6:
+            hex_ip = " ".join([format(int(i, 16), 'x') if i else "0" for i in mgmt_ip_str.split(':')])
+        else:
+            hex_ip = None
+        return hex_ip
+
+    def get_subtype(self, ip_str):
+        try:
+            ipaddress.IPv4Address(ip_str)
+            return ManAddrConst.man_addr_subtype_ipv4
+        except ipaddress.AddressValueError:
+            # not a valid IPv4
+            pass
+        try:
+            ipaddress.IPv6Address(ip_str)
+            return ManAddrConst.man_addr_subtype_ipv6
+        except ipaddress.AddressValueError:
+            # not a valid IPv6
+            logger.warning("Invalid mgmt IP {}".format(ip_str))
+        return None
+
+    def man_addr_subtype(self, sub_id, if_name):
+        return self.mgmt_ips[if_name]['addr_subtype']
+
+    def man_addr(self, sub_id, if_name):
+        """
+        :param sub_id:
+        :return: MGMT IP in HEX
+        """
+        return self.mgmt_ips[if_name]['addr_hex']
+
+    @staticmethod
+    def man_addr_if_subtype(sub_id, _): return ManAddrConst.man_addr_if_subtype
+
+    @staticmethod
+    def man_addr_if_id(sub_id, _): return ManAddrConst.man_addr_if_id
+
+    @staticmethod
+    def man_addr_OID(sub_id, _): return ManAddrConst.man_addr_oid
+
+
+_lldp_updater = LLDPRemTableUpdater()
 _port_updater = LocPortUpdater()
 _chassis_updater = LLDPLocalSystemDataUpdater()
+_loc_man_addr_updater = LLDPLocManAddrUpdater()
+_rem_man_addr_updater = LLDPRemManAddrUpdater()
 
 
 class LLDPLocalSystemData(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3'):
     """
-
+    lldpLocalSystemData  OBJECT IDENTIFIER
+    ::= { lldpObjects 3 }
     """
     chassis_updater = _chassis_updater
+
     lldpLocChassisIdSubtype = MIBEntry('1', ValueType.INTEGER, chassis_updater.table_lookup_integer, LLDPLocalChassis(1))
 
     lldpLocChassisId = MIBEntry('2', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(2))
@@ -319,39 +562,72 @@ class LLDPLocalSystemData(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3'):
 
     lldpLocSysDesc = MIBEntry('4', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(4))
 
+    lldpLocSysCapSupported = MIBEntry('5', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(5))
 
-class LLDPLocPortTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3.7'):
-    """
-    lldpLocPortTable OBJECT-TYPE
-        SYNTAX      SEQUENCE OF LldpLocPortEntry
+    lldpLocSysCapEnabled = MIBEntry('6', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(6))
+
+    class LLDPLocPortTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3.7'):
+        """
+        lldpLocPortTable OBJECT-TYPE
+            SYNTAX      SEQUENCE OF LldpLocPortEntry
+            MAX-ACCESS  not-accessible
+            STATUS      current
+            DESCRIPTION
+              "This table contains one or more rows per port information
+               associated with the local system known to this agent."
+            ::= { lldpLocalSystemData 7 }
+
+            LldpLocPortEntry ::= SEQUENCE {
+                lldpLocPortNum                LldpPortNumber,
+                lldpLocPortIdSubtype          LldpPortIdSubtype,
+                lldpLocPortId                 LldpPortId,
+                lldpLocPortDesc               SnmpAdminString
+            }
+
+        """
+        port_updater = _port_updater
+
+        # lldpLocPortEntry = '1'
+
+        lldpLocPortNum = SubtreeMIBEntry('1.1', port_updater, ValueType.INTEGER, port_updater.local_port_num)
+
+        # We're using locally assigned name, so according to textual convention, the subtype is 7
+        lldpLocPortIdSubtype = SubtreeMIBEntry('1.2', port_updater, ValueType.INTEGER, lambda _: 7)
+
+        lldpLocPortId = SubtreeMIBEntry('1.3', port_updater, ValueType.OCTET_STRING, port_updater.local_port_id)
+
+        lldpLocPortDesc = SubtreeMIBEntry('1.4', port_updater, ValueType.OCTET_STRING, port_updater.port_table_lookup,
+                                          "description")
+
+    class LLDPLocManAddrTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3.8'):
+        """
+        lldpLocManAddrTable OBJECT-TYPE
+        SYNTAX      SEQUENCE OF LldpLocManAddrEntry
         MAX-ACCESS  not-accessible
         STATUS      current
         DESCRIPTION
-          "This table contains one or more rows per port information
-           associated with the local system known to this agent."
-        ::= { lldpLocalSystemData 7 }
+                "This table contains management address information on the
+                local system known to this agent."
+        ::= { lldpLocalSystemData 8 }
+        """
+        updater = _loc_man_addr_updater
+        lldpLocManAddrSubtype = SubtreeMIBEntry('1.1', updater, ValueType.INTEGER,
+                                                updater.lookup, updater.man_addr_subtype)
 
-        LldpLocPortEntry ::= SEQUENCE {
-            lldpLocPortNum                LldpPortNumber,
-            lldpLocPortIdSubtype          LldpPortIdSubtype,
-            lldpLocPortId                 LldpPortId,
-            lldpLocPortDesc               SnmpAdminString
-        }
+        lldpLocManAddr = SubtreeMIBEntry('1.2', updater, ValueType.OCTET_STRING,
+                                         updater.lookup, updater.man_addr)
 
-    """
-    port_updater = _port_updater
+        lldpLocManAddrLen = SubtreeMIBEntry('1.3', updater, ValueType.INTEGER,
+                                            updater.lookup, updater.man_addr_len)
 
-    # lldpLocPortEntry = '1'
+        lldpLocManAddrIfSubtype = SubtreeMIBEntry('1.4', updater, ValueType.INTEGER,
+                                                  updater.lookup, updater.man_addr_if_subtype)
 
-    lldpLocPortNum = SubtreeMIBEntry('1.1', port_updater, ValueType.INTEGER, port_updater.local_port_num)
+        lldpLocManAddrIfId = SubtreeMIBEntry('1.5', updater, ValueType.INTEGER,
+                                             updater.lookup, updater.man_addr_if_id)
 
-    # We're using interface name as port id, so according to textual convention, the subtype is 5
-    lldpLocPortIdSubtype = SubtreeMIBEntry('1.2', port_updater, ValueType.INTEGER, lambda _: 5)
-
-    lldpLocPortId = SubtreeMIBEntry('1.3', port_updater, ValueType.OCTET_STRING, port_updater.local_port_id)
-
-    lldpLocPortDesc = SubtreeMIBEntry('1.4', port_updater, ValueType.OCTET_STRING, port_updater.port_table_lookup,
-                                      "description")
+        lldpLocManAddrOID = SubtreeMIBEntry('1.6', updater, ValueType.OBJECT_IDENTIFIER,
+                                            updater.lookup, updater.man_addr_OID)
 
 
 class LLDPRemTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.4.1'):
@@ -490,3 +766,32 @@ class LLDPRemTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.4.1'):
     lldpRemSysCapEnabled = \
         SubtreeMIBEntry('1.12', lldp_updater, ValueType.OCTET_STRING, lldp_updater.lldp_table_lookup,
                         LLDPRemoteTables(12))
+
+
+class LLDPRemManAddrTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.4.2'):
+    """
+    lldpRemManAddrTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF LldpRemManAddrEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+            "This table contains one or more rows per management address
+            information on the remote system learned on a particular port
+            contained in the local chassis known to this agent."
+    ::= { lldpRemoteSystemsData 2 }
+    """
+    updater = _rem_man_addr_updater
+    lldpRemManAddrSubtype = SubtreeMIBEntry('1.1', updater, ValueType.INTEGER,
+                                            updater.lookup, updater.man_addr_subtype)
+
+    lldpRemManAddr = SubtreeMIBEntry('1.2', updater, ValueType.OCTET_STRING,
+                                     updater.lookup, updater.man_addr)
+
+    lldpRemManAddrIfSubtype = SubtreeMIBEntry('1.3', updater, ValueType.INTEGER,
+                                              updater.lookup, updater.man_addr_if_subtype)
+
+    lldpRemManAddrIfId = SubtreeMIBEntry('1.4', updater, ValueType.INTEGER,
+                                         updater.lookup, updater.man_addr_if_id)
+
+    lldpRemManAddrOID = SubtreeMIBEntry('1.5', updater, ValueType.OBJECT_IDENTIFIER,
+                                        updater.lookup, updater.man_addr_OID)
