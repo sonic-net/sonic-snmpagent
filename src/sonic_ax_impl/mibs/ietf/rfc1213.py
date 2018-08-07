@@ -142,6 +142,9 @@ class IpMib(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.4'):
         SubtreeMIBEntry('22.1.2', arp_updater, ValueType.OCTET_STRING, arp_updater.arp_dest)
 
 class InterfacesUpdater(MIBUpdater):
+
+    RFC1213_MAX_SPEED = 4294967295
+
     def __init__(self):
         super().__init__()
         self.db_conn = mibs.init_db()
@@ -296,19 +299,19 @@ class InterfacesUpdater(MIBUpdater):
         if not oid:
             return
 
+        if_table = ""
         # Once PORT_TABLE will be moved to CONFIG DB
         # we will get entry from CONFIG_DB for all cases
-        table = ""
         db = mibs.APPL_DB
         if oid in self.oid_lag_name_map:
-            table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
+            if_table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
         elif oid in self.mgmt_oid_name_map:
-            table = mibs.mgmt_if_entry_table(self.mgmt_oid_name_map[oid])
+            if_table = mibs.mgmt_if_entry_table(self.mgmt_oid_name_map[oid])
             db = mibs.CONFIG_DB
         else:
-            table = mibs.if_entry_table(self.oid_name_map[oid])
+            if_table = mibs.if_entry_table(self.oid_name_map[oid])
 
-        return self.db_conn.get_all(db, table, blocking=True)
+        return self.db_conn.get_all(db, if_table, blocking=True)
 
     def _get_if_entry_state_db(self, sub_id):
         """
@@ -380,6 +383,18 @@ class InterfacesUpdater(MIBUpdater):
 
         return int(entry.get(b"mtu", 0))
 
+    def get_speed_bps(self, sub_id):
+        """
+        :param sub_id: The 1-based sub-identifier query.
+        :return: min of RFC1213_MAX_SPEED or speed value for the respective sub_id.
+        """
+        entry = self._get_if_entry(sub_id)
+        if not entry:
+            return
+
+        speed = int(entry.get(b"speed", 0))
+        # speed is reported in Mbps in the db
+        return min(RFC1213_MAX_SPEED, speed * 1000000)
 
 class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
     """
@@ -409,14 +424,8 @@ class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
     ifMtu = \
         SubtreeMIBEntry('2.1.4', if_updater, ValueType.INTEGER, if_updater.get_mtu)
 
-    # FIXME Placeholder.
-    #   "If the bandwidth of the interface is greater
-    #   than the maximum value reportable by this object,
-    #   then this object should report its maximum value
-    #   (4.294,967,295) and ifHighSpeed must be used to
-    #   report the interface's speed."
     ifSpeed = \
-        SubtreeMIBEntry('2.1.5', if_updater, ValueType.GAUGE_32, lambda sub_id: 4294967295)
+        SubtreeMIBEntry('2.1.5', if_updater, ValueType.GAUGE_32, if_updater.get_speed_bps)
 
     # FIXME Placeholder.
     ifPhysAddress = \
