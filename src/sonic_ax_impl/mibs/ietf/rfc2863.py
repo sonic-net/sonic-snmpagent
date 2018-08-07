@@ -182,6 +182,34 @@ class InterfaceMIBUpdater(MIBUpdater):
             mibs.logger.warning("SyncD 'COUNTERS_DB' missing attribute '{}'.".format(e))
             return None
 
+    def _get_if_entry(self, sub_id):
+        """
+        :param oid: The 1-based sub-identifier query.
+        :return: the DB entry for the respective sub_id.
+        """
+        oid = self.get_oid(sub_id)
+        if not oid:
+            return
+
+        if_table = ""
+        if oid in self.oid_lag_name_map:
+            if_table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
+        else:
+            if_table = mibs.if_entry_table(self.oid_name_map[oid])
+
+        return self.db_conn.get_all(mibs.APPL_DB, if_table, blocking=True)
+
+    def get_high_speed(self, sub_id):
+        """
+        :param sub_id: The 1-based sub-identifier query.
+        :return: speed value for the respective sub_id or 40000 if not defined.
+        """
+        entry = self._get_if_entry(sub_id)
+        if not entry:
+            return
+
+        return int(entry.get(b"speed", 40000))
+
 
 class InterfaceMIBObjects(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.31.1'):
     """
@@ -259,8 +287,7 @@ class InterfaceMIBObjects(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.31.1'):
     """  # FIXME: Placeholder (original impl reported 0)
     ifLinkUpDownTrapEnable = SubtreeMIBEntry('1.1.14', if_updater, ValueType.INTEGER, lambda sub_id: 2)
 
-    # FIXME: Placeholder
-    ifHighSpeed = SubtreeMIBEntry('1.1.15', if_updater, ValueType.GAUGE_32, lambda sub_id: 40000)
+    ifHighSpeed = SubtreeMIBEntry('1.1.15', if_updater, ValueType.GAUGE_32, if_updater.get_high_speed)
 
     """
     ifPromiscuousMode  OBJECT-TYPE
