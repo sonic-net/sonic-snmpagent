@@ -350,7 +350,7 @@ class InterfacesUpdater(MIBUpdater):
 
         speed = int(entry.get(b"speed", 0))
         # speed is reported in Mbps in the db
-        return min(RFC1213_MAX_SPEED, speed * 1000000)
+        return min(self.RFC1213_MAX_SPEED, speed * 1000000)
 
 class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
     """
