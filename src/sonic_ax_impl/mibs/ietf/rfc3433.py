@@ -262,6 +262,8 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         self.ent_phy_sensor_value_map = {}
         self.ent_phy_sensor_oper_state_map = {}
 
+        self.transceiver_dom = []
+
     def reinit_data(self):
         """
         Reinit data, clear cache
@@ -278,8 +280,6 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
                                                     self.TRANSCEIVER_DOM_KEY_PATTERN)
         if transceiver_dom_encoded:
             self.transceiver_dom = [entry.decode() for entry in transceiver_dom_encoded]
-        else:
-            self.transceiver_dom = []
 
     def update_data(self):
         """
