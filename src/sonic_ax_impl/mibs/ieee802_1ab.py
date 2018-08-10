@@ -266,8 +266,13 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         """
         # establish connection to application database.
         self.db_conn.connect(mibs.APPL_DB)
-        self.mgmt_ip_str = self.db_conn.get(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE,
-                                            b'lldp_loc_man_addr').decode('utf-8')
+        mgmt_ip_bytes = self.db_conn.get(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE, b'lldp_loc_man_addr')
+
+        if not mgmt_ip_bytes:
+            logger.warning("failed to get local management address from APP DB.")
+            return
+
+        self.mgmt_ip_str = mgmt_ip_bytes.decode('utf-8')
         logger.debug("Got mgmt ip from db : {}".format(self.mgmt_ip_str))
 
         try:
