@@ -259,6 +259,7 @@ class LocPortUpdater(MIBUpdater):
             return None
         return 7
 
+
 class LLDPLocManAddrUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
@@ -390,7 +391,8 @@ class LLDPRemTableUpdater(MIBUpdater):
                                       remote_index))
 
                 self.lldp_counters.update({if_name: lldp_kvs})
-            except (KeyError, AttributeError):
+            except (KeyError, AttributeError) as e:
+                logger.warning("Exception when updating lldpRemTable: {}".format(e))
                 continue
 
         self.if_range.sort()
@@ -446,7 +448,8 @@ class LLDPRemManAddrUpdater(MIBUpdater):
 
     def update_rem_if_mgmt(self, if_oid, if_name):
         lldp_kvs = self.db_conn.get_all(mibs.APPL_DB, mibs.lldp_entry_table(if_name))
-        if not lldp_kvs:
+        if not lldp_kvs or b'lldp_rem_man_addr' not in lldp_kvs:
+            # this interfaces doesn't have remote lldp data, or the peer doesn't advertise his mgmt address
             return
         try:
             mgmt_ip_str = lldp_kvs[b'lldp_rem_man_addr'].decode()
@@ -461,7 +464,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
                 addr_subtype_sub_oid = 6
                 mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i, 16) if i else 0 for i in mgmt_ip_str.split(':')])
             else:
-                logger.warning("Ivalid management IP {}".format(mgmt_ip_str))
+                logger.warning("Invalid management IP {}".format(mgmt_ip_str))
                 return
             self.if_range.append((time_mark,
                                   if_oid,
@@ -575,21 +578,15 @@ class LLDPRemManAddrUpdater(MIBUpdater):
     def man_addr_OID(sub_id, _): return ManAddrConst.man_addr_oid
 
 
-_lldp_updater = LLDPRemTableUpdater()
-_port_updater = LocPortUpdater()
-_chassis_updater = LLDPLocalSystemDataUpdater()
-_loc_man_addr_updater = LLDPLocManAddrUpdater()
-_rem_man_addr_updater = LLDPRemManAddrUpdater()
-
-
 class LLDPLocalSystemData(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3'):
     """
     lldpLocalSystemData  OBJECT IDENTIFIER
     ::= { lldpObjects 3 }
     """
-    chassis_updater = _chassis_updater
+    chassis_updater = LLDPLocalSystemDataUpdater()
 
-    lldpLocChassisIdSubtype = MIBEntry('1', ValueType.INTEGER, chassis_updater.table_lookup_integer, LLDPLocalChassis(1))
+    lldpLocChassisIdSubtype = MIBEntry('1', ValueType.INTEGER, chassis_updater.table_lookup_integer,
+                                       LLDPLocalChassis(1))
 
     lldpLocChassisId = MIBEntry('2', ValueType.OCTET_STRING, chassis_updater.table_lookup, LLDPLocalChassis(2))
 
@@ -620,7 +617,7 @@ class LLDPLocalSystemData(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3'):
             }
 
         """
-        port_updater = _port_updater
+        port_updater = LocPortUpdater()
 
         # lldpLocPortEntry = '1'
 
@@ -645,7 +642,8 @@ class LLDPLocalSystemData(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3'):
                 local system known to this agent."
         ::= { lldpLocalSystemData 8 }
         """
-        updater = _loc_man_addr_updater
+        updater = LLDPLocManAddrUpdater()
+
         lldpLocManAddrSubtype = SubtreeMIBEntry('1.1', updater, ValueType.INTEGER,
                                                 updater.lookup, updater.man_addr_subtype)
 
@@ -753,7 +751,7 @@ class LLDPRemTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.4.1'):
           lldpRemSysCapEnabled      LldpSystemCapabilitiesMap
     }
     """
-    lldp_updater = _lldp_updater
+    lldp_updater = LLDPRemTableUpdater()
 
     lldpRemTimeMark = \
         SubtreeMIBEntry('1.1', lldp_updater, ValueType.TIME_TICKS, lldp_updater.lldp_table_lookup_integer,
@@ -815,7 +813,8 @@ class LLDPRemManAddrTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.4.2'):
             contained in the local chassis known to this agent."
     ::= { lldpRemoteSystemsData 2 }
     """
-    updater = _rem_man_addr_updater
+    updater = LLDPRemManAddrUpdater()
+
     lldpRemManAddrSubtype = SubtreeMIBEntry('1.1', updater, ValueType.INTEGER,
                                             updater.lookup, updater.man_addr_subtype)
 

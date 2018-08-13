@@ -176,3 +176,18 @@ class TestLLDPMIB(TestCase):
         pdu = PDU.decode(break2)
         resp = pdu.make_response(self.lut)
         print(resp)
+
+    def test_getnextpdu_noeth(self):
+        # oid.include = 1
+        oid = ObjectIdentifier(12, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, 7, 18545, 126, 1))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        print("GetNextPDU sr=", get_pdu.sr)
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.END_OF_MIB_VIEW)
