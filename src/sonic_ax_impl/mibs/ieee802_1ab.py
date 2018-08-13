@@ -210,7 +210,7 @@ class LocPortUpdater(MIBUpdater):
                 break
 
             if b"set" in data:
-                self.update_interface_data(interface.encode('utf-8'))
+                self.update_interface_data(interface.encode())
 
     def local_port_num(self, sub_id):
         if len(sub_id) == 0:
@@ -266,10 +266,13 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         """
         # establish connection to application database.
         self.db_conn.connect(mibs.APPL_DB)
-        self.mgmt_ip_str = self.db_conn.get(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE,
-                                            b'lldp_loc_man_addr').decode('utf-8')
-        logger.debug("Got mgmt ip from db : {}".format(self.mgmt_ip_str))
+        mgmt_ip_bytes = self.db_conn.get(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE, b'lldp_loc_man_addr')
 
+        if not mgmt_ip_bytes:
+            self.mgmt_ip_str = ''
+        else:
+            self.mgmt_ip_str = mgmt_ip_bytes.decode()
+            logger.debug("Got mgmt ip from db : {}".format(self.mgmt_ip_str))
         try:
             mgmt_ip_sub_oid = tuple([int(i) for i in self.mgmt_ip_str.split('.')])
         except ValueError:
@@ -425,7 +428,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
                                          b'lldp_rem_man_addr')
         if not mgmt_ip_bytes:
             return
-        mgmt_ip_str = mgmt_ip_bytes.decode('utf-8')
+        mgmt_ip_str = mgmt_ip_bytes.decode()
         subtype = self.get_subtype(mgmt_ip_str)
         ip_hex = self.get_ip_hex(mgmt_ip_str, subtype)
         mgmt_ip_sub_oid = None
@@ -459,11 +462,11 @@ class LLDPRemManAddrUpdater(MIBUpdater):
                 break
 
             if b"set" in data:
-                self.update_rem_if_mgmt(if_index, interface.encode('utf-8'))
+                self.update_rem_if_mgmt(if_index, interface.encode())
             elif b"del" in data:
                 # some remote data about that neighbor is gone, del it and try to query again
                 self.if_range = [sub_oid for sub_oid in self.if_range if sub_oid[0] != if_index]
-                self.update_rem_if_mgmt(if_index, interface.encode('utf-8'))
+                self.update_rem_if_mgmt(if_index, interface.encode())
 
     def reinit_data(self):
         """
