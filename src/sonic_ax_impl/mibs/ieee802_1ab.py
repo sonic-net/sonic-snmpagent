@@ -250,6 +250,14 @@ class LocPortUpdater(MIBUpdater):
             logger.warning(" 0 - b'PORT_TABLE' missing attribute '{}'.".format(e))
             return None
 
+    def port_id_subtype(self, sub_id):
+        """
+        return port_id_subtype 7(local)
+        for every port
+        """
+        if len(sub_id) == 0:
+            return None
+        return 7
 
 class LLDPLocManAddrUpdater(MIBUpdater):
     def __init__(self):
@@ -274,10 +282,14 @@ class LLDPLocManAddrUpdater(MIBUpdater):
             self.mgmt_ip_str = mgmt_ip_bytes.decode()
             logger.debug("Got mgmt ip from db : {}".format(self.mgmt_ip_str))
         try:
-            mgmt_ip_sub_oid = tuple([int(i) for i in self.mgmt_ip_str.split('.')])
+            addr_subtype_sub_oid = 4
+            mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i) for i in self.mgmt_ip_str.split('.')])
         except ValueError:
             logger.error("Invalid local mgmt IP {}".format(self.mgmt_ip_str))
-        self.man_addr_list.append(mgmt_ip_sub_oid)
+            return
+        sub_oid = (ManAddrConst.man_addr_subtype_ipv4,
+                   *mgmt_ip_sub_oid)
+        self.man_addr_list.append(sub_oid)
 
     def update_data(self):
         """
@@ -370,14 +382,23 @@ class LLDPRemTableUpdater(MIBUpdater):
             lldp_kvs = self.db_conn.get_all(mibs.APPL_DB, mibs.lldp_entry_table(if_name))
             if not lldp_kvs:
                 continue
-            self.if_range.append((if_oid, ))
-            self.lldp_counters.update({if_name: lldp_kvs})
+            try:
+                time_mark = int(lldp_kvs[b'lldp_rem_time_mark'])
+                remote_index = int(lldp_kvs[b'lldp_rem_index'])
+                self.if_range.append((time_mark,
+                                      if_oid,
+                                      remote_index))
+
+                self.lldp_counters.update({if_name: lldp_kvs})
+            except (KeyError, AttributeError):
+                continue
+
         self.if_range.sort()
 
     def local_port_num(self, sub_id):
         if len(sub_id) == 0:
             return None
-        sub_id = sub_id[0]
+        sub_id = sub_id[1]
         if sub_id not in self.oid_name_map:
             return None
         return int(sub_id)
@@ -385,7 +406,7 @@ class LLDPRemTableUpdater(MIBUpdater):
     def lldp_table_lookup(self, sub_id, table_name):
         if len(sub_id) == 0:
             return None
-        sub_id = sub_id[0]
+        sub_id = sub_id[1]
         if sub_id not in self.oid_name_map:
             return None
         if_name = self.oid_name_map[sub_id]
@@ -424,25 +445,36 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         self.pubsub = None
 
     def update_rem_if_mgmt(self, if_oid, if_name):
-        mgmt_ip_bytes = self.db_conn.get(mibs.APPL_DB, mibs.lldp_entry_table(if_name),
-                                         b'lldp_rem_man_addr')
-        if not mgmt_ip_bytes:
+        lldp_kvs = self.db_conn.get_all(mibs.APPL_DB, mibs.lldp_entry_table(if_name))
+        if not lldp_kvs:
             return
-        mgmt_ip_str = mgmt_ip_bytes.decode()
-        subtype = self.get_subtype(mgmt_ip_str)
-        ip_hex = self.get_ip_hex(mgmt_ip_str, subtype)
-        mgmt_ip_sub_oid = None
-        if subtype == ManAddrConst.man_addr_subtype_ipv4:
-            mgmt_ip_sub_oid = tuple(int(i) for i in mgmt_ip_str.split('.'))
-        elif subtype == ManAddrConst.man_addr_subtype_ipv6:
-            mgmt_ip_sub_oid = tuple(int(i, 16) if i else 0 for i in mgmt_ip_str.split(':'))
-        else:
-            logger.warning("Ivalid management IP {}".format(mgmt_ip_str))
+        try:
+            mgmt_ip_str = lldp_kvs[b'lldp_rem_man_addr'].decode()
+            time_mark = int(lldp_kvs[b'lldp_rem_time_mark'])
+            remote_index = int(lldp_kvs[b'lldp_rem_index'])
+            subtype = self.get_subtype(mgmt_ip_str)
+            ip_hex = self.get_ip_hex(mgmt_ip_str, subtype)
+            if subtype == ManAddrConst.man_addr_subtype_ipv4:
+                addr_subtype_sub_oid = 4
+                mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i) for i in mgmt_ip_str.split('.')])
+            elif subtype == ManAddrConst.man_addr_subtype_ipv6:
+                addr_subtype_sub_oid = 6
+                mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i, 16) if i else 0 for i in mgmt_ip_str.split(':')])
+            else:
+                logger.warning("Ivalid management IP {}".format(mgmt_ip_str))
+                return
+            self.if_range.append((time_mark,
+                                  if_oid,
+                                  remote_index,
+                                  subtype,
+                                  *mgmt_ip_sub_oid))
+
+            self.mgmt_ips.update({if_name: {"ip_str": mgmt_ip_str,
+                                            "addr_subtype": subtype,
+                                            "addr_hex": ip_hex}})
+        except (KeyError, AttributeError) as e:
+            logger.warning("Error updating remote mgmt addr: {}".format(e))
             return
-        self.if_range.append((if_oid, *mgmt_ip_sub_oid))
-        self.mgmt_ips.update({if_name: {"ip_str": mgmt_ip_str,
-                                        "addr_subtype": subtype,
-                                        "addr_hex": ip_hex}})
         self.if_range.sort()
 
     def update_data(self):
@@ -490,7 +522,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
     def lookup(self, sub_id, callable):
         if len(sub_id) == 0:
             return None
-        sub_id = sub_id[0]
+        sub_id = sub_id[1]
         if sub_id not in self.oid_name_map:
             return None
         if_name = self.oid_name_map[sub_id]
@@ -595,7 +627,7 @@ class LLDPLocalSystemData(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3'):
         lldpLocPortNum = SubtreeMIBEntry('1.1', port_updater, ValueType.INTEGER, port_updater.local_port_num)
 
         # We're using locally assigned name, so according to textual convention, the subtype is 7
-        lldpLocPortIdSubtype = SubtreeMIBEntry('1.2', port_updater, ValueType.INTEGER, lambda _: 7)
+        lldpLocPortIdSubtype = SubtreeMIBEntry('1.2', port_updater, ValueType.INTEGER, port_updater.port_id_subtype)
 
         lldpLocPortId = SubtreeMIBEntry('1.3', port_updater, ValueType.OCTET_STRING, port_updater.local_port_id)
 
