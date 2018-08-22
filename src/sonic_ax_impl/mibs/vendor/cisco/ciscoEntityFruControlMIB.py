@@ -49,7 +49,7 @@ class PowerStatusHandler:
             num_psus = self.psuutil.get_num_psus()
         except Exception:
             # Any unexpected exception or error, log it and keep running
-            logger.exception("PowerStatusHandler._getPsuIndex() caught an unexpected exception during get_num_psus()")
+            mibs.logger.exception("PowerStatusHandler._getPsuIndex() caught an unexpected exception during get_num_psus()")
             return None
 
         if psu_index < 1 or psu_index > num_psus:
@@ -73,7 +73,7 @@ class PowerStatusHandler:
             num_psus = self.psuutil.get_num_psus()
         except Exception:
             # Any unexpected exception or error, log it and keep running
-            logger.exception("PowerStatusHandler.get_next() caught an unexpected exception during get_num_psus()")
+            mibs.logger.exception("PowerStatusHandler.get_next() caught an unexpected exception during get_num_psus()")
             return None
 
 
@@ -100,7 +100,7 @@ class PowerStatusHandler:
             psu_presence = self.psuutil.get_psu_presence(psu_index)
         except Exception:
             # Any unexpected exception or error, log it and keep running
-            logger.exception("PowerStatusHandler.getPsuStatus() caught an unexpected exception during get_psu_presence()")
+            mibs.logger.exception("PowerStatusHandler.getPsuStatus() caught an unexpected exception during get_psu_presence()")
             return None
 
         if psu_presence:
@@ -108,7 +108,7 @@ class PowerStatusHandler:
                 psu_status = self.psuutil.get_psu_status(psu_index)
             except Exception:
                 # Any unexpected exception or error, log it and keep running
-                logger.exception("PowerStatusHandler.getPsuStatus() caught an unexpected exception during get_psu_status()")
+                mibs.logger.exception("PowerStatusHandler.getPsuStatus() caught an unexpected exception during get_psu_status()")
                 return None
 
             if psu_status:
