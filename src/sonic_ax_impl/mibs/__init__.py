@@ -40,6 +40,7 @@ SENSOR_PART_ID_MAP = {
 IFINDEX_SUB_ID_MULTIPLIER = 1000
 
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
+redis_sec_kwargs = {'unix_socket_path': '/var/run/redis/redis-secondary.sock'}
 
 def counter_table(sai_id):
     """
@@ -110,6 +111,18 @@ def init_db():
     # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
     # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
     db_conn = SonicV2Connector(**redis_kwargs)
+
+    return db_conn
+
+
+def init_db_sec():
+    """
+    Connects to DB
+    :return: db_conn
+    """
+    # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
+    # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
+    db_conn = SonicV2Connector(**redis_sec_kwargs)
 
     return db_conn
 

@@ -18,6 +18,7 @@ class FdbUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
         self.db_conn = mibs.init_db()
+        self.db_sec_conn = mibs.init_db_sec()
 
         self.if_name_map = {}
         self.if_alias_map = {}
@@ -38,7 +39,7 @@ class FdbUpdater(MIBUpdater):
         self.oid_sai_map, \
         self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
 
-        self.if_bpid_map = port_util.get_bridge_port_map(self.db_conn)
+        self.if_bpid_map = port_util.get_bridge_port_map(self.db_sec_conn)
 
 
     def update_data(self):
@@ -46,11 +47,11 @@ class FdbUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
-        self.db_conn.connect(mibs.ASIC_DB)
+        self.db_sec_conn.connect(mibs.ASIC_DB)
         self.vlanmac_ifindex_map = {}
         self.vlanmac_ifindex_list = []
 
-        fdb_strings = self.db_conn.keys(mibs.ASIC_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:*")
+        fdb_strings = self.db_sec_conn.keys(mibs.ASIC_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:*")
         if not fdb_strings:
             return
 
@@ -62,14 +63,14 @@ class FdbUpdater(MIBUpdater):
                 mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': {}.".format(fdb_str, e))
                 break
 
-            ent = self.db_conn.get_all(mibs.ASIC_DB, s, blocking=True)
+            ent = self.db_sec_conn.get_all(mibs.ASIC_DB, s, blocking=True)
             # Example output: oid:0x3a000000000608
             bridge_port_id = ent[b"SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"][6:]
             if bridge_port_id not in self.if_bpid_map:
                 continue
             port_id = self.if_bpid_map[bridge_port_id]
 
-            vlanmac = fdb_vlanmac(self.db_conn, fdb)
+            vlanmac = fdb_vlanmac(self.db_sec_conn, fdb)
             self.vlanmac_ifindex_map[vlanmac] = mibs.get_index(self.if_id_map[port_id])
             self.vlanmac_ifindex_list.append(vlanmac)
         self.vlanmac_ifindex_list.sort()
