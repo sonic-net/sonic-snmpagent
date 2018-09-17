@@ -2,6 +2,7 @@ import ipaddress
 import python_arptable
 from enum import unique, Enum
 from bisect import bisect_right
+from swsssdk.port_util import BaseIdx
 
 from sonic_ax_impl import mibs
 from ax_interface import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry
@@ -369,7 +370,10 @@ class InterfacesUpdater(MIBUpdater):
         """
         oid = self.get_oid(sub_id)
         if oid:
-            return IfTypes.ethernetCsmacd if oid < 1000 else IfTypes.ieee8023adLag
+            if oid < BaseIdx.portchannel_base_idx:
+                return IfTypes.ethernetCsmacd
+            else:
+                return IfTypes.ieee8023adLag
 
 
 class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
