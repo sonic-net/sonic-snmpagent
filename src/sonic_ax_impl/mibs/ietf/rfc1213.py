@@ -2,7 +2,6 @@ import ipaddress
 import python_arptable
 from enum import unique, Enum
 from bisect import bisect_right
-from swsssdk.port_util import BaseIdx
 
 from sonic_ax_impl import mibs
 from ax_interface import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry
@@ -159,6 +158,8 @@ class InterfacesUpdater(MIBUpdater):
         self.lag_name_if_name_map = {}
         self.if_name_lag_name_map = {}
         self.oid_lag_name_map = {}
+        self.mgmt_oid_name_map = {}
+        self.mgmt_alias_map = {}
 
         # cache of interface counters
         self.if_counters = {}
@@ -179,6 +180,9 @@ class InterfacesUpdater(MIBUpdater):
         self.oid_sai_map, \
         self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
 
+        self.mgmt_oid_name_map, \
+        self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn)
+
     def update_data(self):
         """
         Update redis (caches config)
@@ -192,7 +196,9 @@ class InterfacesUpdater(MIBUpdater):
         self.if_name_lag_name_map, \
         self.oid_lag_name_map = mibs.init_sync_d_lag_tables(self.db_conn)
 
-        self.if_range = sorted(list(self.oid_sai_map.keys()) + list(self.oid_lag_name_map.keys()))
+        self.if_range = sorted(list(self.oid_sai_map.keys()) +
+                               list(self.oid_lag_name_map.keys()) +
+                               list(self.mgmt_oid_name_map.keys()))
         self.if_range = [(i,) for i in self.if_range]
 
     def get_next(self, sub_id):
@@ -234,6 +240,8 @@ class InterfacesUpdater(MIBUpdater):
 
         if oid in self.oid_lag_name_map:
             return self.oid_lag_name_map[oid]
+        elif oid in self.mgmt_oid_name_map:
+            return self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
 
         return self.if_alias_map[self.oid_name_map[oid]]
 
@@ -267,7 +275,12 @@ class InterfacesUpdater(MIBUpdater):
         if not oid:
             return
 
-        if oid in self.oid_lag_name_map:
+        if oid in self.mgmt_oid_name_map:
+            # TODO: mgmt counters not available through SNMP right now
+            # COUNTERS DB does not have suppot for generic linux (mgmt) interface counters
+            mibs.logger.warning('management interface counters not available through SNMP right now')
+            return 0
+        elif oid in self.oid_lag_name_map:
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
                 counter_value += self._get_counter(mibs.get_index(lag_member), table_name)
@@ -295,6 +308,8 @@ class InterfacesUpdater(MIBUpdater):
         if_table = ""
         if oid in self.oid_lag_name_map:
             if_table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
+        elif oid in self.mgmt_oid_name_map:
+            if_table = mibs.mgmt_if_entry_table(self.mgmt_oid_name_map[oid])
         else:
             if_table = mibs.if_entry_table(self.oid_name_map[oid])
 
@@ -369,11 +384,13 @@ class InterfacesUpdater(MIBUpdater):
         ieee8023adLag(161) -- IEEE 802.3ad Link Aggregate
         """
         oid = self.get_oid(sub_id)
-        if oid:
-            if oid < BaseIdx.portchannel_base_idx:
-                return IfTypes.ethernetCsmacd
-            else:
-                return IfTypes.ieee8023adLag
+        if not oid:
+            return
+
+        if oid in self.oid_lag_name_map:
+            return IfTypes.ieee8023adLag
+        else:
+            return IfTypes.ethernetCsmacd
 
 
 class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
