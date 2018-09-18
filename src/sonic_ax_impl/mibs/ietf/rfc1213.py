@@ -2,6 +2,7 @@ import ipaddress
 import python_arptable
 from enum import unique, Enum
 from bisect import bisect_right
+from swsssdk.port_util import BaseIdx
 
 from sonic_ax_impl import mibs
 from ax_interface import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry
@@ -44,6 +45,12 @@ class DbTables(int, Enum):
     SAI_PORT_STAT_IF_OUT_ERRORS = 20
     # ifOutQLen ::= { ifEntry 21 }
     SAI_PORT_STAT_IF_OUT_QLEN = 21
+
+@unique
+class IfTypes(int, Enum):
+    """ IANA ifTypes """
+    ethernetCsmacd = 6
+    ieee8023adLag = 161
 
 class ArpUpdater(MIBUpdater):
     def __init__(self):
@@ -352,6 +359,23 @@ class InterfacesUpdater(MIBUpdater):
         # speed is reported in Mbps in the db
         return min(self.RFC1213_MAX_SPEED, speed * 1000000)
 
+    def get_if_type(self, sub_id):
+        """
+        :param sub_id: The 1-based sub-identifier query.
+        :return: integer representing a type according to textual convention
+
+        ethernetCsmacd(6), -- for all ethernet-like interfaces,
+                           -- regardless of speed, as per RFC3635
+        ieee8023adLag(161) -- IEEE 802.3ad Link Aggregate
+        """
+        oid = self.get_oid(sub_id)
+        if oid:
+            if oid < BaseIdx.portchannel_base_idx:
+                return IfTypes.ethernetCsmacd
+            else:
+                return IfTypes.ieee8023adLag
+
+
 class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
     """
     'interfaces' https://tools.ietf.org/html/rfc1213#section-3.5
@@ -371,11 +395,8 @@ class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
     ifDescr = \
         SubtreeMIBEntry('2.1.2', if_updater, ValueType.OCTET_STRING, if_updater.interface_description)
 
-    # FIXME: Placeholder
-    # ethernetCsmacd(6), -- for all ethernet-like interfaces,
-    #                    -- regardless of speed, as per RFC3635
     ifType = \
-        SubtreeMIBEntry('2.1.3', if_updater, ValueType.INTEGER, lambda sub_id: 6)
+        SubtreeMIBEntry('2.1.3', if_updater, ValueType.INTEGER, if_updater.get_if_type)
 
     ifMtu = \
         SubtreeMIBEntry('2.1.4', if_updater, ValueType.INTEGER, if_updater.get_mtu)
