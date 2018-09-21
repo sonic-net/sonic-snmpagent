@@ -4,7 +4,7 @@ import re
 from swsssdk import SonicV2Connector
 from swsssdk import port_util
 from swsssdk.port_util import get_index, get_index_from_str
-from sonic_ax_impl import logger, _if_alias_map
+from sonic_ax_impl import logger
 
 COUNTERS_PORT_NAME_MAP = b'COUNTERS_PORT_NAME_MAP'
 COUNTERS_QUEUE_NAME_MAP = b'COUNTERS_QUEUE_NAME_MAP'
@@ -156,12 +156,15 @@ def init_sync_d_interface_tables(db_conn):
                        .format(port_util.SONIC_ETHERNET_RE_PATTERN))
         logger.warning("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
 
-    # { SONiC name -> optional rename }
-    if_alias_map = _if_alias_map
+    db_conn.connect(APPL_DB)
+
+    if_alias_map = dict()
+
+    for if_name in if_name_map:
+        if_entry = db_conn.get_all(APPL_DB, if_entry_table(if_name), blocking=True)
+        if_alias_map[if_name] = if_entry.get(b'alias', if_name)
+
     logger.debug("Chassis name map:\n" + pprint.pformat(if_alias_map, indent=2))
-    if if_alias_map is None or len(if_alias_map) == 0:
-        logger.warning("No alias map found--port names will use SONiC names.")
-        if_alias_map = dict(zip(if_name_map.keys(), if_name_map.keys()))
 
     return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map
 

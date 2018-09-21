@@ -66,7 +66,7 @@ class TestSonicMIB(TestCase):
         sub_id = 1000 * 1 # sub id for Ethernet100
 
         expected_mib = {
-            2: (ValueType.OCTET_STRING, "QSFP+ for Ethernet0"),
+            2: (ValueType.OCTET_STRING, "QSFP+ for etp1"),
             5: (ValueType.INTEGER, PhysicalClass.PORT),
             7: (ValueType.OCTET_STRING, ""), # skip
             8: (ValueType.OCTET_STRING, "A1"),
@@ -97,20 +97,20 @@ class TestSonicMIB(TestCase):
 
     def test_getpdu_xcvr_dom(self):
         expected_mib = {
-            1000 * 1 + 1: "DOM Temperature Sensor for Ethernet0",
-            1000 * 1 + 2: "DOM Voltage Sensor for Ethernet0",
-            1000 * 1 + 11: "DOM RX Power Sensor for Ethernet0/1",
-            1000 * 1 + 21: "DOM RX Power Sensor for Ethernet0/2",
-            1000 * 1 + 31: "DOM RX Power Sensor for Ethernet0/3",
-            1000 * 1 + 41: "DOM RX Power Sensor for Ethernet0/4",
-            1000 * 1 + 12: "DOM TX Bias Sensor for Ethernet0/1",
-            1000 * 1 + 22: "DOM TX Bias Sensor for Ethernet0/2",
-            1000 * 1 + 32: "DOM TX Bias Sensor for Ethernet0/3",
-            1000 * 1 + 42: "DOM TX Bias Sensor for Ethernet0/4",
-            1000 * 1 + 13: "DOM TX Power Sensor for Ethernet0/1",
-            1000 * 1 + 23: "DOM TX Power Sensor for Ethernet0/2",
-            1000 * 1 + 33: "DOM TX Power Sensor for Ethernet0/3",
-            1000 * 1 + 43: "DOM TX Power Sensor for Ethernet0/4",
+            1000 * 1 + 1: "DOM Temperature Sensor for etp1",
+            1000 * 1 + 2: "DOM Voltage Sensor for etp1",
+            1000 * 1 + 11: "DOM RX Power Sensor for etp1/1",
+            1000 * 1 + 21: "DOM RX Power Sensor for etp1/2",
+            1000 * 1 + 31: "DOM RX Power Sensor for etp1/3",
+            1000 * 1 + 41: "DOM RX Power Sensor for etp1/4",
+            1000 * 1 + 12: "DOM TX Bias Sensor for etp1/1",
+            1000 * 1 + 22: "DOM TX Bias Sensor for etp1/2",
+            1000 * 1 + 32: "DOM TX Bias Sensor for etp1/3",
+            1000 * 1 + 42: "DOM TX Bias Sensor for etp1/4",
+            1000 * 1 + 13: "DOM TX Power Sensor for etp1/1",
+            1000 * 1 + 23: "DOM TX Power Sensor for etp1/2",
+            1000 * 1 + 33: "DOM TX Power Sensor for etp1/3",
+            1000 * 1 + 43: "DOM TX Power Sensor for etp1/4",
         }
 
         phyDescr, phyClass = 2, 5

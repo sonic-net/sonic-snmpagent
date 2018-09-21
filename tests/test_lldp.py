@@ -133,7 +133,7 @@ class TestLLDPMIB(TestCase):
     def test_local_port_identification(self):
         mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 3, 7, 1, 3)]
         ret = mib_entry(sub_id=(1,))
-        self.assertEquals(ret, b'Ethernet0')
+        self.assertEquals(ret, b'etp1')
         print(ret)
 
     def test_local_port_num(self):
@@ -154,7 +154,7 @@ class TestLLDPMIB(TestCase):
         response = get_pdu.make_response(self.lut)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
-        self.assertEqual(str(value0.data), "Ethernet0")
+        self.assertEqual(str(value0.data), "etp1")
 
     def test_lab_breaks(self):
         break1 = b'\x01\x06\x10\x00\x00\x00\x00q\x00\x01\xd1\x02\x00\x01\xd1\x03\x00\x00\x00P\t\x00\x01\x00\x00' \
