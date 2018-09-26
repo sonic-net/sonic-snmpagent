@@ -456,254 +456,160 @@
   },
   "PORT_TABLE:Ethernet0": {
     "description": "snowflake",
+    "alias": "etp1",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet4": {
     "description": "snowflake",
+    "alias": "etp2",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet8": {
     "description": "snowflake",
+    "alias": "etp3",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet12": {
     "description": "snowflake",
+    "alias": "etp4",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet16": {
     "description": "snowflake",
+    "alias": "etp5",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet20": {
     "description": "snowflake",
+    "alias": "etp6",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet24": {
     "description": "snowflake",
+    "alias": "etp7",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet28": {
     "description": "snowflake",
+    "alias": "etp8",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet32": {
     "description": "snowflake",
+    "alias": "etp9",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet36": {
     "description": "snowflake",
+    "alias": "etp10",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet40": {
     "description": "snowflake",
+    "alias": "etp11",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet44": {
     "description": "snowflake",
+    "alias": "etp12",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet48": {
     "description": "snowflake",
+    "alias": "etp13",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet52": {
     "description": "snowflake",
+    "alias": "etp14",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet56": {
     "description": "snowflake",
+    "alias": "etp15",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet60": {
     "description": "snowflake",
+    "alias": "etp16",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet64": {
     "description": "snowflake",
+    "alias": "etp17",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet68": {
     "description": "snowflake",
+    "alias": "etp18",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet72": {
     "description": "snowflake",
+    "alias": "etp19",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet76": {
     "description": "snowflake",
+    "alias": "etp20",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet80": {
     "description": "snowflake",
+    "alias": "etp21",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet84": {
     "description": "snowflake",
+    "alias": "etp22",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet88": {
     "description": "snowflake",
+    "alias": "etp23",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet92": {
     "description": "snowflake",
+    "alias": "etp24",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet96": {
     "description": "snowflake",
+    "alias": "etp25",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet100": {
     "description": "snowflake",
+    "alias": "etp26",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet104": {
     "description": "snowflake",
+    "alias": "etp27",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet108": {
     "description": "snowflake",
+    "alias": "etp28",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet112": {
     "description": "snowflake",
+    "alias": "etp29",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet116": {
-    "speed": 1000
+    "speed": 1000,
+    "alias": "etp30"
   },
   "PORT_TABLE:Ethernet120": {
-    "description": "snowflake"
+    "description": "snowflake",
+    "alias": "et31"
   },
   "PORT_TABLE:Ethernet124": {
     "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet0": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet4": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet8": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet12": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet16": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet20": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet24": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet28": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet32": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet36": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet40": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet44": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet48": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet52": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet56": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet60": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet64": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet68": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet72": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet76": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet80": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet84": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet88": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet92": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet96": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet100": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet104": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet108": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet112": {
-    "description": "snowflake",
-    "speed": 100000
-  },
-  "PORT_TABLE:Ethernet116": {
-    "speed": 1000
-  },
-  "PORT_TABLE:Ethernet120": {
-    "description": "snowflake"
-  },
-  "PORT_TABLE:Ethernet124": {
-    "description": "snowflake",
+    "alias": "etp32",
     "speed": 100000
   },
   "ROUTE_TABLE:0.0.0.0/0": {
