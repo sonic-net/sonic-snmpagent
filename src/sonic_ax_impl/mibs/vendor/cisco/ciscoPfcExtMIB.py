@@ -110,7 +110,8 @@ class PfcUpdater(MIBUpdater):
         if oid is None:
             return None
 
-        counter_name = 'SAI_PORT_STAT_PFC_3_RX_PKTS'
+        # BUG: need the sum of all the priorities
+        counter_name = 'SAI_PORT_STAT_PFC_3_TX_PKTS'
 
         if oid in self.oid_lag_name_map:
             counter_value = 0
@@ -131,7 +132,8 @@ class PfcUpdater(MIBUpdater):
         if oid is None:
             return None
 
-        counter_name = 'SAI_PORT_STAT_PFC_3_TX_PKTS'
+        # BUG: need the sum of all the priorities
+        counter_name = 'SAI_PORT_STAT_PFC_3_RX_PKTS'
 
         if oid in self.oid_lag_name_map:
             counter_value = 0
@@ -203,7 +205,7 @@ class PfcPrioUpdater(PfcUpdater):
             mibs.logger.warning("requestsPerPriority: incorrect sub_id = {} error: {}".format(str(sub_id), e))
             return None
 
-        counter_name = 'SAI_PORT_STAT_PFC_' + str(queue_index) + '_RX_PKTS'
+        counter_name = 'SAI_PORT_STAT_PFC_' + str(queue_index) + '_TX_PKTS'
 
         if port_oid in self.oid_lag_name_map:
             counter_value = 0
@@ -233,7 +235,7 @@ class PfcPrioUpdater(PfcUpdater):
             mibs.logger.warning("indicationsPerPriority: incorrect sub_id = {}".format(str(sub_id)))
             return None
 
-        counter_name = 'SAI_PORT_STAT_PFC_' + str(queue_index) + '_TX_PKTS'
+        counter_name = 'SAI_PORT_STAT_PFC_' + str(queue_index) + '_RX_PKTS'
 
         if port_oid in self.oid_lag_name_map:
             counter_value = 0
