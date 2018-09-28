@@ -306,14 +306,37 @@ class InterfacesUpdater(MIBUpdater):
             return
 
         if_table = ""
+        db = mibs.APPL_DB
         if oid in self.oid_lag_name_map:
             if_table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
         elif oid in self.mgmt_oid_name_map:
             if_table = mibs.mgmt_if_entry_table(self.mgmt_oid_name_map[oid])
-        else:
+            db = mibs.CONFIG_DB
+        elif oid in self.oid_name_map:
             if_table = mibs.if_entry_table(self.oid_name_map[oid])
+        else:
+            return None
 
-        return self.db_conn.get_all(mibs.APPL_DB, if_table, blocking=True)
+        return self.db_conn.get_all(db, if_table, blocking=True)
+
+    def _get_if_entry_state_db(self, sub_id):
+        """
+        :param oid: The 1-based sub-identifier query.
+        :return: the DB entry for the respective sub_id.
+        """
+        oid = self.get_oid(sub_id)
+        if not oid:
+            return
+
+        if_table = ""
+        db = mibs.STATE_DB
+        if oid in self.mgmt_oid_name_map:
+            mgmt_if_name = self.mgmt_oid_name_map[oid]
+            if_table = mibs.mgmt_if_entry_table_state_db(mgmt_if_name)
+        else:
+            return None
+
+        return self.db_conn.get_all(db, if_table, blocking=True)
 
     def _get_status(self, sub_id, key):
         """
@@ -326,7 +349,10 @@ class InterfacesUpdater(MIBUpdater):
             b"down": 2
         }
 
-        entry = self._get_if_entry(sub_id)
+        if self.get_oid(sub_id) in self.mgmt_oid_name_map and key == b"oper_status":
+            entry = self._get_if_entry_state_db(sub_id)
+        else:
+            entry = self._get_if_entry(sub_id)
         if not entry:
             return
 

@@ -206,14 +206,18 @@ class InterfaceMIBUpdater(MIBUpdater):
             return
 
         if_table = ""
+        db = mibs.APPL_DB
         if oid in self.oid_lag_name_map:
             if_table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
         elif oid in self.mgmt_oid_name_map:
             if_table = mibs.mgmt_if_entry_table(self.mgmt_oid_name_map[oid])
-        else:
+            db = mibs.CONFIG_DB
+        elif oid in self.oid_name_map:
             if_table = mibs.if_entry_table(self.oid_name_map[oid])
+        else:
+            return None
 
-        return self.db_conn.get_all(mibs.APPL_DB, if_table, blocking=True)
+        return self.db_conn.get_all(db, if_table, blocking=True)
 
     def get_high_speed(self, sub_id):
         """
