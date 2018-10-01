@@ -5,6 +5,7 @@
   },
   "MGMT_PORT|eth1": {
     "description": "snowflake",
+    "admin_status": "up",
     "alias": "mgmt1",
     "speed": 1000
   }
