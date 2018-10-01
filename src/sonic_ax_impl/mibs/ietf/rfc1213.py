@@ -306,6 +306,8 @@ class InterfacesUpdater(MIBUpdater):
             return
 
         if_table = ""
+        # Once PORT_TABLE will be moved to CONFIG DB
+        # we will get entry from CONFIG_DB for all cases
         db = mibs.APPL_DB
         if oid in self.oid_lag_name_map:
             if_table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
@@ -349,6 +351,9 @@ class InterfacesUpdater(MIBUpdater):
             b"down": 2
         }
 
+        # Once PORT_TABLE will be moved to CONFIG DB
+        # we will get rid of this if-else
+        # and read oper status from STATE_DB
         if self.get_oid(sub_id) in self.mgmt_oid_name_map and key == b"oper_status":
             entry = self._get_if_entry_state_db(sub_id)
         else:

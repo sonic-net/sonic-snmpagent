@@ -206,6 +206,8 @@ class InterfaceMIBUpdater(MIBUpdater):
             return
 
         if_table = ""
+        # Once PORT_TABLE will be moved to CONFIG DB
+        # we will get entry from CONFIG_DB for all cases
         db = mibs.APPL_DB
         if oid in self.oid_lag_name_map:
             if_table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
