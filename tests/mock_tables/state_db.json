@@ -1,5 +1,11 @@
 {
   "DEVICE_METADATA|localhost": {
     "chassis_serial_number": "SAMPLETESTSN"
+  },
+  "MGMT_PORT_TABLE|eth0": {
+    "oper_status": "down"
+  },
+  "MGMT_PORT_TABLE|eth1": {
+    "oper_status": "up"
   }
 }

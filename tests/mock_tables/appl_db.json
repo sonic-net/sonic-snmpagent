@@ -159,6 +159,16 @@
     "lldp_rem_sys_name": "switch218ad08",
     "lldp_rem_port_id": "ge-0/0/17"
   },
+  "LLDP_ENTRY_TABLE:eth1": {
+    "lldp_rem_port_id_subtype": 5,
+    "lldp_rem_chassis_id": "f4:b5:2f:56:34:00",
+    "lldp_rem_sys_desc": "I'm going to need you to come in on saturday",
+    "lldp_rem_time_mark": 18542,
+    "lldp_rem_port_desc": "TPS report vending machine",
+    "lldp_rem_chassis_id_subtype": 4,
+    "lldp_rem_sys_name": "switch218ad08",
+    "lldp_rem_port_id": "ge-0/0/17"
+  },
   "LLDP_ENTRY_TABLE:Ethernet20": {
     "lldp_rem_port_id_subtype": 5,
     "lldp_rem_chassis_id": "00:11:22:33:44:55",

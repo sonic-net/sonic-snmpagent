@@ -78,6 +78,12 @@ class TestLLDPMIB(TestCase):
         self.assertEquals(ret, b'Ethernet0')
         print(ret)
 
+    def test_mgmt_local_port_identification(self):
+        mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 3, 7, 1, 3)]
+        ret = mib_entry(sub_id=(10001,))
+        self.assertEquals(ret, b'mgmt1')
+        print(ret)
+
     def test_getnextpdu_local_port_identification(self):
         # oid.include = 1
         oid = ObjectIdentifier(11, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 3, 7, 1, 3))
@@ -119,7 +125,7 @@ class TestLLDPMIB(TestCase):
 
     def test_getnextpdu_noeth(self):
         # oid.include = 1
-        oid = ObjectIdentifier(12, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, 7, 126))
+        oid = ObjectIdentifier(12, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, 7, 12600))
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=[oid]

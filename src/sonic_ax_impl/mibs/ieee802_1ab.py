@@ -36,6 +36,10 @@ class LLDPUpdater(MIBUpdater):
         self.if_id_map = {}
         self.oid_sai_map = {}
         self.oid_name_map = {}
+
+        self.mgmt_oid_name_map = {}
+        self.mgmt_alias_map = {}
+
         self.if_range = []
 
         # cache of interface counters
@@ -51,6 +55,13 @@ class LLDPUpdater(MIBUpdater):
         self.if_id_map, \
         self.oid_sai_map, \
         self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
+
+        self.mgmt_oid_name_map, \
+        self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn)
+
+        # merge dataplane and mgmt ports
+        self.oid_name_map.update(self.mgmt_oid_name_map)
+        self.if_alias_map.update(self.mgmt_alias_map)
 
     def get_next(self, sub_id):
         """
