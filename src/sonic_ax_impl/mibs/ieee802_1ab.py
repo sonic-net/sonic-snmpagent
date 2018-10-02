@@ -85,9 +85,6 @@ def poll_lldp_entry_updates(pubsub):
                      "The error seems to be: {}".format(msg, e))
         return ret
 
-    if interface == 'eth0':
-        return ret
-
     # get interface from interface name
     if_index = port_util.get_index_from_str(interface)
 
@@ -147,6 +144,10 @@ class LocPortUpdater(MIBUpdater):
         self.if_id_map = {}
         self.oid_sai_map = {}
         self.oid_name_map = {}
+
+        self.mgmt_oid_name_map = {}
+        self.mgmt_alias_map = {}
+
         self.if_range = []
 
         # cache of port data
@@ -164,6 +165,13 @@ class LocPortUpdater(MIBUpdater):
         self.oid_sai_map, \
         self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
 
+        self.mgmt_oid_name_map, \
+        self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn)
+
+        # merge dataplane and mgmt ports
+        self.oid_name_map.update(self.mgmt_oid_name_map)
+        self.if_alias_map.update(self.mgmt_alias_map)
+
         self.if_range = []
         # get local port kvs from APP_BD's PORT_TABLE
         self.loc_port_data = {}
@@ -174,11 +182,28 @@ class LocPortUpdater(MIBUpdater):
         if not self.loc_port_data:
             logger.warning("0 - b'PORT_TABLE' is empty. No local port information could be retrieved.")
 
+    def _get_if_entry(self, if_name):
+        if_table = ""
+
+        # Once PORT_TABLE will be moved to CONFIG DB
+        # we will get entry from CONFIG_DB for all cases
+        db = mibs.APPL_DB
+        if if_name in self.if_name_map:
+            if_table = mibs.if_entry_table(if_name)
+        elif if_name in self.mgmt_oid_name_map.values():
+            if_table = mibs.mgmt_if_entry_table(if_name)
+            db = mibs.CONFIG_DB
+        else:
+            return None
+
+        return self.db_conn.get_all(db, if_table, blocking=True)
+
     def update_interface_data(self, if_name):
         """
         Update data from the DB for a single interface
         """
-        loc_port_kvs = self.db_conn.get_all(mibs.APPL_DB, mibs.if_entry_table(if_name))
+
+        loc_port_kvs = self._get_if_entry(if_name)
         if not loc_port_kvs:
             return
         self.loc_port_data.update({if_name: loc_port_kvs})
@@ -344,6 +369,9 @@ class LLDPRemTableUpdater(MIBUpdater):
         self.if_id_map = {}
         self.oid_sai_map = {}
         self.oid_name_map = {}
+
+        self.mgmt_oid_name_map = {}
+
         self.if_range = []
 
         # cache of interface counters
@@ -359,6 +387,10 @@ class LLDPRemTableUpdater(MIBUpdater):
         self.if_id_map, \
         self.oid_sai_map, \
         self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
+
+        self.mgmt_oid_name_map, _ = mibs.init_mgmt_interface_tables(self.db_conn)
+
+        self.oid_name_map.update(self.mgmt_oid_name_map)
 
     def get_next(self, sub_id):
         """
@@ -443,6 +475,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         self.if_range = []
         self.mgmt_ips = {}
         self.oid_name_map = {}
+        self.mgmt_oid_name_map = {}
         self.mgmt_ip_str = None
         self.pubsub = None
 
@@ -508,6 +541,11 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         Subclass reinit data routine.
         """
         _, _, _, _, self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
+
+        self.mgmt_oid_name_map, _ = mibs.init_mgmt_interface_tables(self.db_conn)
+
+        self.oid_name_map.update(self.mgmt_oid_name_map)
+
         # establish connection to application database.
         self.db_conn.connect(mibs.APPL_DB)
 

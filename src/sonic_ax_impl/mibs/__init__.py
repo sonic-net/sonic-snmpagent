@@ -14,6 +14,8 @@ LOC_CHASSIS_TABLE = b'LLDP_LOC_CHASSIS'
 APPL_DB = 'APPL_DB'
 ASIC_DB = 'ASIC_DB'
 COUNTERS_DB = 'COUNTERS_DB'
+CONFIG_DB = 'CONFIG_DB'
+STATE_DB = 'STATE_DB'
 
 TABLE_NAME_SEPARATOR_COLON = ':'
 TABLE_NAME_SEPARATOR_VBAR = '|'
@@ -98,6 +100,24 @@ def lag_entry_table(lag_name):
     return b'LAG_TABLE:' + lag_name
 
 
+def mgmt_if_entry_table(if_name):
+    """
+    :param if_name: given interface to cast
+    :return: MGMT_PORT_TABLE key
+    """
+
+    return b'MGMT_PORT|' + if_name
+
+
+def mgmt_if_entry_table_state_db(if_name):
+    """
+    :param if_name: given interface to cast
+    :return: MGMT_PORT_TABLE key
+    """
+
+    return b'MGMT_PORT_TABLE|' + if_name
+
+
 def config(**kwargs):
     global redis_kwargs
     redis_kwargs = {k:v for (k,v) in kwargs.items() if k in ['unix_socket_path', 'host', 'port']}
@@ -112,6 +132,36 @@ def init_db():
     db_conn = SonicV2Connector(**redis_kwargs)
 
     return db_conn
+
+def init_mgmt_interface_tables(db_conn):
+    """
+    Initializes interface maps for mgmt ports
+    :param db_conn: db connector
+    :return: tuple of mgmt name to oid map and mgmt name to alias map
+    """
+
+    db_conn.connect(CONFIG_DB)
+    db_conn.connect(STATE_DB)
+
+    mgmt_ports_keys = db_conn.keys(CONFIG_DB, mgmt_if_entry_table(b'*'))
+
+    if not mgmt_ports_keys:
+        logger.warning('No managment ports found in {}'.format(mgmt_if_entry_table(b'')))
+        return {}, {}
+
+    mgmt_ports = [key.split(mgmt_if_entry_table(b''))[-1] for key in mgmt_ports_keys]
+    oid_name_map = {get_index(mgmt_name): mgmt_name for mgmt_name in mgmt_ports}
+    logger.debug('Managment port map:\n' + pprint.pformat(oid_name_map, indent=2))
+
+    if_alias_map = dict()
+
+    for if_name in oid_name_map.values():
+        if_entry = db_conn.get_all(CONFIG_DB, mgmt_if_entry_table(if_name), blocking=True)
+        if_alias_map[if_name] = if_entry.get(b'alias', if_name)
+
+    logger.debug("Management alias map:\n" + pprint.pformat(if_alias_map, indent=2))
+
+    return oid_name_map, if_alias_map
 
 
 def init_sync_d_interface_tables(db_conn):

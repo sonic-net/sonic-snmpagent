@@ -53,6 +53,8 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.lag_name_if_name_map = {}
         self.if_name_lag_name_map = {}
         self.oid_lag_name_map = {}
+        self.mgmt_oid_name_map = {}
+        self.mgmt_alias_map = {}
 
         self.if_counters = {}
         self.if_range = []
@@ -79,7 +81,12 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.if_name_lag_name_map, \
         self.oid_lag_name_map = mibs.init_sync_d_lag_tables(self.db_conn)
 
-        self.if_range = sorted(list(self.oid_sai_map.keys()) + list(self.oid_lag_name_map.keys()))
+        self.mgmt_oid_name_map, \
+        self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn)
+
+        self.if_range = sorted(list(self.oid_sai_map.keys()) +
+                               list(self.oid_lag_name_map.keys()) +
+                               list(self.mgmt_oid_name_map.keys()))
         self.if_range = [(i,) for i in self.if_range]
 
     def update_data(self):
@@ -123,6 +130,8 @@ class InterfaceMIBUpdater(MIBUpdater):
 
         if oid in self.oid_lag_name_map:
             return self.oid_lag_name_map[oid]
+        elif oid in self.mgmt_oid_name_map:
+            return self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
 
         return self.if_alias_map[self.oid_name_map[oid]]
 
@@ -160,6 +169,13 @@ class InterfaceMIBUpdater(MIBUpdater):
         :param mask: mask to apply to counter
         :return: the counter for the respective sub_id/table.
         """
+
+        if oid in self.mgmt_oid_name_map:
+            # TODO: mgmt counters not available through SNMP right now
+            # COUNTERS DB does not have suppot for generic linux (mgmt) interface counters
+            mibs.logger.warning('management interface counters not available through SNMP right now')
+            return 0
+
         if oid in self.oid_lag_name_map:
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
@@ -190,12 +206,20 @@ class InterfaceMIBUpdater(MIBUpdater):
             return
 
         if_table = ""
+        # Once PORT_TABLE will be moved to CONFIG DB
+        # we will get entry from CONFIG_DB for all cases
+        db = mibs.APPL_DB
         if oid in self.oid_lag_name_map:
             if_table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
-        else:
+        elif oid in self.mgmt_oid_name_map:
+            if_table = mibs.mgmt_if_entry_table(self.mgmt_oid_name_map[oid])
+            db = mibs.CONFIG_DB
+        elif oid in self.oid_name_map:
             if_table = mibs.if_entry_table(self.oid_name_map[oid])
+        else:
+            return None
 
-        return self.db_conn.get_all(mibs.APPL_DB, if_table, blocking=True)
+        return self.db_conn.get_all(db, if_table, blocking=True)
 
     def get_high_speed(self, sub_id):
         """
