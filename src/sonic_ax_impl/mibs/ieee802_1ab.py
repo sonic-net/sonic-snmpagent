@@ -269,11 +269,8 @@ class LocPortUpdater(MIBUpdater):
             return None
         counters = self.loc_port_data[if_name]
         _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
-        try:
-            return counters[_table_name]
-        except KeyError as e:
-            logger.warning(" 0 - b'PORT_TABLE' missing attribute '{}'.".format(e))
-            return None
+
+        return counters.get(_table_name, '')
 
     def port_id_subtype(self, sub_id):
         """
