@@ -6,6 +6,7 @@ https://github.com/rayed/pyagentx
 """
 import asyncio
 import logging
+import re
 
 from . import logger, constants
 from .protocol import AgentX
@@ -25,6 +26,20 @@ class SocketManager:
 
         self.transport = self.ax_socket = None
 
+        self.ax_socket_path = constants.AGENTX_SOCKET_PATH
+        # open the snmpd config file and search for a agentx socke redefinition
+        pattern = re.compile("^agentxsocket\s+(.*)$")
+        try :
+            with open(constants.SNMPD_CONFIG_FILE,'rt') as config_file:
+                for line in config_file:
+                    for match in pattern.finditer(line):
+                        self.ax_socket_path = match.group(1)
+        except:
+            log_level = logging.WARNING
+            logger.log(log_level, "SNMPD config file not found, using default agentx file socket")
+        log_level = logging.INFO
+        logger.log(log_level, "Using agentx socket "+self.ax_socket_path)
+
     async def connection_loop(self):
         """
         Try/Retry connection coroutine to attach the socket.
@@ -37,10 +52,21 @@ class SocketManager:
             try:
                 logger.info("Attempting AgentX socket bind...".format())
 
-                connection_routine = self.loop.create_unix_connection(
-                    protocol_factory=lambda: AgentX(self.mib_table, self.loop),
-                    path=constants.AGENTX_SOCKET_PATH,
-                    sock=self.ax_socket)
+                # Open the connection to the Agentx socket, we check the socket string to 
+                # either open a tcp socket or a Unix domain socket
+                if self.ax_socket_path.startswith('tcp'):
+                    myhost = self.ax_socket_path.split(':')[1]
+                    myport = self.ax_socket_path.split(':')[2]
+                    connection_routine = self.loop.create_connection(
+                        protocol_factory=lambda: AgentX(self.mib_table, self.loop),
+                        host=myhost,
+                        port=myport,
+                        sock=self.ax_socket)
+                else:
+                    connection_routine = self.loop.create_unix_connection(
+                        protocol_factory=lambda: AgentX(self.mib_table, self.loop),
+                        path=self.ax_socket_path,
+                        sock=self.ax_socket)
 
                 # Initiate the socket connection
                 self.transport, protocol = await connection_routine
