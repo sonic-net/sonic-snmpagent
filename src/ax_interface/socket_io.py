@@ -45,7 +45,72 @@ class SocketManager:
         except:
             logger.warning("SNMPD config file not found, using default agentx file socket")
 
-        logger.info("Using agentx socket " + self.ax_socket_path)
+        self.parse_socket()
+        logger.info("Using agentx socket type " + self.ax_socket_type + " with path " + self.ax_socket_path)
+
+    def parse_socket(self):
+        # Determine wether the socket method is supported
+        # extract the type and connection data
+
+        # lets get the unsuported methods out of the way first
+        unsuported_list = ['ssh', 'dtlsudp', 'ipx', 'aal5pvc', 'udp']
+        for method in unsuported_list:
+            if self.ax_socket_path.startswith(method):
+                # This is not a supported method
+                logger.warning("Socket type " + self.ax_socket_path + " not supported, using default agentx file socket")
+                self.ax_socket_path = constants.AGENTX_SOCKET_PATH
+                self.ax_socket_type = 'unix'
+                return
+        # Now the stuff that we are interested in
+        # First case: we have a simple number then its a local UDP port
+        # udp has been added to the unsuported_list because asynio throws a not implemented error with udp
+        # we leave the code here for when it will be implemented
+        if self.ax_socket_path.isdigit():
+            self.ax_socket_type = 'udp'
+            self.host = 'localhost'
+            self.port = self.ax_socket_path
+            return
+        # if we have an explicit udp socket 
+        if self.ax_socket_path.startswith('udp'):
+            self.ax_socket_type = 'udp'
+            self.host, self.port = self.get_ip_port(self.ax_socket_path.split(':',1)[1])
+            return
+        # if we have an explicit tcp socket
+        if self.ax_socket_path.startswith('tcp'):
+            self.ax_socket_type = 'tcp'
+            self.host, self.port = self.get_ip_port(self.ax_socket_path.split(':',1)[1])
+            return
+        # if we have an explicit unix domain socket
+        if self.ax_socket_path.startswith('unix'):
+            self.ax_socket_type = 'unix'
+            self.ax_socket_path = self.ax_socket_path.split(':',1)[1]
+            return
+        # unix is not compulsory so you can also have a plain path
+        if '/' in self.ax_socket_path:
+            self.ax_socket_type = 'unix'
+            return
+        # if at this point we haven't matched anything yet its that we are most likely left with a hort:port pair so UDP
+        if ':' in self.ax_socket_path:
+            self.ax_socket_type = 'udp'
+            self.host, self.port = self.get_ip_port(self.ax_socket_path)
+            return
+        # we should never get here but if we do it's that there is garbage so lets revert to the default of snmp
+        logger.warning("There's something weird with " + self.ax_socket_path + " , using default agentx file socket")
+        self.ax_socket_path = constants.AGENTX_SOCKET_PATH
+        self.ax_socket_type = 'unix'
+        return
+
+    def get_ip_port(self,address):
+        # determine if we only have a port or a ip:port tuple, must work with IPv6
+        address_list = address.split(':')
+        if len(address_list) == 1:
+            # we only have a port
+            return 'localhost', address_list[0]
+        else:
+            # if we get here then either: we've got garbage, an ip:port or ipv6:port or hostname:port
+            # an IP or IPv6 only is illegal
+            address_list = address.rsplit(':',1)
+            return address_list[0], address_list[1]
 
     async def connection_loop(self):
         """
@@ -60,50 +125,25 @@ class SocketManager:
                 logger.info("Attempting AgentX socket bind...".format())
 
                 # Open the connection to the Agentx socket, we check the socket string to 
-                # either open a tcp socket or a Unix domain socket
-                if '/' in self.ax_socket_path:
-                    # This looks like a filesystem path so lets open it as a domain socket
-                    # but first lets remove 'unix' if it's in the spec
-                    if self.ax_socket_path.startswith('unix'):
-                        self.ax_socket_path = self.ax_socket_path.split(':')[1]
-                    connection_routine = self.loop.create_unix_connection(
-                        protocol_factory=lambda: AgentX(self.mib_table, self.loop),
-                        path=self.ax_socket_path,
-                        sock=self.ax_socket)
-                elif self.ax_socket_path.startswith('tcp'):
-                    # This looks like a tcp connection
-                    myhost = self.ax_socket_path.split(':')[1]
-                    myport = self.ax_socket_path.split(':')[2]
-                    connection_routine = self.loop.create_connection(
-                        protocol_factory=lambda: AgentX(self.mib_table, self.loop),
-                        host=myhost,
-                        port=myport,
-                        sock=self.ax_socket)
-                elif self.ax_socket_path.startswith('udp'):
-                    # This looks like a udp connection
-                    myhost = self.ax_socket_path.split(':')[1]
-                    myport = self.ax_socket_path.split(':')[2]
-                    connection_routine = self.loop.create_datagram_endpoint(
-                        protocol_factory=lambda: AgentX(self.mib_table, self.loop),
-                        host=myhost,
-                        port=myport,
-                        sock=self.ax_socket)
-                elif self.ax_socket_path.isdigit():
-                    # if the socket path is just a number then it is treated as a udp port on localhost
-                    myhost = 'localhost'
-                    myport = self.ax_socket_path
-                    connection_routine = self.loop.create_datagram_endpoint(
-                        protocol_factory=lambda: AgentX(self.mib_table, self.loop),
-                        host=myhost,
-                        port=myport,
-                        sock=self.ax_socket)
-                else:
-                    # We do not support 'ssh', 'dtlsudp', 'ipx', or 'aal5pvc' (ATM lol...) methods
-                    # default to the snmp default /var/agentx/master and log a warning
-                    logger.warning("Socket type " + self.ax_socket_path + " not supported, using default agentx file socket")
+                # lets open our socket according to its detected type
+                if self.ax_socket_type == 'unix':
                     connection_routine = self.loop.create_unix_connection(
                         protocol_factory=lambda: AgentX(self.mib_table, self.loop),
                         path=constants.AGENTX_SOCKET_PATH,
+                        sock=self.ax_socket)
+                elif self.ax_socket_type == 'udp':
+                    # we should not land here as the udp method is in the unsuported list
+                    # testing shows that async_io throws a NotImplementedError when udp is used
+                    # the code remains for when asyncio will implement it
+                    connection_routine = self.loop.create_datagram_endpoint(
+                        protocol_factory=lambda: AgentX(self.mib_table, self.loop),
+                        remote_addr=(self.host,self.port),
+                        sock=self.ax_socket)
+                elif self.ax_socket_type == 'tcp':
+                    connection_routine = self.loop.create_connection(
+                        protocol_factory=lambda: AgentX(self.mib_table, self.loop),
+                        host=self.host,
+                        port=self.port,
                         sock=self.ax_socket)
 
                 # Initiate the socket connection
