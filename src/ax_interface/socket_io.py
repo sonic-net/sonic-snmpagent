@@ -69,11 +69,13 @@ class SocketManager:
             self.ax_socket_type = 'udp'
             self.host = 'localhost'
             self.port = self.ax_socket_path
+            self.unsuported_method()
             return
         # if we have an explicit udp socket 
         if self.ax_socket_path.startswith('udp'):
             self.ax_socket_type = 'udp'
             self.host, self.port = self.get_ip_port(self.ax_socket_path.split(':',1)[1])
+            self.unsuported_method()
             return
         # if we have an explicit tcp socket
         if self.ax_socket_path.startswith('tcp'):
@@ -89,10 +91,11 @@ class SocketManager:
         if '/' in self.ax_socket_path:
             self.ax_socket_type = 'unix'
             return
-        # if at this point we haven't matched anything yet its that we are most likely left with a hort:port pair so UDP
+        # if at this point we haven't matched anything yet its that we are most likely left with a host:port pair so UDP
         if ':' in self.ax_socket_path:
             self.ax_socket_type = 'udp'
             self.host, self.port = self.get_ip_port(self.ax_socket_path)
+            self.unsuported_method()
             return
         # we should never get here but if we do it's that there is garbage so lets revert to the default of snmp
         logger.warning("There's something weird with " + self.ax_socket_path + " , using default agentx file socket")
@@ -112,6 +115,11 @@ class SocketManager:
             address_list = address.rsplit(':',1)
             return address_list[0], address_list[1]
 
+    def unsuported_method(self):
+        logger.warning("Socket type " + self.ax_socket_path + " not supported, using default agentx file socket")
+        self.ax_socket_path = constants.AGENTX_SOCKET_PATH
+        self.ax_socket_type = 'unix'
+
     async def connection_loop(self):
         """
         Try/Retry connection coroutine to attach the socket.
@@ -129,7 +137,7 @@ class SocketManager:
                 if self.ax_socket_type == 'unix':
                     connection_routine = self.loop.create_unix_connection(
                         protocol_factory=lambda: AgentX(self.mib_table, self.loop),
-                        path=constants.AGENTX_SOCKET_PATH,
+                        path=self.ax_socket_path,
                         sock=self.ax_socket)
                 elif self.ax_socket_type == 'udp':
                     # we should not land here as the udp method is in the unsuported list
