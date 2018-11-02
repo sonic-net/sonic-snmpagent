@@ -27,18 +27,25 @@ class SocketManager:
         self.transport = self.ax_socket = None
 
         self.ax_socket_path = constants.AGENTX_SOCKET_PATH
-        # open the snmpd config file and search for a agentx socke redefinition
-        pattern = re.compile("^agentxsocket\s+(.*)$")
+
+        # The following code reads the snmp config file to see if the Agentx Socket path has been redefined
+        # from the default RFC value '/var/agentx/master'. We do not implement reading the SNMP daemon's
+        # command line to check if it has been redefined there, this should be an effort for the future
+        # perhaps via a psutil().cmdline() call
+
+        # open the snmpd config file and search for a agentx socket redefinition. Exceptions will be raised
+        # if the constants.SNMPD_CONFIG_FILE or the file in itself do not exist
+        pattern = re.compile("^agentxsocket\s+(.*)$", re.IGNORECASE)
         try :
             with open(constants.SNMPD_CONFIG_FILE,'rt') as config_file:
                 for line in config_file:
-                    for match in pattern.finditer(line):
+                    match = pattern.search(line)
+                    if match:
                         self.ax_socket_path = match.group(1)
         except:
-            log_level = logging.WARNING
-            logger.log(log_level, "SNMPD config file not found, using default agentx file socket")
-        log_level = logging.INFO
-        logger.log(log_level, "Using agentx socket "+self.ax_socket_path)
+            logger.warning("SNMPD config file not found, using default agentx file socket")
+
+        logger.info("Using agentx socket " + self.ax_socket_path)
 
     async def connection_loop(self):
         """
@@ -54,7 +61,17 @@ class SocketManager:
 
                 # Open the connection to the Agentx socket, we check the socket string to 
                 # either open a tcp socket or a Unix domain socket
-                if self.ax_socket_path.startswith('tcp'):
+                if '/' in self.ax_socket_path:
+                    # This looks like a filesystem path so lets open it as a domain socket
+                    # but first lets remove 'unix' if it's in the spec
+                    if self.ax_socket_path.startswith('unix'):
+                        self.ax_socket_path = self.ax_socket_path.split(':')[1]
+                    connection_routine = self.loop.create_unix_connection(
+                        protocol_factory=lambda: AgentX(self.mib_table, self.loop),
+                        path=self.ax_socket_path,
+                        sock=self.ax_socket)
+                elif self.ax_socket_path.startswith('tcp'):
+                    # This looks like a tcp connection
                     myhost = self.ax_socket_path.split(':')[1]
                     myport = self.ax_socket_path.split(':')[2]
                     connection_routine = self.loop.create_connection(
@@ -62,10 +79,31 @@ class SocketManager:
                         host=myhost,
                         port=myport,
                         sock=self.ax_socket)
+                elif self.ax_socket_path.startswith('udp'):
+                    # This looks like a udp connection
+                    myhost = self.ax_socket_path.split(':')[1]
+                    myport = self.ax_socket_path.split(':')[2]
+                    connection_routine = self.loop.create_datagram_endpoint(
+                        protocol_factory=lambda: AgentX(self.mib_table, self.loop),
+                        host=myhost,
+                        port=myport,
+                        sock=self.ax_socket)
+                elif self.ax_socket_path.isdigit():
+                    # if the socket path is just a number then it is treated as a udp port on localhost
+                    myhost = 'localhost'
+                    myport = self.ax_socket_path
+                    connection_routine = self.loop.create_datagram_endpoint(
+                        protocol_factory=lambda: AgentX(self.mib_table, self.loop),
+                        host=myhost,
+                        port=myport,
+                        sock=self.ax_socket)
                 else:
+                    # We do not support 'ssh', 'dtlsudp', 'ipx', or 'aal5pvc' (ATM lol...) methods
+                    # default to the snmp default /var/agentx/master and log a warning
+                    logger.warning("Socket type " + self.ax_socket_path + " not supported, using default agentx file socket")
                     connection_routine = self.loop.create_unix_connection(
                         protocol_factory=lambda: AgentX(self.mib_table, self.loop),
-                        path=self.ax_socket_path,
+                        path=constants.AGENTX_SOCKET_PATH,
                         sock=self.ax_socket)
 
                 # Initiate the socket connection
