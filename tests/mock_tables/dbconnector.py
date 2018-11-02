@@ -40,6 +40,8 @@ class SwssSyncClient(mockredis.MockRedis):
             fname = 'asic_db.json'
         elif db == 2:
             fname = 'counters_db.json'
+        elif db == 4:
+            fname = 'config_db.json'
         elif db == 6:
             fname = 'state_db.json'
         else:

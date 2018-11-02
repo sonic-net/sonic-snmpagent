@@ -24,5 +24,11 @@
   	"tx2power": -5.4,
   	"tx3power": -5.4,
   	"tx4power": -5.4
+  },
+  "MGMT_PORT_TABLE|eth0": {
+    "oper_status": "down"
+  },
+  "MGMT_PORT_TABLE|eth1": {
+    "oper_status": "up"
   }
 }
