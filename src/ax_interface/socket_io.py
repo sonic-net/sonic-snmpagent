@@ -57,24 +57,17 @@ class SocketManager:
         for method in unsuported_list:
             if self.ax_socket_path.startswith(method):
                 # This is not a supported method
-                logger.warning("Socket type " + self.ax_socket_path + " not supported, using default agentx file socket")
-                self.ax_socket_path = constants.AGENTX_SOCKET_PATH
-                self.ax_socket_type = 'unix'
+                self.unsuported_method()
                 return
         # Now the stuff that we are interested in
         # First case: we have a simple number then its a local UDP port
-        # udp has been added to the unsuported_list because asynio throws a not implemented error with udp
+        # udp has been added to the unsuported_list because asyncio throws a not implemented error with udp
         # we leave the code here for when it will be implemented
         if self.ax_socket_path.isdigit():
-            self.ax_socket_type = 'udp'
-            self.host = 'localhost'
-            self.port = self.ax_socket_path
             self.unsuported_method()
             return
         # if we have an explicit udp socket 
         if self.ax_socket_path.startswith('udp'):
-            self.ax_socket_type = 'udp'
-            self.host, self.port = self.get_ip_port(self.ax_socket_path.split(':',1)[1])
             self.unsuported_method()
             return
         # if we have an explicit tcp socket
@@ -93,8 +86,6 @@ class SocketManager:
             return
         # if at this point we haven't matched anything yet its that we are most likely left with a host:port pair so UDP
         if ':' in self.ax_socket_path:
-            self.ax_socket_type = 'udp'
-            self.host, self.port = self.get_ip_port(self.ax_socket_path)
             self.unsuported_method()
             return
         # we should never get here but if we do it's that there is garbage so lets revert to the default of snmp
