@@ -1,6 +1,7 @@
 from enum import Enum, unique
 
 AGENTX_SOCKET_PATH = '/var/agentx/master'
+SNMPD_CONFIG_FILE = '/etc/snmp/snmpd.conf'
 
 # https://tools.ietf.org/html/rfc2741#section-6.1 -- PDU Header definition
 # Headers are fixed at 20 bytes.
