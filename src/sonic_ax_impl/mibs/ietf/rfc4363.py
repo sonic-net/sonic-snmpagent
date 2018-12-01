@@ -7,13 +7,6 @@ from ax_interface import MIBMeta, ValueType, MIBUpdater, SubtreeMIBEntry
 from ax_interface.util import mac_decimals
 from bisect import bisect_right
 
-def fdb_vlanmac(db_conn, fdb):
-    if 'vlan' in fdb:
-        vlan_id = fdb["vlan"]
-    elif 'bvid' in fdb:
-        vlan_id = port_util.get_vlan_id_from_bvid(db_conn, fdb["bvid"])
-    return (int(vlan_id),) + mac_decimals(fdb["mac"])
-
 class FdbUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
@@ -27,7 +20,19 @@ class FdbUpdater(MIBUpdater):
         self.vlanmac_ifindex_map = {}
         self.vlanmac_ifindex_list = []
         self.if_bpid_map = {}
+        self.bvid_vlan_map = {}
 
+    def fdb_vlanmac(self, fdb):
+        if 'vlan' in fdb:
+            vlan_id = fdb["vlan"]
+        elif 'bvid' in fdb:
+            if fdb["bvid"] in self.bvid_vlan_map:
+                vlan_id = self.bvid_vlan_map[fdb["bvid"]]
+            else:
+                vlan_id = port_util.get_vlan_id_from_bvid(self.db_conn, fdb["bvid"])
+                self.bvid_vlan_map[fdb["bvid"]] = vlan_id
+        return (int(vlan_id),) + mac_decimals(fdb["mac"])
+          
     def reinit_data(self):
         """
         Subclass update interface information
@@ -39,7 +44,7 @@ class FdbUpdater(MIBUpdater):
         self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
 
         self.if_bpid_map = port_util.get_bridge_port_map(self.db_conn)
-
+        self.bvid_vlan_map.clear()
 
     def update_data(self):
         """
@@ -69,7 +74,7 @@ class FdbUpdater(MIBUpdater):
                 continue
             port_id = self.if_bpid_map[bridge_port_id]
 
-            vlanmac = fdb_vlanmac(self.db_conn, fdb)
+            vlanmac = self.fdb_vlanmac(fdb)
             self.vlanmac_ifindex_map[vlanmac] = mibs.get_index(self.if_id_map[port_id])
             self.vlanmac_ifindex_list.append(vlanmac)
         self.vlanmac_ifindex_list.sort()
