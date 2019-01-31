@@ -32,7 +32,8 @@ class RouteUpdater(MIBUpdater):
         ## Collect only ipv4 lo interfaces
         for loopback in loopbacks:
             lostr = loopback.decode()
-            loip = lostr[len("INTF_TABLE:lo:"):]
+            loipmask = lostr[len("INTF_TABLE:lo:"):]
+            loip = loipmask.split('/')[0]
             ipa = ipaddress.ip_address(loip)
             if isinstance(ipa, ipaddress.IPv4Address):
                 self.loips[loip] = ipa

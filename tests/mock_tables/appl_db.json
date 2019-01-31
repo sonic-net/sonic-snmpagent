@@ -675,11 +675,11 @@
     "oper_status": "up",
     "mtu": "9216"
   },
-  "INTF_TABLE:lo:10.1.0.32": {
+  "INTF_TABLE:lo:10.1.0.32/32": {
     "scope": "global",
     "family": "IPv4"
   },
-  "INTF_TABLE:lo:fc00:1::32": {
+  "INTF_TABLE:lo:fc00:1::32/128": {
     "scope": "global",
     "family": "IPv6"
   }
