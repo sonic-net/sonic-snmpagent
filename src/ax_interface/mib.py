@@ -86,21 +86,15 @@ class MIBMeta(type):
             for me in vars(cls).values():
                 if isinstance(me, MIBEntry):
                     setattr(me, MIBEntry.PREFIXLEN, _prefix_len + len(me.subtree))
+                    setattr(me, MIBEntry.PREFIX, _prefix + me.subtree)
 
             sub_ids = {}
 
-            # gather all static MIB entries.
-            static_entries = (v for v in vars(cls).values() if type(v) is MIBEntry)
-            for me in static_entries:
+            # gather all MIB entries.
+            mib_entries = (v for v in vars(cls).values() if isinstance(v, MIBEntry))
+            for me in mib_entries:
                 sub_ids.update({_prefix + me.subtree: me})
                 prefixes.append(_prefix + me.subtree)
-
-            # gather all subtree IDs
-            # to support dynamic sub_id in the subtree, not to pour leaves into dictionary
-            subtree_entries = (v for v in vars(cls).values() if type(v) is SubtreeMIBEntry)
-            for sme in subtree_entries:
-                sub_ids.update({_prefix + sme.subtree: sme})
-                prefixes.append(_prefix + sme.subtree)
 
             # gather all updater instances
             updaters = set(v for k, v in vars(cls).items() if isinstance(v, MIBUpdater))
@@ -134,6 +128,7 @@ class MIBMeta(type):
 
 class MIBEntry:
     PREFIXLEN = '__prefixlen__'
+    PREFIX = '__prefix__'
 
     def __init__(self, subtree, value_type, callable_, *args):
         """
@@ -155,7 +150,7 @@ class MIBEntry:
             raise ValueError("Third argument must be a callable object--got literal instead.")
         self._callable_ = callable_
         self._callable_args = args
-        self.subtree = subtree
+        self.subtree_str = subtree
         self.value_type = value_type
         self.subtree = util.oid2tuple(subtree, dot_prefix=False)
 
@@ -173,6 +168,9 @@ class MIBEntry:
 
     def get_next(self, sub_id):
         return None
+        
+    def get_prefix(self):
+        return getattr(self, MIBEntry.PREFIX)
 
 class SubtreeMIBEntry(MIBEntry):
     def __init__(self, subtree, iterator, value_type, callable_, *args, updater=None):
@@ -209,6 +207,20 @@ class SubtreeMIBEntry(MIBEntry):
             logger.exception("SubtreeMIBEntry.get_next() caught an unexpected exception during iterator.get_next()")
             return None
 
+class OverlayAdpaterMIBEntry(MIBEntry):
+    def __init__(self, underlay):
+        super().__init__(underlay.subtree_str, underlay.value_type, underlay._callable_, *underlay._callable_args)
+        self.underlay = underlay
+        
+    def __iter__(self):
+        return self.underlay.__iter__()
+
+    def __call__(self, sub_id=None):
+        return self.underlay.__call__(sub_id)
+        
+    def get_next(self, sub_id):
+        return self.underlay.get_next(sub_id)
+            
 class MIBTable(dict):
     """
     Simplistic LUT for Get/GetNext OID. Interprets iterables as keys and implements the same interfaces as dict's.
