@@ -221,6 +221,8 @@ class OidMIBEntry(MIBEntry):
 class OverlayAdpaterMIBEntry(MIBEntry):
     def __init__(self, underlay_mibentry, overlay_mibentry):
         assert underlay_mibentry.value_type == overlay_mibentry.value_type
+        assert underlay_mibentry.subtree == overlay_mibentry.subtree
+        
         super().__init__(underlay_mibentry.subtree_str, underlay_mibentry.value_type, underlay_mibentry._callable_)
         self.underlay_mibentry = underlay_mibentry
         self.overlay_mibentry = overlay_mibentry
