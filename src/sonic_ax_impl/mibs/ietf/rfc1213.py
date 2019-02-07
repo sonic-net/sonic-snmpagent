@@ -4,9 +4,9 @@ from enum import unique, Enum
 from bisect import bisect_right
 
 from sonic_ax_impl import mibs
-from ax_interface import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry, OverlayAdpaterMIBEntry
+from ax_interface import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
 from ax_interface.encodings import ObjectIdentifier
-from ax_interface.util import mac_decimals, ip2tuple_v4
+from ax_interface.util import mac_decimals, ip2tuple_v4, oid2tuple
 
 
 @unique
@@ -422,6 +422,51 @@ class InterfacesUpdater(MIBUpdater):
             return IfTypes.ieee8023adLag
         else:
             return IfTypes.ethernetCsmacd
+
+class RedisOidTree(MIBUpdater):
+    def __init__(self, prefix_str):
+        super().__init__()
+        
+        self.db_conn = mibs.init_db()
+        if prefix_str.startswith('.'):
+            prefix_str = prefix_str[1:]
+        self.prefix_str = prefix_str
+
+    def reinit_data(self):
+        """
+        Subclass update loopback information
+        """
+        pass
+
+    def update_data(self):
+        """
+        Update redis (caches config)
+        Pulls the table references for each interface.
+        """
+        self.oid_list = []
+        self.oid_map = {}
+        
+        self.db_conn.connect(mibs.SNMP_OVERLAY_DB)
+        keys = self.db_conn.keys(mibs.SNMP_OVERLAY_DB, self.prefix_str + '*')
+        # TODO: fix db_conn.keys to return empty list instead of None if there is no match
+        if keys is None:
+            keys = []
+            
+        for key in keys:
+            key = key.decode()
+            oid = oid2tuple(key, dot_prefix=False)
+            self.oid_list.append(oid)
+            value = self.db_conn.get_all(mibs.SNMP_OVERLAY_DB, key)
+            if value[b'type'] in [b'COUNTER_32']:
+                self.oid_map[oid] = int(value[b'data'])
+            
+        #print(keys, self.oid_list, self.oid_map)
+        self.oid_list.sort()
+            
+    def get_oidvalue(self, oid):
+        if oid not in self.oid_map:
+            return None
+        return self.oid_map[oid]
 
 
 class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):

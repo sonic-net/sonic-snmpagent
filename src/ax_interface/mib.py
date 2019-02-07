@@ -173,7 +173,7 @@ class MIBEntry:
         return getattr(self, MIBEntry.PREFIX)
 
 class SubtreeMIBEntry(MIBEntry):
-    def __init__(self, subtree, iterator, value_type, callable_, *args, updater=None):
+    def __init__(self, subtree, iterator, value_type, callable_, *args):
         super().__init__(subtree, value_type, callable_, *args)
         self.iterator = iterator
 
@@ -207,19 +207,43 @@ class SubtreeMIBEntry(MIBEntry):
             logger.exception("SubtreeMIBEntry.get_next() caught an unexpected exception during iterator.get_next()")
             return None
 
-class OverlayAdpaterMIBEntry(MIBEntry):
-    def __init__(self, underlay):
-        super().__init__(underlay.subtree_str, underlay.value_type, underlay._callable_, *underlay._callable_args)
-        self.underlay = underlay
-        
+# Define MIB entry (subtree) with a callable, which accepts a starndard OID tuple as a paramter
+class OidMIBEntry(MIBEntry):
+    def __init__(self, subtree, value_type, callable_):
+        super().__init__(subtree, value_type, callable_)
+
     def __iter__(self):
-        return self.underlay.__iter__()
+        raise NotImplementedError
+        
+    def __call__(self, sub_id):
+        return self._callable_.__call__(self.get_prefix() + sub_id)
+
+class OverlayAdpaterMIBEntry(MIBEntry):
+    def __init__(self, underlay_mibentry, overlay_mibentry):
+        assert underlay_mibentry.value_type == overlay_mibentry.value_type
+        super().__init__(underlay_mibentry.subtree_str, underlay_mibentry.value_type, underlay_mibentry._callable_)
+        self.underlay_mibentry = underlay_mibentry
+        self.overlay_mibentry = overlay_mibentry
+        
+    def __setattr__(self, name, value):
+        super().__setattr__(name, value)
+        if name.startswith('__') and name.endswith('__'):
+            setattr(self.underlay_mibentry, name, value)
+            setattr(self.overlay_mibentry, name, value)
+            
+    def __iter__(self):
+        return self.underlay_mibentry.__iter__()
 
     def __call__(self, sub_id=None):
-        return self.underlay.__call__(sub_id)
+        overlay_val = self.overlay_mibentry(sub_id)
+        if overlay_val is not None:
+            return overlay_val
+
+        underlay_val = self.underlay_mibentry(sub_id)
+        return underlay_val
         
     def get_next(self, sub_id):
-        return self.underlay.get_next(sub_id)
+        return self.underlay_mibentry.get_next(sub_id)
             
 class MIBTable(dict):
     """
