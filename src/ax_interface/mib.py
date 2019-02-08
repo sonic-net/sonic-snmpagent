@@ -168,7 +168,7 @@ class MIBEntry:
 
     def get_next(self, sub_id):
         return None
-        
+
     def get_prefix(self):
         return getattr(self, MIBEntry.PREFIX)
 
@@ -214,7 +214,7 @@ class OidMIBEntry(MIBEntry):
 
     def __iter__(self):
         raise NotImplementedError
-        
+
     def __call__(self, sub_id):
         return self._callable_.__call__(self.get_prefix() + sub_id)
 
@@ -222,17 +222,17 @@ class OverlayAdpaterMIBEntry(MIBEntry):
     def __init__(self, underlay_mibentry, overlay_mibentry):
         assert underlay_mibentry.value_type == overlay_mibentry.value_type
         assert underlay_mibentry.subtree == overlay_mibentry.subtree
-        
+
         super().__init__(underlay_mibentry.subtree_str, underlay_mibentry.value_type, underlay_mibentry._callable_)
         self.underlay_mibentry = underlay_mibentry
         self.overlay_mibentry = overlay_mibentry
-        
+
     def __setattr__(self, name, value):
         super().__setattr__(name, value)
         if name.startswith('__') and name.endswith('__'):
             setattr(self.underlay_mibentry, name, value)
             setattr(self.overlay_mibentry, name, value)
-            
+
     def __iter__(self):
         return self.underlay_mibentry.__iter__()
 
@@ -243,10 +243,10 @@ class OverlayAdpaterMIBEntry(MIBEntry):
 
         underlay_val = self.underlay_mibentry(sub_id)
         return underlay_val
-        
+
     def get_next(self, sub_id):
         return self.underlay_mibentry.get_next(sub_id)
-            
+
 class MIBTable(dict):
     """
     Simplistic LUT for Get/GetNext OID. Interprets iterables as keys and implements the same interfaces as dict's.

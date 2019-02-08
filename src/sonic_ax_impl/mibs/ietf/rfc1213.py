@@ -426,7 +426,7 @@ class InterfacesUpdater(MIBUpdater):
 class RedisOidTree(MIBUpdater):
     def __init__(self, prefix_str):
         super().__init__()
-        
+
         self.db_conn = mibs.init_db()
         if prefix_str.startswith('.'):
             prefix_str = prefix_str[1:]
@@ -445,13 +445,13 @@ class RedisOidTree(MIBUpdater):
         """
         self.oid_list = []
         self.oid_map = {}
-        
+
         self.db_conn.connect(mibs.SNMP_OVERLAY_DB)
         keys = self.db_conn.keys(mibs.SNMP_OVERLAY_DB, self.prefix_str + '*')
         # TODO: fix db_conn.keys to return empty list instead of None if there is no match
         if keys is None:
             keys = []
-            
+
         for key in keys:
             key = key.decode()
             oid = oid2tuple(key, dot_prefix=False)
@@ -459,9 +459,9 @@ class RedisOidTree(MIBUpdater):
             value = self.db_conn.get_all(mibs.SNMP_OVERLAY_DB, key)
             if value[b'type'] in [b'COUNTER_32']:
                 self.oid_map[oid] = int(value[b'data'])
-            
+
         self.oid_list.sort()
-            
+
     def get_oidvalue(self, oid):
         if oid not in self.oid_map:
             return None
@@ -474,7 +474,7 @@ class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
     """
 
     if_updater = InterfacesUpdater()
-    
+
     overlay_updater = RedisOidTree(prefix_str='1.3.6.1.2.1.2')
 
     # (subtree, value_type, callable_, *args, handler=None)
@@ -518,7 +518,7 @@ class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
                            DbTables(10)),
             OidMIBEntry('2.1.10', ValueType.COUNTER_32, overlay_updater.get_oidvalue)
         )
-        
+
     ifInUcastPkts = \
         OverlayAdpaterMIBEntry(
             SubtreeMIBEntry('2.1.11', if_updater, ValueType.COUNTER_32, if_updater.get_counter,

@@ -325,7 +325,7 @@ class TestGetNextPDU(TestCase):
         self.assertEqual(value0.type_, ValueType.COUNTER_32)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 10, 5))))
         self.assertEqual(value0.data, 40321)
-        
+
     def test_in_octets_override(self):
         """
         For a port with no speed in the db the result should be 0
