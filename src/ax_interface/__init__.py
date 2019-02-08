@@ -10,4 +10,4 @@ logger.addHandler(logging.NullHandler())
 from . import exceptions
 from .agent import Agent
 from .constants import ValueType
-from .mib import MIBMeta, MIBUpdater, MIBEntry, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
+from .mib import MIBMeta, MIBUpdater, MIBEntry, SubtreeMIBEntry
