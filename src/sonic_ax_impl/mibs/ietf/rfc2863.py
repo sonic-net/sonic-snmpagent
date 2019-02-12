@@ -2,8 +2,7 @@ from enum import Enum, unique
 from bisect import bisect_right
 
 from sonic_ax_impl import mibs
-from ax_interface import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry
-
+from ax_interface.mib import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
 
 @unique
 class DbTables32(int, Enum):
@@ -239,6 +238,8 @@ class InterfaceMIBObjects(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.31.1'):
     """
     if_updater = InterfaceMIBUpdater()
 
+    oidtree_updater = mibs.RedisOidTreeUpdater(prefix_str='1.3.6.1.2.1.31.1')
+
     # ifXTable = '1'
     # ifXEntry = '1.1'
 
@@ -246,52 +247,88 @@ class InterfaceMIBObjects(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.31.1'):
         SubtreeMIBEntry('1.1.1', if_updater, ValueType.OCTET_STRING, if_updater.interface_name)
 
     ifInMulticastPkts = \
-        SubtreeMIBEntry('1.1.2', if_updater, ValueType.COUNTER_32, if_updater.get_counter32,
-                           DbTables32(2))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('1.1.2', if_updater, ValueType.COUNTER_32, if_updater.get_counter32,
+                           DbTables32(2)),
+            OidMIBEntry('1.1.2', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
+        )
 
     ifInBroadcastPkts = \
-        SubtreeMIBEntry('1.1.3', if_updater, ValueType.COUNTER_32, if_updater.get_counter32,
-                           DbTables32(3))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('1.1.3', if_updater, ValueType.COUNTER_32, if_updater.get_counter32,
+                           DbTables32(3)),
+            OidMIBEntry('1.1.3', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
+        )
 
     ifOutMulticastPkts = \
-        SubtreeMIBEntry('1.1.4', if_updater, ValueType.COUNTER_32, if_updater.get_counter32,
-                           DbTables32(4))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('1.1.4', if_updater, ValueType.COUNTER_32, if_updater.get_counter32,
+                           DbTables32(4)),
+            OidMIBEntry('1.1.4', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
+        )
 
     ifOutBroadcastPkts = \
-        SubtreeMIBEntry('1.1.5', if_updater, ValueType.COUNTER_32, if_updater.get_counter32,
-                           DbTables32(5))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('1.1.5', if_updater, ValueType.COUNTER_32, if_updater.get_counter32,
+                           DbTables32(5)),
+            OidMIBEntry('1.1.5', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
+        )
 
     ifHCInOctets = \
-        SubtreeMIBEntry('1.1.6', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
-                           DbTables64(6))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('1.1.6', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
+                           DbTables64(6)),
+            OidMIBEntry('1.1.6', ValueType.COUNTER_64, oidtree_updater.get_oidvalue)
+        )
 
     ifHCInUcastPkts = \
-        SubtreeMIBEntry('1.1.7', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
-                           DbTables64(7))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('1.1.7', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
+                           DbTables64(7)),
+            OidMIBEntry('1.1.7', ValueType.COUNTER_64, oidtree_updater.get_oidvalue)
+        )
 
     ifHCInMulticastPkts = \
-        SubtreeMIBEntry('1.1.8', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
-                           DbTables64(8))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('1.1.8', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
+                           DbTables64(8)),
+            OidMIBEntry('1.1.8', ValueType.COUNTER_64, oidtree_updater.get_oidvalue)
+        )
 
     ifHCInBroadcastPkts = \
-        SubtreeMIBEntry('1.1.9', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
-                           DbTables64(9))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('1.1.9', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
+                           DbTables64(9)),
+            OidMIBEntry('1.1.9', ValueType.COUNTER_64, oidtree_updater.get_oidvalue)
+        )
 
     ifHCOutOctets = \
-        SubtreeMIBEntry('1.1.10', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
-                           DbTables64(10))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('1.1.10', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
+                           DbTables64(10)),
+            OidMIBEntry('1.1.10', ValueType.COUNTER_64, oidtree_updater.get_oidvalue)
+        )
 
     ifHCOutUcastPkts = \
-        SubtreeMIBEntry('1.1.11', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
-                           DbTables64(11))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('1.1.11', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
+                           DbTables64(11)),
+            OidMIBEntry('1.1.11', ValueType.COUNTER_64, oidtree_updater.get_oidvalue)
+        )
 
     ifHCOutMulticastPkts = \
-        SubtreeMIBEntry('1.1.12', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
-                           DbTables64(12))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('1.1.12', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
+                           DbTables64(12)),
+            OidMIBEntry('1.1.12', ValueType.COUNTER_64, oidtree_updater.get_oidvalue)
+        )
 
     ifHCOutBroadcastPkts = \
-        SubtreeMIBEntry('1.1.13', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
-                           DbTables64(13))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('1.1.13', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
+                           DbTables64(13)),
+            OidMIBEntry('1.1.13', ValueType.COUNTER_64, oidtree_updater.get_oidvalue)
+        )
 
     """
     ifLinkUpDownTrapEnable  OBJECT-TYPE

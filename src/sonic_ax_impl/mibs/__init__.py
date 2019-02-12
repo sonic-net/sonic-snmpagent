@@ -408,8 +408,10 @@ class RedisOidTreeUpdater(MIBUpdater):
             oid = oid2tuple(key, dot_prefix=False)
             self.oid_list.append(oid)
             value = self.db_conn.get_all(SNMP_OVERLAY_DB, key)
-            if value[b'type'] in [b'COUNTER_32']:
+            if value[b'type'] in [b'COUNTER_32', b'COUNTER_64']:
                 self.oid_map[oid] = int(value[b'data'])
+            else:
+                raise ValueError("Invalid value type")
 
         self.oid_list.sort()
 
