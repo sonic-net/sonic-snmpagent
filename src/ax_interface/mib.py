@@ -86,21 +86,15 @@ class MIBMeta(type):
             for me in vars(cls).values():
                 if isinstance(me, MIBEntry):
                     setattr(me, MIBEntry.PREFIXLEN, _prefix_len + len(me.subtree))
+                    setattr(me, MIBEntry.PREFIX, _prefix + me.subtree)
 
             sub_ids = {}
 
-            # gather all static MIB entries.
-            static_entries = (v for v in vars(cls).values() if type(v) is MIBEntry)
-            for me in static_entries:
+            # gather all MIB entries.
+            mib_entries = (v for v in vars(cls).values() if isinstance(v, MIBEntry))
+            for me in mib_entries:
                 sub_ids.update({_prefix + me.subtree: me})
                 prefixes.append(_prefix + me.subtree)
-
-            # gather all subtree IDs
-            # to support dynamic sub_id in the subtree, not to pour leaves into dictionary
-            subtree_entries = (v for v in vars(cls).values() if type(v) is SubtreeMIBEntry)
-            for sme in subtree_entries:
-                sub_ids.update({_prefix + sme.subtree: sme})
-                prefixes.append(_prefix + sme.subtree)
 
             # gather all updater instances
             updaters = set(v for k, v in vars(cls).items() if isinstance(v, MIBUpdater))
@@ -134,6 +128,7 @@ class MIBMeta(type):
 
 class MIBEntry:
     PREFIXLEN = '__prefixlen__'
+    PREFIX = '__prefix__'
 
     def __init__(self, subtree, value_type, callable_, *args):
         """
@@ -155,7 +150,7 @@ class MIBEntry:
             raise ValueError("Third argument must be a callable object--got literal instead.")
         self._callable_ = callable_
         self._callable_args = args
-        self.subtree = subtree
+        self.subtree_str = subtree
         self.value_type = value_type
         self.subtree = util.oid2tuple(subtree, dot_prefix=False)
 
@@ -174,8 +169,11 @@ class MIBEntry:
     def get_next(self, sub_id):
         return None
 
+    def get_prefix(self):
+        return getattr(self, MIBEntry.PREFIX)
+
 class SubtreeMIBEntry(MIBEntry):
-    def __init__(self, subtree, iterator, value_type, callable_, *args, updater=None):
+    def __init__(self, subtree, iterator, value_type, callable_, *args):
         super().__init__(subtree, value_type, callable_, *args)
         self.iterator = iterator
 
@@ -208,6 +206,46 @@ class SubtreeMIBEntry(MIBEntry):
             # Any unexpected exception or error, log it and keep running
             logger.exception("SubtreeMIBEntry.get_next() caught an unexpected exception during iterator.get_next()")
             return None
+
+# Define MIB entry (subtree) with a callable, which accepts a starndard OID tuple as a paramter
+class OidMIBEntry(MIBEntry):
+    def __init__(self, subtree, value_type, callable_):
+        super().__init__(subtree, value_type, callable_)
+
+    def __iter__(self):
+        raise NotImplementedError
+
+    def __call__(self, sub_id):
+        return self._callable_.__call__(self.get_prefix() + sub_id)
+
+class OverlayAdpaterMIBEntry(MIBEntry):
+    def __init__(self, underlay_mibentry, overlay_mibentry):
+        assert underlay_mibentry.value_type == overlay_mibentry.value_type
+        assert underlay_mibentry.subtree == overlay_mibentry.subtree
+
+        super().__init__(underlay_mibentry.subtree_str, underlay_mibentry.value_type, underlay_mibentry._callable_)
+        self.underlay_mibentry = underlay_mibentry
+        self.overlay_mibentry = overlay_mibentry
+
+    def __setattr__(self, name, value):
+        super().__setattr__(name, value)
+        if name.startswith('__') and name.endswith('__'):
+            setattr(self.underlay_mibentry, name, value)
+            setattr(self.overlay_mibentry, name, value)
+
+    def __iter__(self):
+        return self.underlay_mibentry.__iter__()
+
+    def __call__(self, sub_id=None):
+        overlay_val = self.overlay_mibentry(sub_id)
+        if overlay_val is not None:
+            return overlay_val
+
+        underlay_val = self.underlay_mibentry(sub_id)
+        return underlay_val
+
+    def get_next(self, sub_id):
+        return self.underlay_mibentry.get_next(sub_id)
 
 class MIBTable(dict):
     """

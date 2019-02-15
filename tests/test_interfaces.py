@@ -21,6 +21,10 @@ class TestGetNextPDU(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.lut = MIBTable(rfc1213.InterfacesMIB)
+        for updater in cls.lut.updater_instances:
+            updater.update_data()
+            updater.reinit_data()
+            updater.update_data()
 
     def test_getnextpdu_noneifindex(self):
         # oid.include = 1
@@ -303,3 +307,39 @@ class TestGetNextPDU(TestCase):
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 7, 10001))))
         self.assertEqual(value0.data, 1)
+
+    def test_in_octets(self):
+        """
+        For a port with no speed in the db the result should be 0
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 10, 5))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.COUNTER_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 10, 5))))
+        self.assertEqual(value0.data, 40321)
+
+    def test_in_octets_override(self):
+        """
+        For a port with no speed in the db the result should be 0
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 10, 1))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.COUNTER_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 10, 1))))
+        self.assertEqual(value0.data, 54321)

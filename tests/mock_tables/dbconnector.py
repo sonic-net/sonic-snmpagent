@@ -44,6 +44,8 @@ class SwssSyncClient(mockredis.MockRedis):
             fname = 'config_db.json'
         elif db == 6:
             fname = 'state_db.json'
+        elif db == 7:
+            fname = 'snmp_overlay_db.json'
         else:
             raise ValueError("Invalid db")
         self.pubsub = MockPubSub()

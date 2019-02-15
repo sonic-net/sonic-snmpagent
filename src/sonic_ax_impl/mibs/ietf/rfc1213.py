@@ -4,10 +4,9 @@ from enum import unique, Enum
 from bisect import bisect_right
 
 from sonic_ax_impl import mibs
-from ax_interface import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry
+from ax_interface.mib import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
 from ax_interface.encodings import ObjectIdentifier
 from ax_interface.util import mac_decimals, ip2tuple_v4
-
 
 @unique
 class DbTables(int, Enum):
@@ -271,6 +270,7 @@ class InterfacesUpdater(MIBUpdater):
         :param table_name: the redis table (either IntEnum or string literal) to query.
         :return: the counter for the respective sub_id/table.
         """
+
         oid = self.get_oid(sub_id)
         if not oid:
             return
@@ -423,13 +423,14 @@ class InterfacesUpdater(MIBUpdater):
         else:
             return IfTypes.ethernetCsmacd
 
-
 class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
     """
     'interfaces' https://tools.ietf.org/html/rfc1213#section-3.5
     """
 
     if_updater = InterfacesUpdater()
+
+    oidtree_updater = mibs.RedisOidTreeUpdater(prefix_str='1.3.6.1.2.1.2')
 
     # (subtree, value_type, callable_, *args, handler=None)
     ifNumber = MIBEntry('1', ValueType.INTEGER, if_updater.get_if_number)
@@ -467,52 +468,88 @@ class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
         SubtreeMIBEntry('2.1.9', if_updater, ValueType.TIME_TICKS, lambda sub_id: 0)
 
     ifInOctets = \
-        SubtreeMIBEntry('2.1.10', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
-                           DbTables(10))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('2.1.10', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
+                           DbTables(10)),
+            OidMIBEntry('2.1.10', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
+        )
 
     ifInUcastPkts = \
-        SubtreeMIBEntry('2.1.11', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
-                           DbTables(11))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('2.1.11', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
+                           DbTables(11)),
+            OidMIBEntry('2.1.11', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
+        )
 
     ifInNUcastPkts = \
-        SubtreeMIBEntry('2.1.12', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
-                           DbTables(12))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('2.1.12', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
+                           DbTables(12)),
+            OidMIBEntry('2.1.12', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
+        )
 
     ifInDiscards = \
-        SubtreeMIBEntry('2.1.13', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
-                           DbTables(13))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('2.1.13', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
+                           DbTables(13)),
+            OidMIBEntry('2.1.13', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
+        )
 
     ifInErrors = \
-        SubtreeMIBEntry('2.1.14', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
-                           DbTables(14))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('2.1.14', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
+                           DbTables(14)),
+            OidMIBEntry('2.1.14', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
+        )
 
     ifInUnknownProtos = \
-        SubtreeMIBEntry('2.1.15', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
-                           DbTables(15))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('2.1.15', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
+                           DbTables(15)),
+            OidMIBEntry('2.1.15', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
+        )
 
     ifOutOctets = \
-        SubtreeMIBEntry('2.1.16', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
-                           DbTables(16))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('2.1.16', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
+                           DbTables(16)),
+            OidMIBEntry('2.1.16', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
+        )
 
     ifOutUcastPkts = \
-        SubtreeMIBEntry('2.1.17', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
-                           DbTables(17))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('2.1.17', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
+                           DbTables(17)),
+            OidMIBEntry('2.1.17', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
+        )
 
     ifOutNUcastPkts = \
-        SubtreeMIBEntry('2.1.18', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
-                           DbTables(18))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('2.1.18', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
+                           DbTables(18)),
+            OidMIBEntry('2.1.18', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
+        )
 
     ifOutDiscards = \
-        SubtreeMIBEntry('2.1.19', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
-                           DbTables(19))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('2.1.19', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
+                           DbTables(19)),
+            OidMIBEntry('2.1.19', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
+        )
 
     ifOutErrors = \
-        SubtreeMIBEntry('2.1.20', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
-                           DbTables(20))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('2.1.20', if_updater, ValueType.COUNTER_32, if_updater.get_counter,
+                           DbTables(20)),
+            OidMIBEntry('2.1.20', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
+        )
 
     ifOutQLen = \
-        SubtreeMIBEntry('2.1.21', if_updater, ValueType.GAUGE_32, if_updater.get_counter,
-                           DbTables(21))
+        OverlayAdpaterMIBEntry(
+            SubtreeMIBEntry('2.1.21', if_updater, ValueType.GAUGE_32, if_updater.get_counter,
+                           DbTables(21)),
+            OidMIBEntry('2.1.21', ValueType.GAUGE_32, oidtree_updater.get_oidvalue)
+        )
 
     # FIXME Placeholder
     ifSpecific = \
