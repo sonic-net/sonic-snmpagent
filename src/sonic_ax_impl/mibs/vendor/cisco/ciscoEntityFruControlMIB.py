@@ -1,11 +1,6 @@
-import imp
-import re
-import sys
-
 from enum import Enum, unique
 from sonic_ax_impl import mibs
-from ax_interface import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry
-from ax_interface.encodings import ObjectIdentifier
+from ax_interface import MIBMeta, ValueType, SubtreeMIBEntry
 from swsssdk import SonicV2Connector
 
 CHASSIS_INFO_KEY_TEMPLATE = 'chassis {}'
