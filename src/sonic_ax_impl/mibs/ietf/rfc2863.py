@@ -171,8 +171,7 @@ class InterfaceMIBUpdater(MIBUpdater):
 
         if oid in self.mgmt_oid_name_map:
             # TODO: mgmt counters not available through SNMP right now
-            # COUNTERS DB does not have suppot for generic linux (mgmt) interface counters
-            mibs.logger.warning('management interface counters not available through SNMP right now')
+            # COUNTERS DB does not have support for generic linux (mgmt) interface counters
             return 0
 
         if oid in self.oid_lag_name_map:
