@@ -46,6 +46,22 @@ IFINDEX_SUB_ID_MULTIPLIER = 1000
 
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
 
+def chassis_info_table(chassis_name):
+    """
+    :param: chassis_name: chassis name
+    :return: chassis info entry for this chassis
+    """
+
+    return "CHASSIS_INFO" + TABLE_NAME_SEPARATOR_VBAR + chassis_name
+
+def psu_info_table(psu_name):
+    """
+    :param: psu_name: psu name
+    :return: psu info entry for this psu
+    """
+
+    return "PSU_INFO" + TABLE_NAME_SEPARATOR_VBAR + psu_name
+
 def counter_table(sai_id):
     """
     :param if_name: given sai_id to cast.
