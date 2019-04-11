@@ -18,10 +18,11 @@ high_performance_deps = [
 setup(
     name='asyncsnmp',
     install_requires=dependencies,
+    setup_requires=["pytest-runner"],
+    tests_require=test_deps,
     version='2.1.0',
     packages=find_packages('src'),
     extras_require={
-        'testing': test_deps,
         'high_perf': high_performance_deps,
     },
     license='Apache 2.0',
