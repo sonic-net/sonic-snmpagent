@@ -65,6 +65,15 @@ class QueueStatUpdater(MIBUpdater):
 
         self.queue_type_map = {}
 
+    def check_ready(self):
+        """
+        Wait for queue counters to be available
+        before start polling from DB
+        """
+
+        status = mibs.get_fc_group_status(self.db_conn, b'QUEUE')
+        return status == b'enable'
+
     def reinit_data(self):
         """
         Subclass update interface information

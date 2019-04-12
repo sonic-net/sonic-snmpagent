@@ -27,6 +27,15 @@ class PfcUpdater(MIBUpdater):
         self.if_counters = {}
         self.if_range = []
 
+    def check_ready(self):
+        """
+        Wait for pfc counters to be available
+        before start polling from DB
+        """
+
+        status = mibs.get_fc_group_status(self.db_conn, b'PORT')
+        return status == b'enable'
+
     def reinit_data(self):
         """
         Subclass update interface information

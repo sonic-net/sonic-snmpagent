@@ -136,6 +136,14 @@ def mgmt_if_entry_table_state_db(if_name):
 
     return b'MGMT_PORT_TABLE|' + if_name
 
+def fc_config_table(fc_group):
+    """
+    :param fc_group: flex counter group name
+    :return: FLEX_COUNTER_TABLE key
+    """
+
+    return b'FLEX_COUNTER_TABLE|' + fc_group
+
 
 def config(**kwargs):
     global redis_kwargs
@@ -382,6 +390,18 @@ def get_transceiver_sensor_sub_id(ifindex, sensor):
 
     transceiver_oid, = get_transceiver_sub_id(ifindex)
     return (transceiver_oid + SENSOR_PART_ID_MAP[sensor], )
+
+
+def get_fc_group_status(db_conn, fc_group):
+    """
+    :param db_conn: db connector
+    :param fc_group: flex counter group
+    :return: status
+    """
+
+    db_conn.connect(db_conn.CONFIG_DB)
+    return db_conn.get(db_conn.CONFIG_DB, fc_config_table(fc_group), 'FLEX_COUNTER_STATUS')
+
 
 class RedisOidTreeUpdater(MIBUpdater):
     def __init__(self, prefix_str):

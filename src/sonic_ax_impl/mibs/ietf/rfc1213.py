@@ -169,6 +169,15 @@ class InterfacesUpdater(MIBUpdater):
         self.oid_sai_map = {}
         self.oid_name_map = {}
 
+    def check_ready(self):
+        """
+        Wait for port counters to be available
+        before start polling from DB
+        """
+
+        status = mibs.get_fc_group_status(self.db_conn, b'PORT')
+        return status == b'enable'
+
     def reinit_data(self):
         """
         Subclass update interface information

@@ -30,20 +30,24 @@ class MIBUpdater:
         self.frequency = DEFAULT_UPDATE_FREQUENCY
         self.reinit_rate = DEFAULT_REINIT_RATE // DEFAULT_UPDATE_FREQUENCY
         self.update_counter = self.reinit_rate + 1 # reinit_data when init
+        self.ready = False
 
     async def start(self):
         # Run the update while we are allowed
         while self.run_event.is_set():
             try:
-                # reinit internal structures
-                if self.update_counter > self.reinit_rate:
-                    self.reinit_data()
-                    self.update_counter = 0
+                if not self.ready:
+                    self.ready = self.check_ready()
                 else:
-                    self.update_counter += 1
+                    if self.update_counter > self.reinit_rate:
+                        # reinit internal structures
+                        self.reinit_data()
+                        self.update_counter = 0
+                    else:
+                        self.update_counter += 1
 
-                # run the background update task
-                self.update_data()
+                    # run the background update task
+                    self.update_data()
             except Exception:
                 # Any unexpected exception or error, log it and keep running
                 logger.exception("MIBUpdater.start() caught an unexpected exception during update_data()")
@@ -51,6 +55,14 @@ class MIBUpdater:
             # wait based on our update frequency before executing again.
             # randomize to avoid concurrent update storms.
             await asyncio.sleep(self.frequency + random.randint(-2, 2))
+
+    def check_ready(self):
+        """
+        Readiness check to start polling data from DB.
+        Children may override this method.
+        """
+
+        return True
 
     def reinit_data(self):
         """
