@@ -2,6 +2,7 @@
 http://www.ieee802.org/1/files/public/MIBs/LLDP-MIB-200505060000Z.txt
 """
 import ipaddress
+import json
 from enum import Enum, unique
 from bisect import bisect_right
 
@@ -302,11 +303,12 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         if not mgmt_ip_bytes:
             self.mgmt_ip_str = ''
         else:
-            self.mgmt_ip_str = mgmt_ip_bytes.decode()
+            self.mgmt_ip_str = mgmt_ip_bytes.decode('utf8').replace("'", '"').replace("u", '')
             logger.debug("Got mgmt ip from db : {}".format(self.mgmt_ip_str))
         try:
             addr_subtype_sub_oid = 4
-            mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i) for i in self.mgmt_ip_str.split('.')])
+            mgmt_ip_list = json.loads(self.mgmt_ip_str)
+            mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i) for i in mgmt_ip_list[0].split('.')])
         except ValueError:
             logger.error("Invalid local mgmt IP {}".format(self.mgmt_ip_str))
             return
