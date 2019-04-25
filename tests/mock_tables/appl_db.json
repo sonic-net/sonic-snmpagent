@@ -466,7 +466,7 @@
     "lldp_loc_chassis_id": "00:11:22:AB:CD:EF",
     "lldp_loc_sys_name": "SONiC",
     "lldp_loc_sys_desc": "Gotta go Fast!",
-    "lldp_loc_man_addr": "10.224.25.26"
+    "lldp_loc_man_addr": "10.224.25.26,fe80::ce37:abff:feec:de9c"
   },
   "PORT_TABLE:Ethernet0": {
     "description": "snowflake",

@@ -306,13 +306,15 @@ class LLDPLocManAddrUpdater(MIBUpdater):
             logger.debug("Got mgmt ip from db : {}".format(self.mgmt_ip_str))
         try:
             addr_subtype_sub_oid = 4
-            mgmt_ip_sub_oid = ()
+            mgmt_ip_sub_oid = None
             for mgmt_ip in self.mgmt_ip_str.split(','):
                 if '.' in mgmt_ip:
                     mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i) for i in mgmt_ip.split('.')])
                     break
         except ValueError:
             logger.error("Invalid local mgmt IP {}".format(self.mgmt_ip_str))
+            return
+        if mgmt_ip_sub_oid == None:
             return
         sub_oid = (ManAddrConst.man_addr_subtype_ipv4,
                    *mgmt_ip_sub_oid)
