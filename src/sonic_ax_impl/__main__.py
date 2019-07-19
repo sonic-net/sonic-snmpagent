@@ -1,3 +1,4 @@
+from signal import signal, SIGUSR1
 import logging.handlers
 import os
 import shutil
@@ -11,6 +12,21 @@ from . import mibs
 
 LOG_FORMAT = "snmp-subagent [%(name)s] %(levelname)s: %(message)s"
 
+# set signal handlers to switch log level
+def signal_handler_sigusr1(signal, frame):
+    # set log level to debug or revert if set already
+    if sonic_ax_impl.logger.getEffectiveLevel() != logging.DEBUG:
+        sonic_ax_impl.logger.info("signal_handler_sigusr1(): Setting logger level to debug")
+        sonic_ax_impl.logger.setLevel(logging.DEBUG)
+        ax_interface.logger.setLevel(logging.DEBUG)
+    else:
+        sonic_ax_impl.logger.info("signal_handler_sigusr1(): Revert logger level to info")
+        sonic_ax_impl.logger.setLevel(logging.INFO)
+        ax_interface.logger.setLevel(logging.INFO)
+    return
+
+signal(SIGUSR1, signal_handler_sigusr1)
+# end signal handlers
 
 def install_file(src_filename, dest_dir, executable=False):
     dest_file = shutil.copy(src_filename, dest_dir)

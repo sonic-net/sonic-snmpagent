@@ -22,3 +22,17 @@ To run the daemon:
 $ python3.5 -m sonic_ax_impl [-d 10]
 ```
 
+
+To switch log level of already running snmp-subagent process
+
+1.) Find PID of the process.
+
+```
+root 42 1 12 06:37 ? 01:23:46 python3.6 -m sonic_ax_impl
+```
+
+2.) Send SIGUSR1 signal to Process
+```
+root@lnos-x1-a-csw04:/# kill -SIGUSR1 42
+```
+Sending SIGUSR1 signal to process again will reset the log level. 
