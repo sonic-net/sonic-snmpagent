@@ -44,7 +44,7 @@ class XcvrInfoDB(bytes, Enum):
     MODEL_NAME        = b"modelname"
 
 
-# Map used to generate sensor description 
+# Map used to generate sensor description
 SENSOR_NAME_MAP = {
     "temperature" : "Temperature",
     "voltage"     : "Voltage",
@@ -231,7 +231,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
 
                 for sub_id in remove_sub_ids:
                     if sub_id and sub_id in self.physical_entities:
-                        self.physical_entites.remove(sub_id)
+                        self.physical_entities.remove(sub_id)
 
     def _update_transceiver_cache(self, interface):
         """
