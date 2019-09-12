@@ -302,10 +302,11 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         mgmt_ip_bytes = self.db_conn.get(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE, b'lldp_loc_man_addr')
 
         if not mgmt_ip_bytes:
-            self.mgmt_ip_str = ''
-        else:
-            self.mgmt_ip_str = mgmt_ip_bytes.decode()
-            logger.debug("Got mgmt ip from db : {}".format(self.mgmt_ip_str))
+            logger.warning("Missing lldp_loc_man_addr from APPL DB")
+            return
+
+        self.mgmt_ip_str = mgmt_ip_bytes.decode()
+        logger.debug("Got mgmt ip from db : {}".format(self.mgmt_ip_str))
         try:
             addr_subtype_sub_oid = 4
             mgmt_ip_sub_oid = None
@@ -316,8 +317,7 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         except ValueError:
             logger.error("Invalid local mgmt IP {}".format(self.mgmt_ip_str))
             return
-        if mgmt_ip_sub_oid == None:
-            return
+
         sub_oid = (ManAddrConst.man_addr_subtype_ipv4,
                    *mgmt_ip_sub_oid)
         self.man_addr_list.append(sub_oid)
