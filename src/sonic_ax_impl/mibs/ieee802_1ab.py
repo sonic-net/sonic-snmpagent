@@ -348,12 +348,13 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         :param sub_id:
         :return: MGMT IP in HEX
         """
-        hex_ip = ''
-        for mgmt_ip in self.mgmt_ip_str.split(','):
-            if '.' in mgmt_ip:
-                hex_ip = " ".join([format(int(i), '02X') for i in mgmt_ip.split('.')])
-                break
-        return hex_ip
+        if self.mgmt_ip_str:
+            hex_ip = ''
+            for mgmt_ip in self.mgmt_ip_str.split(','):
+                if '.' in mgmt_ip:
+                    hex_ip = " ".join([format(int(i), '02X') for i in mgmt_ip.split('.')])
+                    break
+            return hex_ip
 
     @staticmethod
     def man_addr_len(sub_id): return ManAddrConst.man_addr_len
