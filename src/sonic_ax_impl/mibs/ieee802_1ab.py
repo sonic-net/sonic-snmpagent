@@ -296,16 +296,18 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         Subclass update data routine.
         """
         self.man_addr_list = []
+        self.mgmt_ip_str = None
 
         # establish connection to application database.
         self.db_conn.connect(mibs.APPL_DB)
         mgmt_ip_bytes = self.db_conn.get(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE, b'lldp_loc_man_addr')
 
         if not mgmt_ip_bytes:
-            self.mgmt_ip_str = ''
-        else:
-            self.mgmt_ip_str = mgmt_ip_bytes.decode()
-            logger.debug("Got mgmt ip from db : {}".format(self.mgmt_ip_str))
+            logger.warning("Missing lldp_loc_man_addr from APPL DB")
+            return
+
+        self.mgmt_ip_str = mgmt_ip_bytes.decode()
+        logger.debug("Got mgmt ip from db : {}".format(self.mgmt_ip_str))
         try:
             addr_subtype_sub_oid = 4
             mgmt_ip_sub_oid = None
@@ -316,8 +318,7 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         except ValueError:
             logger.error("Invalid local mgmt IP {}".format(self.mgmt_ip_str))
             return
-        if mgmt_ip_sub_oid == None:
-            return
+
         sub_oid = (ManAddrConst.man_addr_subtype_ipv4,
                    *mgmt_ip_sub_oid)
         self.man_addr_list.append(sub_oid)
@@ -348,12 +349,13 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         :param sub_id:
         :return: MGMT IP in HEX
         """
-        hex_ip = ''
-        for mgmt_ip in self.mgmt_ip_str.split(','):
-            if '.' in mgmt_ip:
-                hex_ip = " ".join([format(int(i), '02X') for i in mgmt_ip.split('.')])
-                break
-        return hex_ip
+        if self.mgmt_ip_str:
+            hex_ip = ''
+            for mgmt_ip in self.mgmt_ip_str.split(','):
+                if '.' in mgmt_ip:
+                    hex_ip = " ".join([format(int(i), '02X') for i in mgmt_ip.split('.')])
+                    break
+            return hex_ip
 
     @staticmethod
     def man_addr_len(sub_id): return ManAddrConst.man_addr_len
