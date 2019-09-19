@@ -296,6 +296,7 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         Subclass update data routine.
         """
         self.man_addr_list = []
+        self.mgmt_ip_str = None
 
         # establish connection to application database.
         self.db_conn.connect(mibs.APPL_DB)
