@@ -466,6 +466,8 @@
     "lldp_loc_chassis_id": "00:11:22:AB:CD:EF",
     "lldp_loc_sys_name": "SONiC",
     "lldp_loc_sys_desc": "Gotta go Fast!",
+    "lldp_loc_sys_cap_enabled": "28 00",
+    "lldp_loc_sys_cap_supported": "28 00",
     "lldp_loc_man_addr": "10.224.25.26,fe80::ce37:abff:feec:de9c"
   },
   "PORT_TABLE:Ethernet0": {
