@@ -497,6 +497,10 @@ class LLDPRemManAddrUpdater(MIBUpdater):
             return
         try:
             mgmt_ip_str = lldp_kvs[b'lldp_rem_man_addr'].decode()
+            mgmt_ip_str = mgmt_ip_str.strip()
+            if len(mgmt_ip_str) == 0:
+                # the peer advertise an emtpy mgmt address
+                return
             time_mark = int(lldp_kvs[b'lldp_rem_time_mark'])
             remote_index = int(lldp_kvs[b'lldp_rem_index'])
             subtype = self.get_subtype(mgmt_ip_str)
