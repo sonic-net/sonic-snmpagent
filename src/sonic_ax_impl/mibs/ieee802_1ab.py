@@ -224,7 +224,7 @@ class LocPortUpdater(MIBUpdater):
         """
         if not self.pubsub:
             redis_client = self.db_conn.get_redis_client(self.db_conn.APPL_DB)
-            db = self.db_conn.db_map[self.db_conn.APPL_DB]["db"]
+            db = self.db_conn.get_dbid(self.db_conn.APPL_DB)
             self.pubsub = redis_client.pubsub()
             self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
 
@@ -534,7 +534,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         """
         if not self.pubsub:
             redis_client = self.db_conn.get_redis_client(self.db_conn.APPL_DB)
-            db = self.db_conn.db_map[self.db_conn.APPL_DB]["db"]
+            db = self.db_conn.get_dbid(self.db_conn.APPL_DB)
             self.pubsub = redis_client.pubsub()
             self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
 

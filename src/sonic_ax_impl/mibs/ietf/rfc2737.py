@@ -193,7 +193,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         # does not support pubsub
         if not self.pubsub:
             redis_client = self.statedb.get_redis_client(self.statedb.STATE_DB)
-            db = self.statedb.db_map[self.statedb.STATE_DB]["db"]
+            db = self.statedb.get_dbid(self.statedb.STATE_DB)
             self.pubsub = redis_client.pubsub()
             self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, self.TRANSCEIVER_KEY_PATTERN))
 
