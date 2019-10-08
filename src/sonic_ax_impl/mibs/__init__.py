@@ -165,7 +165,7 @@ def init_mgmt_interface_tables(db_conn):
     mgmt_ports_keys = db_conn.keys(CONFIG_DB, mgmt_if_entry_table(b'*'))
 
     if not mgmt_ports_keys:
-        logger.warning('No managment ports found in {}'.format(mgmt_if_entry_table(b'')))
+        logger.debug('No managment ports found in {}'.format(mgmt_if_entry_table(b'')))
         return {}, {}
 
     mgmt_ports = [key.split(mgmt_if_entry_table(b''))[-1] for key in mgmt_ports_keys]
