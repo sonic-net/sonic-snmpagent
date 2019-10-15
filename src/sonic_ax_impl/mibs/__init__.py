@@ -325,10 +325,10 @@ def init_sync_d_queue_tables(db_conn):
     if not port_queues_map:
         # In the event no queue exists that follows the SONiC pattern, no OIDs are able to be registered.
         # A RuntimeError here will prevent the 'main' module from loading. (This is desirable.)
-        logger.error("No queues found in the Counter DB. SyncD database is incoherent.")
+        logger.warning("No queues found in the Counter DB. SyncD database is incoherent.")
         raise RuntimeError('The port_queues_map is not defined')
     elif not queue_stat_map:
-        logger.error("No queue stat counters found in the Counter DB. SyncD database is incoherent.")
+        logger.warning("No queue stat counters found in the Counter DB. SyncD database is incoherent.")
         raise RuntimeError('The queue_stat_map is not defined')
 
     for queues in port_queue_list_map.values():
