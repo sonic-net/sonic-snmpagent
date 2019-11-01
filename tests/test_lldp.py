@@ -202,3 +202,59 @@ class TestLLDPMIB(TestCase):
         print(response)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.END_OF_MIB_VIEW)
+
+    def test_getnextpdu_lldpLocSysCapSupported(self):
+        oid = ObjectIdentifier(9, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 3, 5))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.OCTET_STRING)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(9, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 3, 5))))
+        self.assertEqual(str(value0.data), "\x28\x00")
+
+    def test_getnextpdu_lldpLocSysCapEnabled(self):
+        oid = ObjectIdentifier(9, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 3, 6))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.OCTET_STRING)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(9, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 3, 6))))
+        self.assertEqual(str(value0.data), "\x28\x00")
+
+    def test_getnextpdu_lldpRemSysCapSupported(self):
+        oid = ObjectIdentifier(12, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, 11, 1, 1))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.OCTET_STRING)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, 11, 1, 1))))
+        self.assertEqual(str(value0.data), "\x28\x00")
+
+    def test_getnextpdu_lldpRemSysCapEnabled(self):
+        oid = ObjectIdentifier(12, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, 12, 1, 1))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.OCTET_STRING)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, 12, 1, 1))))
+        self.assertEqual(str(value0.data), "\x28\x00")

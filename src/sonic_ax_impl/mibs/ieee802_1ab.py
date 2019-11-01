@@ -95,6 +95,8 @@ def poll_lldp_entry_updates(pubsub):
         return ret
     return data, interface, if_index
 
+def parse_sys_capability(sys_cap):
+    return bytearray([int (x, 16) for x in sys_cap.split()])
 
 class LLDPLocalSystemDataUpdater(MIBUpdater):
     def __init__(self):
@@ -110,7 +112,8 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
         # establish connection to application database.
         self.db_conn.connect(mibs.APPL_DB)
         self.loc_chassis_data = self.db_conn.get_all(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
-
+        self.loc_chassis_data[b'lldp_loc_sys_cap_supported'] = parse_sys_capability(self.loc_chassis_data[b'lldp_loc_sys_cap_supported'])
+        self.loc_chassis_data[b'lldp_loc_sys_cap_enabled'] = parse_sys_capability(self.loc_chassis_data[b'lldp_loc_sys_cap_enabled'])
     def update_data(self):
         """
         Avoid NotImplementedError
@@ -432,7 +435,8 @@ class LLDPRemTableUpdater(MIBUpdater):
                 self.if_range.append((time_mark,
                                       if_oid,
                                       remote_index))
-
+                lldp_kvs[b'lldp_rem_sys_cap_supported'] = parse_sys_capability(lldp_kvs[b'lldp_rem_sys_cap_supported'])
+                lldp_kvs[b'lldp_rem_sys_cap_enabled'] = parse_sys_capability(lldp_kvs[b'lldp_rem_sys_cap_enabled'])
                 self.lldp_counters.update({if_name: lldp_kvs})
             except (KeyError, AttributeError) as e:
                 logger.warning("Exception when updating lldpRemTable: {}".format(e))
