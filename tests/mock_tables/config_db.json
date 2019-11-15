@@ -8,5 +8,11 @@
     "admin_status": "up",
     "alias": "mgmt1",
     "speed": 1000
+  },
+  "MGMT_PORT|eth2": {
+    "description": "NotExistInStateDB",
+    "admin_status": "up",
+    "alias": "mgmt2",
+    "speed": 1000
   }
 }
