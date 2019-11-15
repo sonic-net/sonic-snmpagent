@@ -337,7 +337,7 @@ class InterfacesUpdater(MIBUpdater):
         else:
             return None
 
-        return self.db_conn.get_all(db, if_table, blocking=True)
+        return self.db_conn.get_all(db, if_table, blocking=False)
 
     def _get_status(self, sub_id, key):
         """
@@ -347,7 +347,12 @@ class InterfacesUpdater(MIBUpdater):
         """
         status_map = {
             b"up": 1,
-            b"down": 2
+            b"down": 2,
+            b"testing": 3,
+            b"unknown": 4,
+            b"dormant": 5,
+            b"notPresent": 6,
+            b"lowerLayerDown": 7
         }
 
         # Once PORT_TABLE will be moved to CONFIG DB
@@ -357,11 +362,12 @@ class InterfacesUpdater(MIBUpdater):
             entry = self._get_if_entry_state_db(sub_id)
         else:
             entry = self._get_if_entry(sub_id)
+
         if not entry:
-            return
+            return status_map.get(b"unknown")
 
         # Note: If interface never become up its state won't be reflected in DB entry
-        # If state is not in DB entry assume interface is down
+        # If state key is not in DB entry assume interface is down
         state = entry.get(key, b"down")
 
         return status_map.get(state, status_map[b"down"])
