@@ -38,7 +38,11 @@ class BgpSessionUpdater(MIBUpdater):
 
         except (socket.error, socket.timeout) as e:
             self.sock.close()
-            mibs.logger.error('Failed to talk with quagga socket. Retry later...: {}.'.format(e))
+            mibs.logger.error('Failed to talk with quagga socket. Reconnect later...: {}.'.format(e))
+            return
+        except ValueError as e:
+            self.sock.close()
+            mibs.logger.error('Receive unexpected data from quagga socket. Reconnect later...: {}.'.format(e))
             return
 
         for nei, ses in sessions.items():
