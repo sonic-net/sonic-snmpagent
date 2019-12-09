@@ -112,3 +112,4 @@ class TestSonicMIB(TestCase):
             bgpsu = f.read()
         bgpsumm_ipv6 = parse_bgp_summary(bgpsu)
         self.assertEqual(bgpsumm_ipv6, [])
+

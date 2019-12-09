@@ -57,3 +57,4 @@ class MockSocket(_socket_class):
 # Replace the function with mocked one
 socket.socket = MockSocket
 socket.gethostname = MockGetHostname
+
