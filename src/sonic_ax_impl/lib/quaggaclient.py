@@ -90,6 +90,7 @@ class QuaggaClient:
     def __init__(self, hostname, sock):
         self.prompt_hostname = ('\r\n' + hostname + '> ').encode()
         self.sock = sock
+        self.bpg_provider = 'Quagga'
 
     def union_bgp_sessions(self):
         bgpsumm_ipv4 = self.show_bgp_summary('ip')
@@ -99,16 +100,27 @@ class QuaggaClient:
         sessions_ipv6 = parse_bgp_summary(bgpsumm_ipv6)
 
         ## Note: sessions_ipv4 will overwrite sessions_ipv6 if key is the same
-        sessions = {}
+        neighbor_sessions = {}
         for ses in sessions_ipv6 + sessions_ipv4:
             nei = ses['Neighbor']
-            sessions[nei] = ses
-        return sessions
+            neighbor_sessions[nei] = ses
+        return neighbor_sessions
 
     def auth(self):
         cmd = b"zebra\n"
         self.sock.send(cmd)
-        return self.vtysh_recv()
+
+        ## Nowadays we see 2 BGP stack
+        ## 1. Quagga (version 0.99.24.1)
+        ## 2. FRRouting (version 7.2-sonic)
+        banner = self.vtysh_recv()
+        if 'Quagga' in banner:
+            self.bpg_provider = 'Quagga'
+        elif 'FRRouting' in banner:
+            self.bpg_provider = 'FRRouting'
+        else:
+            raise ValueError('Unexpected data recv for banner: {0}'.format(banner))
+        return banner
 
     def vtysh_run(self, command):
         cmd = command.encode() + b'\n'
@@ -131,5 +143,8 @@ class QuaggaClient:
 
     def show_bgp_summary(self, ipver):
         assert(ipver in ['ip', 'ipv6'])
-        result = self.vtysh_run('show %s bgp summary' % ipver)
+        if self.bpg_provider == 'Quagga' or ipver == 'ip':
+            result = self.vtysh_run('show %s bgp summary' % ipver)
+        elif self.bpg_provider == 'FRRouting' and ipver == 'ipv6':
+            result = self.vtysh_run('show ip bgp ipv6 summary')
         return result
