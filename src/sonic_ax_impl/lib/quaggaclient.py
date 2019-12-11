@@ -20,7 +20,8 @@ def parse_bgp_summary(summ):
     li = 0
     while li < n:
         l = ls[li]
-        if l.startswith('Neighbor        '): break
+        if l.startswith('Neighbor        '):
+            break
         if l.startswith('No IPv'): # eg. No IPv6 neighbor is configured
             return bgpinfo
         if l.endswith('> exit'): # last command in the lines
@@ -90,7 +91,7 @@ class QuaggaClient:
     def __init__(self, hostname, sock):
         self.prompt_hostname = ('\r\n' + hostname + '> ').encode()
         self.sock = sock
-        self.bpg_provider = 'Quagga'
+        self.bgp_provider = 'Quagga'
 
     def union_bgp_sessions(self):
         bgpsumm_ipv4 = self.show_bgp_summary('ip')
@@ -115,9 +116,9 @@ class QuaggaClient:
         ## 2. FRRouting (version 7.2-sonic)
         banner = self.vtysh_recv()
         if 'Quagga' in banner:
-            self.bpg_provider = 'Quagga'
+            self.bgp_provider = 'Quagga'
         elif 'FRRouting' in banner:
-            self.bpg_provider = 'FRRouting'
+            self.bgp_provider = 'FRRouting'
         else:
             raise ValueError('Unexpected data recv for banner: {0}'.format(banner))
         return banner
@@ -143,8 +144,8 @@ class QuaggaClient:
 
     def show_bgp_summary(self, ipver):
         assert(ipver in ['ip', 'ipv6'])
-        if self.bpg_provider == 'Quagga' or ipver == 'ip':
+        if self.bgp_provider == 'Quagga' or ipver == 'ip':
             result = self.vtysh_run('show %s bgp summary' % ipver)
-        elif self.bpg_provider == 'FRRouting' and ipver == 'ipv6':
+        elif self.bgp_provider == 'FRRouting' and ipver == 'ipv6':
             result = self.vtysh_run('show ip bgp ipv6 summary')
         return result
