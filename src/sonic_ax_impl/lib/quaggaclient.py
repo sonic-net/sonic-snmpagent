@@ -22,15 +22,17 @@ def parse_bgp_summary(summ):
         l = ls[li]
         if l.startswith('Neighbor        '):
             break
-        if l.startswith('No IPv'): # eg. No IPv6 neighbor is configured
+        if l.startswith('No IPv'): # eg. No IPv6 neighbor is configured, in Quagga (version 0.99.24.1)
             return bgpinfo
-        if l.endswith('> exit'): # last command in the lines
+        if l.startswith('% No BGP neighbors found'): # in FRRouting (version 7.2)
+            return bgpinfo
+        if l.endswith('> '): # directly hostname prompt, in FRRouting (version 4.0)
             return bgpinfo
         li += 1
 
     ## Read and store the table header
     if li >= n:
-        raise ValueError('No table header found')
+        raise ValueError('No table header found: ' + summ)
     hl = ls[li]
     li += 1
     ht = re.split('\s+', hl.rstrip())
