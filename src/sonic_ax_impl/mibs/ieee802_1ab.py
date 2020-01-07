@@ -678,8 +678,6 @@ class LLDPLocalSystemData(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3'):
 
         # lldpLocPortEntry = '1'
 
-        lldpLocPortNum = SubtreeMIBEntry('1.1', port_updater, ValueType.INTEGER, port_updater.local_port_num)
-
         # We're using locally assigned name, so according to textual convention, the subtype is 7
         lldpLocPortIdSubtype = SubtreeMIBEntry('1.2', port_updater, ValueType.INTEGER, port_updater.port_id_subtype)
 
@@ -700,12 +698,6 @@ class LLDPLocalSystemData(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3'):
         ::= { lldpLocalSystemData 8 }
         """
         updater = LLDPLocManAddrUpdater()
-
-        lldpLocManAddrSubtype = SubtreeMIBEntry('1.1', updater, ValueType.INTEGER,
-                                                updater.lookup, updater.man_addr_subtype)
-
-        lldpLocManAddr = SubtreeMIBEntry('1.2', updater, ValueType.OCTET_STRING,
-                                         updater.lookup, updater.man_addr)
 
         lldpLocManAddrLen = SubtreeMIBEntry('1.3', updater, ValueType.INTEGER,
                                             updater.lookup, updater.man_addr_len)
@@ -810,17 +802,6 @@ class LLDPRemTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.4.1'):
     """
     lldp_updater = LLDPRemTableUpdater()
 
-    lldpRemTimeMark = \
-        SubtreeMIBEntry('1.1', lldp_updater, ValueType.TIME_TICKS, lldp_updater.lldp_table_lookup_integer,
-                        LLDPRemoteTables(1))
-
-    lldpRemLocalPortNum = \
-        SubtreeMIBEntry('1.2', lldp_updater, ValueType.INTEGER, lldp_updater.local_port_num)
-
-    lldpRemIndex = \
-        SubtreeMIBEntry('1.3', lldp_updater, ValueType.INTEGER, lldp_updater.lldp_table_lookup_integer,
-                        LLDPRemoteTables(3))
-
     lldpRemChassisIdSubtype = \
         SubtreeMIBEntry('1.4', lldp_updater, ValueType.INTEGER, lldp_updater.lldp_table_lookup_integer,
                         LLDPRemoteTables(4))
@@ -871,12 +852,6 @@ class LLDPRemManAddrTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.4.2'):
     ::= { lldpRemoteSystemsData 2 }
     """
     updater = LLDPRemManAddrUpdater()
-
-    lldpRemManAddrSubtype = SubtreeMIBEntry('1.1', updater, ValueType.INTEGER,
-                                            updater.lookup, updater.man_addr_subtype)
-
-    lldpRemManAddr = SubtreeMIBEntry('1.2', updater, ValueType.OCTET_STRING,
-                                     updater.lookup, updater.man_addr)
 
     lldpRemManAddrIfSubtype = SubtreeMIBEntry('1.3', updater, ValueType.INTEGER,
                                               updater.lookup, updater.man_addr_if_subtype)
