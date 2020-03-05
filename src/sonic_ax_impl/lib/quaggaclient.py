@@ -89,10 +89,9 @@ def bgp_peer_tuple(dic):
 class QuaggaClient:
     HOST = '127.0.0.1'
     PORT = 2605
-    PROMPT_PASSWORD = b'Password: '
+    PROMPT_PASSWORD = b'\x1fPassword: '
 
     def __init__(self, hostname, sock):
-        self.prompt_hostname = ('\r\n' + hostname + '> ').encode()
         self.sock = sock
         self.bgp_provider = 'Quagga'
 
@@ -111,10 +110,7 @@ class QuaggaClient:
         return neighbor_sessions
 
     def auth(self):
-        cmd = b"zebra\n"
-        self.sock.send(cmd)
-
-        ## Nowadays we see 2 BGP stack
+        ## Nowadays we see 2 BGP stacks
         ## 1. Quagga (version 0.99.24.1)
         ## 2. FRRouting (version 7.2-sonic)
         banner = self.vtysh_recv()
@@ -124,6 +120,13 @@ class QuaggaClient:
             self.bgp_provider = 'FRRouting'
         else:
             raise ValueError('Unexpected data recv for banner: {0}'.format(banner))
+
+        ## Send default user credential
+        cmd = b"zebra\n"
+        self.sock.send(cmd)
+
+        ## Receive the prompt including the hostname
+        self.vtysh_recv()
         return banner
 
     def vtysh_run(self, command):
@@ -141,7 +144,11 @@ class QuaggaClient:
             if not data:
                 raise ValueError('Unexpected data recv acc=: {0}'.format(acc))
             acc += data
-            if acc.endswith(self.prompt_hostname):
+            ## RFC 1123 Section 2.1
+            ## Hostname starts with with alphabet or number
+            ## Hostname lenght <= 255
+            ## Hostname contains no whitespace characters
+            if acc.endswith(br'\r\n\w[\S]{0,254}[#>] $'):
                 break
             if acc.endswith(QuaggaClient.PROMPT_PASSWORD):
                 break
