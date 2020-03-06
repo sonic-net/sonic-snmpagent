@@ -11,7 +11,7 @@ class BgpSessionUpdater(MIBUpdater):
         super().__init__()
         self.sock = PerseverantSocket(socket.AF_INET, socket.SOCK_STREAM
             , address_tuple=(QuaggaClient.HOST, QuaggaClient.PORT))
-        self.QuaggaClient = QuaggaClient(socket.gethostname(), self.sock)
+        self.QuaggaClient = QuaggaClient(self.sock)
 
         self.session_status_map = {}
         self.session_status_list = []

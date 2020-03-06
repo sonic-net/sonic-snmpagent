@@ -4,6 +4,7 @@ from collections import namedtuple
 import unittest
 from unittest import TestCase, mock
 from unittest.mock import patch, mock_open, MagicMock
+from enum import Enum
 
 INPUT_DIR = os.path.dirname(os.path.abspath(__file__))
 modules_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,14 +20,20 @@ _socket_gethostname = socket.gethostname
 def MockGetHostname():
     return 'str-msn2700-05'
 
+class State(Enum):
+    CLOSED = 0
+    BANNER = 1
+    INTERACTIVE = 2
+
 class MockSocket(_socket_class):
     def __init__(self, *args, **kwargs):
         super(MockSocket, self).__init__(*args, **kwargs)
         self._string_sent = b''
-        self.prompt_hostname = MockGetHostname().encode()
+        self.prompt_hostname = (MockGetHostname() + '> ').encode()
+        self.state = State.CLOSED
 
     def connect(self, *args, **kwargs):
-        pass
+        self.state = State.BANNER
 
     def send(self, *args, **kwargs):
         string = args[0]
@@ -34,8 +41,12 @@ class MockSocket(_socket_class):
         pass
 
     def recv(self, *args, **kwargs):
+        if self.state == State.CLOSED:
+            raise OSError("Transport endpoint is not connected")
+
         try:
-            if self._string_sent == b'':
+            if self.state == State.BANNER:
+                self.state = State.INTERACTIVE
                 return b'\r\nHello, this is Quagga (version 0.99.24.1).\r\nCopyright 1996-2005 Kunihiro Ishiguro, et al.\r\n\r\n\r\nUser Access Verification\r\n\r\n\xff\xfb\x01\xff\xfb\x03\xff\xfe"\xff\xfd\x1fPassword: '
             if self._string_sent == b'zebra\n':
                 return self.prompt_hostname
@@ -50,7 +61,7 @@ class MockSocket(_socket_class):
 
             with open(filename, 'rb') as f:
                 ret = f.read()
-            return ret + self.prompt_hostname
+            return ret + br'\r\n' + self.prompt_hostname
         finally:
             self._string_sent = b''
 

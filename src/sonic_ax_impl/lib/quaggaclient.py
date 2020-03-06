@@ -27,7 +27,7 @@ def parse_bgp_summary(summ):
             return bgpinfo
         if l.startswith('% No BGP neighbors found'): # in FRRouting (version 7.2)
             return bgpinfo
-        if l.endswith('> '): # directly hostname prompt, in FRRouting (version 4.0)
+        if (l.endswith('> ') or l.endswith('# ')) and li == n - 1: # empty output followed by prompt, in FRRouting (version 4.0)
             return bgpinfo
         li += 1
 
@@ -91,7 +91,7 @@ class QuaggaClient:
     PORT = 2605
     PROMPT_PASSWORD = b'\x1fPassword: '
 
-    def __init__(self, hostname, sock):
+    def __init__(self, sock):
         self.sock = sock
         self.bgp_provider = 'Quagga'
 
@@ -121,12 +121,9 @@ class QuaggaClient:
         else:
             raise ValueError('Unexpected data recv for banner: {0}'.format(banner))
 
-        ## Send default user credential
-        cmd = b"zebra\n"
-        self.sock.send(cmd)
-
-        ## Receive the prompt including the hostname
-        self.vtysh_recv()
+        ## Send default user credential and receive the prompt
+        passwd = "zebra"
+        self.vtysh_run(passwd)
         return banner
 
     def vtysh_run(self, command):
@@ -148,7 +145,7 @@ class QuaggaClient:
             ## Hostname starts with with alphabet or number
             ## Hostname lenght <= 255
             ## Hostname contains no whitespace characters
-            if acc.endswith(br'\r\n\w[\S]{0,254}[#>] $'):
+            if re.match(br'^|(\r\n)\w[\S]{0,254}[#>] $', acc):
                 break
             if acc.endswith(QuaggaClient.PROMPT_PASSWORD):
                 break
