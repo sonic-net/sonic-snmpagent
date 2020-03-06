@@ -14,7 +14,7 @@ class PerseverantSocket:
 
     def _initsock(self):
         self.sock = socket.socket(family=self.family, type=self.type, proto=self.proto, fileno=self.fileno, *self.args, **self.kwargs)
-        self.sock.settimeout(10)
+        self.sock.settimeout(1)
 
     @property
     def connected(self):
@@ -26,6 +26,8 @@ class PerseverantSocket:
 
     def reconnect(self):
         assert self.address_tuple is not None
+        if self._connected:
+            self.close()
         self.sock.connect(self.address_tuple)
         self._connected = True
 
