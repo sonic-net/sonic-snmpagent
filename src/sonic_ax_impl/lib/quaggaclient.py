@@ -143,8 +143,8 @@ class QuaggaClient:
             acc += data
             ## 1. To match hostname
             ##    RFC 1123 Section 2.1
-            ##    Hostname starts with with alphabet or number
-            ##    Hostname lenght <= 255
+            ##    First char of hostname must be a letter or a digit
+            ##    Hostname length <= 255
             ##    Hostname contains no whitespace characters
             ## 2. To match the prompt line
             ##    The buffer may containers only prompt without return char
