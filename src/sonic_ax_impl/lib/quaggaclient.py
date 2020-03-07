@@ -141,11 +141,15 @@ class QuaggaClient:
             if not data:
                 raise ValueError('Unexpected data recv acc=: {0}'.format(acc))
             acc += data
-            ## RFC 1123 Section 2.1
-            ## Hostname starts with with alphabet or number
-            ## Hostname lenght <= 255
-            ## Hostname contains no whitespace characters
-            if re.match(br'^|(\r\n)\w[\S]{0,254}[#>] $', acc):
+            ## 1. To match hostname
+            ##    RFC 1123 Section 2.1
+            ##    Hostname starts with with alphabet or number
+            ##    Hostname lenght <= 255
+            ##    Hostname contains no whitespace characters
+            ## 2. To match the prompt line
+            ##    The buffer may containers only prompt without return char
+            ##    Or the buffer container some output followed by return char and prompt
+            if re.search(b'(^|\r\n)\\w[\\S]{0,254}[#>] $', acc):
                 break
             if acc.endswith(QuaggaClient.PROMPT_PASSWORD):
                 break

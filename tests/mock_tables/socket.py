@@ -63,7 +63,7 @@ class MockSocket(_socket_class):
 
             with open(filename, 'rb') as f:
                 ret = f.read()
-            return ret + br'\r\n' + self.prompt_hostname
+            return ret + b'\r\n' + self.prompt_hostname
         finally:
             self._string_sent = b''
 
