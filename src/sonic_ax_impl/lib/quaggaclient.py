@@ -1,5 +1,6 @@
 import re
 import ipaddress
+import socket
 
 STATE_CODE = {
     "Idle": 1,
@@ -133,9 +134,12 @@ class QuaggaClient:
     def vtysh_recv(self):
         acc = b""
         while True:
-            data = self.sock.recv(1024)
+            try:
+                data = self.sock.recv(1024)
+            except socket.timeout as e:
+                raise ValueError('Timeout recv acc=: {0}'.format(acc)) from e
             if not data:
-                raise ValueError('Unexpected data recv: {0}'.format(acc))
+                raise ValueError('Unexpected data recv acc=: {0}'.format(acc))
             acc += data
             if acc.endswith(self.prompt_hostname):
                 break
