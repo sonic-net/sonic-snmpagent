@@ -149,7 +149,7 @@ class QuaggaClient:
             ## 2. To match the prompt line
             ##    The buffer may containers only prompt without return char
             ##    Or the buffer container some output followed by return char and prompt
-            if re.search(b'(^|\r\n)\\w[\\S]{0,254}[#>] $', acc):
+            if re.search(b'(^|\r\n)[a-zA-Z0-9][\\S]{0,254}[#>] $', acc):
                 break
             if acc.endswith(QuaggaClient.PROMPT_PASSWORD):
                 break
