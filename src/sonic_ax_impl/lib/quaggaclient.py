@@ -1,5 +1,6 @@
 import re
 import ipaddress
+import socket
 
 STATE_CODE = {
     "Idle": 1,
@@ -26,7 +27,7 @@ def parse_bgp_summary(summ):
             return bgpinfo
         if l.startswith('% No BGP neighbors found'): # in FRRouting (version 7.2)
             return bgpinfo
-        if l.endswith('> '): # directly hostname prompt, in FRRouting (version 4.0)
+        if (l.endswith('> ') or l.endswith('# ')) and li == n - 1: # empty output followed by prompt, in FRRouting (version 4.0)
             return bgpinfo
         li += 1
 
@@ -88,10 +89,9 @@ def bgp_peer_tuple(dic):
 class QuaggaClient:
     HOST = '127.0.0.1'
     PORT = 2605
-    PROMPT_PASSWORD = b'Password: '
+    PROMPT_PASSWORD = b'\x1fPassword: '
 
-    def __init__(self, hostname, sock):
-        self.prompt_hostname = ('\r\n' + hostname + '> ').encode()
+    def __init__(self, sock):
         self.sock = sock
         self.bgp_provider = 'Quagga'
 
@@ -110,10 +110,7 @@ class QuaggaClient:
         return neighbor_sessions
 
     def auth(self):
-        cmd = b"zebra\n"
-        self.sock.send(cmd)
-
-        ## Nowadays we see 2 BGP stack
+        ## Nowadays we see 2 BGP stacks
         ## 1. Quagga (version 0.99.24.1)
         ## 2. FRRouting (version 7.2-sonic)
         banner = self.vtysh_recv()
@@ -123,6 +120,10 @@ class QuaggaClient:
             self.bgp_provider = 'FRRouting'
         else:
             raise ValueError('Unexpected data recv for banner: {0}'.format(banner))
+
+        ## Send default user credential and receive the prompt
+        passwd = "zebra"
+        self.vtysh_run(passwd)
         return banner
 
     def vtysh_run(self, command):
@@ -133,11 +134,22 @@ class QuaggaClient:
     def vtysh_recv(self):
         acc = b""
         while True:
-            data = self.sock.recv(1024)
+            try:
+                data = self.sock.recv(1024)
+            except socket.timeout as e:
+                raise ValueError('Timeout recv acc=: {0}'.format(acc)) from e
             if not data:
-                raise ValueError('Unexpected data recv: {0}'.format(acc))
+                raise ValueError('Unexpected data recv acc=: {0}'.format(acc))
             acc += data
-            if acc.endswith(self.prompt_hostname):
+            ## 1. To match hostname
+            ##    RFC 1123 Section 2.1
+            ##    First char of hostname must be a letter or a digit
+            ##    Hostname length <= 255
+            ##    Hostname contains no whitespace characters
+            ## 2. To match the prompt line
+            ##    The buffer may containers only prompt without return char
+            ##    Or the buffer container some output followed by return char and prompt
+            if re.search(b'(^|\r\n)[a-zA-Z0-9][\\S]{0,254}[#>] $', acc):
                 break
             if acc.endswith(QuaggaClient.PROMPT_PASSWORD):
                 break

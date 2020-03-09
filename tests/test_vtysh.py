@@ -28,9 +28,6 @@ class TestSonicMIB(TestCase):
         for updater in cls.lut.updater_instances:
             updater.update_data()
 
-    def test_hostname(self):
-        self.assertEqual(socket.gethostname(), 'str-msn2700-05')
-
     def test_getpdu_established(self):
         oid = ObjectIdentifier(20, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 187, 1, 2, 5, 1, 3, 1, 4, 10, 0, 0, 61))
         get_pdu = GetPDU(

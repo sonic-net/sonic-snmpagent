@@ -11,13 +11,21 @@ class BgpSessionUpdater(MIBUpdater):
         super().__init__()
         self.sock = PerseverantSocket(socket.AF_INET, socket.SOCK_STREAM
             , address_tuple=(QuaggaClient.HOST, QuaggaClient.PORT))
-        self.QuaggaClient = QuaggaClient(socket.gethostname(), self.sock)
+        self.QuaggaClient = QuaggaClient(self.sock)
 
         self.session_status_map = {}
         self.session_status_list = []
 
     def reinit_data(self):
-        pass
+        if not self.sock.connected:
+            try:
+                self.sock.reconnect()
+                mibs.logger.info('Connected quagga socket')
+            except (ConnectionRefusedError, socket.timeout) as e:
+                mibs.logger.debug('Failed to connect quagga socket. Retry later...: {}.'.format(e))
+                return
+            self.QuaggaClient.auth()
+            mibs.logger.info('Authed quagga socket')
 
     def update_data(self):
         self.session_status_map = {}
@@ -25,14 +33,7 @@ class BgpSessionUpdater(MIBUpdater):
 
         try:
             if not self.sock.connected:
-                try:
-                    self.sock.reconnect()
-                    mibs.logger.info('Connected quagga socket')
-                except (ConnectionRefusedError, socket.timeout) as e:
-                    mibs.logger.debug('Failed to connect quagga socket. Retry later...: {}.'.format(e))
-                    return
-                self.QuaggaClient.auth()
-                mibs.logger.info('Authed quagga socket')
+                return
 
             sessions = self.QuaggaClient.union_bgp_sessions()
 

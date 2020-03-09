@@ -6,8 +6,15 @@ class PerseverantSocket:
         self.address_tuple = address_tuple
         self.family = family
         self.type = type
-        self.sock = socket.socket(family=self.family, type=self.type, proto=proto, fileno=fileno, *args, **kwargs)
-        self.sock.settimeout(10)
+        self.proto = proto
+        self.fileno = fileno
+        self.args = args
+        self.kwargs = kwargs
+        self._initsock()
+
+    def _initsock(self):
+        self.sock = socket.socket(family=self.family, type=self.type, proto=self.proto, fileno=self.fileno, *self.args, **self.kwargs)
+        self.sock.settimeout(1)
 
     @property
     def connected(self):
@@ -19,13 +26,15 @@ class PerseverantSocket:
 
     def reconnect(self):
         assert self.address_tuple is not None
+        if self._connected:
+            self.close()
         self.sock.connect(self.address_tuple)
         self._connected = True
 
     def close(self):
         self._connected = False
         self.sock.close()
-        self.sock = socket.socket(self.family, self.type)
+        self._initsock()
 
     ## TODO: override __getattr__ to implement auto function call forwarding if not implemented
     def send(self, *args, **kwargs):
