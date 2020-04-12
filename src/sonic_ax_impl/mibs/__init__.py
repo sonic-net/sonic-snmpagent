@@ -183,6 +183,7 @@ def init_mgmt_interface_tables(db_conn):
     return oid_name_map, if_alias_map
 
 
+# TODO: the function name include interface, but only return port by design. Fix the design or the name
 def init_sync_d_interface_tables(db_conn):
     """
     Initializes interface maps for SyncD-connected MIB(s).
@@ -195,6 +196,9 @@ def init_sync_d_interface_tables(db_conn):
     # { if_name (SONiC) -> sai_id }
     # ex: { "Ethernet76" : "1000000000023" }
     if_name_map, if_id_map = port_util.get_interface_oid_map(db_conn)
+    if_name_map = {if_name: sai_id for if_name, sai_id in if_name_map.items() if re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode())}
+    if_id_map = {sai_id: if_name for sai_id, if_name in if_id_map.items() if re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode())}
+
     logger.debug("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
     logger.debug("Interface name map:\n" + pprint.pformat(if_id_map, indent=2))
 
