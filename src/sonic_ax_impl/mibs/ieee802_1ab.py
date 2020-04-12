@@ -95,6 +95,8 @@ def poll_lldp_entry_updates(pubsub):
         return ret
     return data, interface, if_index
 
+def parse_sys_capability(sys_cap):
+    return bytearray([int (x, 16) for x in sys_cap.split()])
 
 class LLDPLocalSystemDataUpdater(MIBUpdater):
     def __init__(self):
@@ -110,7 +112,8 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
         # establish connection to application database.
         self.db_conn.connect(mibs.APPL_DB)
         self.loc_chassis_data = self.db_conn.get_all(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
-
+        self.loc_chassis_data[b'lldp_loc_sys_cap_supported'] = parse_sys_capability(self.loc_chassis_data[b'lldp_loc_sys_cap_supported'])
+        self.loc_chassis_data[b'lldp_loc_sys_cap_enabled'] = parse_sys_capability(self.loc_chassis_data[b'lldp_loc_sys_cap_enabled'])
     def update_data(self):
         """
         Avoid NotImplementedError
@@ -224,7 +227,7 @@ class LocPortUpdater(MIBUpdater):
         """
         if not self.pubsub:
             redis_client = self.db_conn.get_redis_client(self.db_conn.APPL_DB)
-            db = self.db_conn.db_map[self.db_conn.APPL_DB]["db"]
+            db = self.db_conn.get_dbid(self.db_conn.APPL_DB)
             self.pubsub = redis_client.pubsub()
             self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
 
@@ -432,7 +435,8 @@ class LLDPRemTableUpdater(MIBUpdater):
                 self.if_range.append((time_mark,
                                       if_oid,
                                       remote_index))
-
+                lldp_kvs[b'lldp_rem_sys_cap_supported'] = parse_sys_capability(lldp_kvs[b'lldp_rem_sys_cap_supported'])
+                lldp_kvs[b'lldp_rem_sys_cap_enabled'] = parse_sys_capability(lldp_kvs[b'lldp_rem_sys_cap_enabled'])
                 self.lldp_counters.update({if_name: lldp_kvs})
             except (KeyError, AttributeError) as e:
                 logger.warning("Exception when updating lldpRemTable: {}".format(e))
@@ -497,6 +501,10 @@ class LLDPRemManAddrUpdater(MIBUpdater):
             return
         try:
             mgmt_ip_str = lldp_kvs[b'lldp_rem_man_addr'].decode()
+            mgmt_ip_str = mgmt_ip_str.strip()
+            if len(mgmt_ip_str) == 0:
+                # the peer advertise an emtpy mgmt address
+                return
             time_mark = int(lldp_kvs[b'lldp_rem_time_mark'])
             remote_index = int(lldp_kvs[b'lldp_rem_index'])
             subtype = self.get_subtype(mgmt_ip_str)
@@ -530,7 +538,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         """
         if not self.pubsub:
             redis_client = self.db_conn.get_redis_client(self.db_conn.APPL_DB)
-            db = self.db_conn.db_map[self.db_conn.APPL_DB]["db"]
+            db = self.db_conn.get_dbid(self.db_conn.APPL_DB)
             self.pubsub = redis_client.pubsub()
             self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
 
@@ -670,8 +678,6 @@ class LLDPLocalSystemData(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3'):
 
         # lldpLocPortEntry = '1'
 
-        lldpLocPortNum = SubtreeMIBEntry('1.1', port_updater, ValueType.INTEGER, port_updater.local_port_num)
-
         # We're using locally assigned name, so according to textual convention, the subtype is 7
         lldpLocPortIdSubtype = SubtreeMIBEntry('1.2', port_updater, ValueType.INTEGER, port_updater.port_id_subtype)
 
@@ -692,12 +698,6 @@ class LLDPLocalSystemData(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3'):
         ::= { lldpLocalSystemData 8 }
         """
         updater = LLDPLocManAddrUpdater()
-
-        lldpLocManAddrSubtype = SubtreeMIBEntry('1.1', updater, ValueType.INTEGER,
-                                                updater.lookup, updater.man_addr_subtype)
-
-        lldpLocManAddr = SubtreeMIBEntry('1.2', updater, ValueType.OCTET_STRING,
-                                         updater.lookup, updater.man_addr)
 
         lldpLocManAddrLen = SubtreeMIBEntry('1.3', updater, ValueType.INTEGER,
                                             updater.lookup, updater.man_addr_len)
@@ -802,17 +802,6 @@ class LLDPRemTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.4.1'):
     """
     lldp_updater = LLDPRemTableUpdater()
 
-    lldpRemTimeMark = \
-        SubtreeMIBEntry('1.1', lldp_updater, ValueType.TIME_TICKS, lldp_updater.lldp_table_lookup_integer,
-                        LLDPRemoteTables(1))
-
-    lldpRemLocalPortNum = \
-        SubtreeMIBEntry('1.2', lldp_updater, ValueType.INTEGER, lldp_updater.local_port_num)
-
-    lldpRemIndex = \
-        SubtreeMIBEntry('1.3', lldp_updater, ValueType.INTEGER, lldp_updater.lldp_table_lookup_integer,
-                        LLDPRemoteTables(3))
-
     lldpRemChassisIdSubtype = \
         SubtreeMIBEntry('1.4', lldp_updater, ValueType.INTEGER, lldp_updater.lldp_table_lookup_integer,
                         LLDPRemoteTables(4))
@@ -863,12 +852,6 @@ class LLDPRemManAddrTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.4.2'):
     ::= { lldpRemoteSystemsData 2 }
     """
     updater = LLDPRemManAddrUpdater()
-
-    lldpRemManAddrSubtype = SubtreeMIBEntry('1.1', updater, ValueType.INTEGER,
-                                            updater.lookup, updater.man_addr_subtype)
-
-    lldpRemManAddr = SubtreeMIBEntry('1.2', updater, ValueType.OCTET_STRING,
-                                     updater.lookup, updater.man_addr)
 
     lldpRemManAddrIfSubtype = SubtreeMIBEntry('1.3', updater, ValueType.INTEGER,
                                               updater.lookup, updater.man_addr_if_subtype)
