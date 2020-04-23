@@ -1,5 +1,7 @@
 import pprint
 import re
+import os
+from collections import Iterable
 
 from swsssdk import SonicV2Connector
 from swsssdk import port_util
@@ -148,9 +150,57 @@ def init_db():
     """
     # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
     # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
-    db_conn = SonicV2Connector(**redis_kwargs)
+    db_conn = SonicV2Connector(**redis_kwargs) 
 
     return db_conn
+
+def init_multi_db():
+    db_conn= []
+    if (os.path.isfile('/usr/share/sonic/platform/asic.conf')):
+        fp = open('/usr/share/sonic/platform/asic.conf', 'r')
+        line = fp.readline()
+        while line:
+            line_split = line.split('=')
+            if line_split[0].lower() == "num_asic":
+                num_asic=int(line_split[1])
+                break
+            line = fp.readline()
+        fp.close()
+    else:
+        num_asic = 1 
+
+    if num_asic == 1:
+        db = SonicV2Connector(use_unix_socket_path=True)
+        db_conn.append(db)
+        return db_conn
+
+    for asic_inst in range(num_asic):
+        namespace = "asic" + str(asic_inst)
+        db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
+        db_conn.append(db)
+
+    return db_conn
+
+def get_keys_from_multi_db(multi_db_conn, db_id, pattern='*'):
+    result_keys=[]
+    for db_conn in multi_db_conn:
+        db_conn.connect(db_id)
+        keys = db_conn.keys(db_id, pattern)
+        result_keys.append(keys)
+    return result_keys
+
+
+def get_all_from_multi_db(global_db_conn, multi_db_conn, db_name, _hash, *args, **kwargs):
+    # check if key exisits in global db
+    global_db_conn.connect(db_name)
+    if (global_db_conn.exists(db_name, _hash)):
+        return global_db_conn.get_all(db_name, _hash, *args, **kwargs)
+   
+    for db_conn in multi_db_conn:
+        db_conn.connect(db_id)
+        if(db_conn.exists(db_name, _hash)):
+            return db_conn.get_all(db_name, _hash, *args, **kwargs)
+    return {}
 
 def init_mgmt_interface_tables(db_conn):
     """
@@ -182,8 +232,27 @@ def init_mgmt_interface_tables(db_conn):
 
     return oid_name_map, if_alias_map
 
+def init_multi_sync_d_interface_tables(multi_db_conn):
+    if_name_map = {}
+    if_alias_map = {}
+    if_id_map = {}
+    oid_sai_map = {}
+    oid_name_map = {}
 
-# TODO: the function name include interface, but only return port by design. Fix the design or the name
+    for db_conn in multi_db_conn:
+        if_name_map_asic, \
+        if_alias_map_asic, \
+        if_id_map_asic, \
+        oid_sai_map_asic, \
+        oid_name_map_asic = init_sync_d_interface_tables(db_conn)
+        if_name_map.update(if_name_map_asic)
+        if_alias_map.update(if_alias_map_asic)
+        if_id_map.update(if_id_map_asic)
+        oid_sai_map.update(oid_sai_map_asic)
+        oid_name_map.update(oid_name_map_asic)
+
+    return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map 
+
 def init_sync_d_interface_tables(db_conn):
     """
     Initializes interface maps for SyncD-connected MIB(s).
@@ -196,9 +265,6 @@ def init_sync_d_interface_tables(db_conn):
     # { if_name (SONiC) -> sai_id }
     # ex: { "Ethernet76" : "1000000000023" }
     if_name_map, if_id_map = port_util.get_interface_oid_map(db_conn)
-    if_name_map = {if_name: sai_id for if_name, sai_id in if_name_map.items() if re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode())}
-    if_id_map = {sai_id: if_name for sai_id, if_name in if_id_map.items() if re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode())}
-
     logger.debug("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
     logger.debug("Interface name map:\n" + pprint.pformat(if_id_map, indent=2))
 
@@ -241,6 +307,21 @@ def init_sync_d_interface_tables(db_conn):
 
     return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map
 
+def init_multi_sync_d_lag_tables(multi_db_conn):
+
+    lag_name_if_name_map = {}
+    if_name_lag_name_map = {}
+    oid_lag_name_map = {}
+
+    for db_conn in multi_db_conn:
+        lag_name_if_name_map_asic, \
+        if_name_lag_name_map_asic, \
+        oid_lag_name_map_asic = init_sync_d_lag_tables(db_conn)
+        lag_name_if_name_map.update(lag_name_if_name_map_asic)
+        if_name_lag_name_map.update(if_name_lag_name_map_asic)
+        oid_lag_name_map.update(oid_lag_name_map_asic)
+
+    return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map 
 
 def init_sync_d_lag_tables(db_conn):
     """
@@ -285,6 +366,21 @@ def init_sync_d_lag_tables(db_conn):
             oid_lag_name_map[idx] = if_name
 
     return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map
+
+def init_multi_sync_d_queue_tables(multi_db_conn):
+    port_queues_map = {}
+    queue_stat_map = {}
+    port_queue_list_map = {}
+
+    for db_conn in multi_db_conn:
+        port_queues_map_asic, \
+        queue_stat_map_asic, \
+        port_queue_list_map_asic = init_sync_d_queue_tables(db_conn)
+        port_queues_map.update(port_queues_map_asic)
+        queue_stat_map.update(queue_stat_map_asic)
+        port_queue_list_map.update(port_queue_list_map_asic)
+
+    return port_queues_map, queue_stat_map, port_queue_list_map
 
 def init_sync_d_queue_tables(db_conn):
     """

@@ -48,6 +48,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         super().__init__()
 
         self.db_conn = mibs.init_db()
+        self.multi_db_conn = mibs.init_multi_db()
 
         self.lag_name_if_name_map = {}
         self.if_name_lag_name_map = {}
@@ -74,11 +75,11 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map = mibs.init_multi_sync_d_interface_tables(self.multi_db_conn)
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
-        self.oid_lag_name_map = mibs.init_sync_d_lag_tables(self.db_conn)
+        self.oid_lag_name_map = mibs.init_multi_sync_d_lag_tables(self.multi_db_conn)
 
         self.mgmt_oid_name_map, \
         self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn)
@@ -94,7 +95,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         Pulls the table references for each interface.
         """
         self.if_counters = {
-            sai_id: self.db_conn.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
+            sai_id: mibs.get_all_from_multi_db(self.db_conn, self.multi_db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
             for sai_id in self.if_id_map}
 
 
@@ -217,7 +218,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         else:
             return None
 
-        return self.db_conn.get_all(db, if_table, blocking=True)
+        return mibs.get_all_from_multi_db(self.db_conn, self.multi_db_conn, db, if_table, blocking=True)
 
     def get_high_speed(self, sub_id):
         """
