@@ -18,19 +18,29 @@ class AgentXInterfaceError(Exception):
 
 class AgentError(AgentXInterfaceError):
     """ Exception throwable by the Agent class. """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class PDUError(AgentXInterfaceError):
     """ Class of errors related to PDU encoding/decoding. """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class PDUUnpackError(struct.error, PDUError):
     """ Raised when the byte string unpacking fails. """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class PDUPackError(struct.error, PDUError):
     """ Raised when the PDU Encoding (byte packing) fails. """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class UnsupportedPDUError(ValueError, PDUError):
     """ Raised when the PDU type is not a known :class:`PduType`."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)

@@ -1,11 +1,8 @@
-import json
 import ipaddress
-from enum import unique, Enum
 
 from sonic_ax_impl import mibs
 from ax_interface import MIBMeta, ValueType, MIBUpdater, SubtreeMIBEntry
-from ax_interface.encodings import OctetString
-from ax_interface.util import mac_decimals, ip2tuple_v4
+from ax_interface.util import ip2tuple_v4
 from bisect import bisect_right
 
 class RouteUpdater(MIBUpdater):

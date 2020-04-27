@@ -1,12 +1,8 @@
-import sys
 import asyncio
 import bisect
 import random
-import logging
 
-from . import util
-from . import logger
-
+from . import logger, util
 from .constants import ValueType
 from .encodings import ValueRepresentation
 
@@ -20,6 +16,7 @@ Interval between reinit runs (in seconds).
 """
 DEFAULT_REINIT_RATE = 60
 
+
 class MIBUpdater:
     """
     Interface for developing OID handlers that require persistent (or background) execution.
@@ -29,7 +26,7 @@ class MIBUpdater:
         self.run_event = asyncio.Event()
         self.frequency = DEFAULT_UPDATE_FREQUENCY
         self.reinit_rate = DEFAULT_REINIT_RATE // DEFAULT_UPDATE_FREQUENCY
-        self.update_counter = self.reinit_rate + 1 # reinit_data when init
+        self.update_counter = self.reinit_rate + 1  # reinit_data when init
 
     async def start(self):
         # Run the update while we are allowed
@@ -161,16 +158,17 @@ class MIBEntry:
         return self._callable_.__call__(*self._callable_args)
 
     def get_sub_id(self, oid_key):
-        return oid_key[getattr(self, MIBEntry.PREFIXLEN):]
+        return oid_key[getattr(self, MIBEntry.PREFIXLEN) :]
 
     def replace_sub_id(self, oid_key, sub_id):
-        return oid_key[:getattr(self, MIBEntry.PREFIXLEN)] + sub_id
+        return oid_key[: getattr(self, MIBEntry.PREFIXLEN)] + sub_id
 
     def get_next(self, sub_id):
         return None
 
     def get_prefix(self):
         return getattr(self, MIBEntry.PREFIX)
+
 
 class SubtreeMIBEntry(MIBEntry):
     def __init__(self, subtree, iterator, value_type, callable_, *args):
@@ -207,6 +205,7 @@ class SubtreeMIBEntry(MIBEntry):
             logger.exception("SubtreeMIBEntry.get_next() caught an unexpected exception during iterator.get_next()")
             return None
 
+
 # Define MIB entry (subtree) with a callable, which accepts a starndard OID tuple as a paramter
 class OidMIBEntry(MIBEntry):
     def __init__(self, subtree, value_type, callable_):
@@ -218,12 +217,17 @@ class OidMIBEntry(MIBEntry):
     def __call__(self, sub_id):
         return self._callable_.__call__(self.get_prefix() + sub_id)
 
+
 class OverlayAdpaterMIBEntry(MIBEntry):
     def __init__(self, underlay_mibentry, overlay_mibentry):
         assert underlay_mibentry.value_type == overlay_mibentry.value_type
         assert underlay_mibentry.subtree == overlay_mibentry.subtree
 
-        super().__init__(underlay_mibentry.subtree_str, underlay_mibentry.value_type, underlay_mibentry._callable_)
+        super().__init__(
+            underlay_mibentry.subtree_str,
+            underlay_mibentry.value_type,
+            underlay_mibentry._callable_,
+        )
         self.underlay_mibentry = underlay_mibentry
         self.overlay_mibentry = overlay_mibentry
 
@@ -247,6 +251,7 @@ class OverlayAdpaterMIBEntry(MIBEntry):
     def get_next(self, sub_id):
         return self.underlay_mibentry.get_next(sub_id)
 
+
 class MIBTable(dict):
     """
     Simplistic LUT for Get/GetNext OID. Interprets iterables as keys and implements the same interfaces as dict's.
@@ -260,10 +265,13 @@ class MIBTable(dict):
         self.updater_instances = getattr(mib_cls, MIBMeta.UPDATERS)
         self.prefixes = getattr(mib_cls, MIBMeta.PREFIXES)
 
+    @staticmethod
     def _done_background_task_callback(fut):
         ex = fut.exception()
         if ex is not None:
-            exstr = "MIBTable background task caught an unexpected exception: {}".format(str(ex))
+            exstr = "MIBTable background task caught an unexpected exception: {}".format(
+                str(ex)
+            )
             logger.error(exstr)
 
     def start_background_tasks(self, event):
@@ -283,13 +291,10 @@ class MIBTable(dict):
         preceding_oids = oids[:left_insert_index]
         if not preceding_oids:
             return None
-        if preceding_oids[-1] == item[:len(preceding_oids[-1])]:
+        if preceding_oids[-1] == item[: len(preceding_oids[-1])]:
             return preceding_oids[-1]
         else:
             return None
-
-    def _find_parent_oid_key(self, oid_key):
-        oids = sorted(self)
 
     def _get_value(self, mib_entry, oid_key):
         sub_id = mib_entry.get_sub_id(oid_key)
@@ -368,7 +373,7 @@ class MIBTable(dict):
             oid_key = remaining_oids[0]
             mib_entry = self[oid_key]
             try:
-                key1 = next(iter(mib_entry)) # get the first sub_id from the mib_etnry
+                key1 = next(iter(mib_entry))  # get the first sub_id from the mib_etnry
             except StopIteration:
                 # handler returned None, which implies there's no data, keep walking.
                 remaining_oids = remaining_oids[1:]
@@ -402,3 +407,13 @@ class MIBTable(dict):
         if not hasattr(value, '__iter__'):
             raise ValueError("Invalid key '{}'. All keys must be iterable types.".format(key))
         super().__setitem__(key, value)
+
+    def __eq__(self, other):
+        if not isinstance(other, MIBTable):
+            return False
+        return (
+            dict.__eq__(self, other)
+            and self.prefixes == other.prefixes
+            and self.update_frequency == other.update_frequency
+            and self.updater_instances == other.updater_instances
+        )
