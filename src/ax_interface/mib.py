@@ -1,8 +1,6 @@
 import asyncio
 import bisect
-import logging
 import random
-import sys
 
 from . import logger, util
 from .constants import ValueType
@@ -267,6 +265,7 @@ class MIBTable(dict):
         self.updater_instances = getattr(mib_cls, MIBMeta.UPDATERS)
         self.prefixes = getattr(mib_cls, MIBMeta.PREFIXES)
 
+    @staticmethod
     def _done_background_task_callback(fut):
         ex = fut.exception()
         if ex is not None:

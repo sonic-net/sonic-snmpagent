@@ -1,5 +1,4 @@
 import json
-from enum import unique, Enum
 
 from sonic_ax_impl import mibs
 from swsssdk import port_util
