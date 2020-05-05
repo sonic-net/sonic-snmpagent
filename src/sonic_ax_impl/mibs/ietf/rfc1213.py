@@ -100,7 +100,7 @@ class ArpUpdater(MIBUpdater):
                 mibs.setns(ns_fd, mibs.CLONE_NEWNET)
                 dest_map, dest_list = self.get_arp_table()
                 self.arp_dest_map.update(dest_map)
-                self.arp_dest_list.append(dest_list)
+                self.arp_dest_list.extend(dest_list)
                 # Revert back to original namespace
                 mibs.setns(current_fd, mibs.CLONE_NEWNET)
                 ns_fd.close()
