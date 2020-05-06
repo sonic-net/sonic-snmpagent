@@ -281,8 +281,7 @@ class MIBTable(dict):
             updater.run_event = event
             fut = asyncio.ensure_future(updater.start())
             fut.add_done_callback(MIBTable._done_background_task_callback)
-            task = event._loop.create_task(fut)
-            tasks.append(task)
+            tasks.append(fut)
         return asyncio.gather(*tasks, loop=event._loop)
 
     def _find_parent_prefix(self, item):
