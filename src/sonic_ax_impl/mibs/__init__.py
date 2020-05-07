@@ -1,9 +1,10 @@
 import pprint
 import re
 import os
-from collections import Iterable
+import glob 
 
 from swsssdk import SonicV2Connector
+from swsssdk import SonicDBConfig
 from swsssdk import port_util
 from swsssdk.port_util import get_index, get_index_from_str
 from ax_interface.mib import MIBUpdater
@@ -47,6 +48,15 @@ SENSOR_PART_ID_MAP = {
 IFINDEX_SUB_ID_MULTIPLIER = 1000
 
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
+
+NAMESPACE_PATH_GLOB = '/run/netns/*'
+
+def get_namespaces():
+    ns_list = []
+    for path in glob.glob(NAMESPACE_PATH_GLOB):
+        ns = os.path.basename(path)
+        ns_list.append(ns)
+    return ns_list
 
 def chassis_info_table(chassis_name):
     """
@@ -154,50 +164,39 @@ def init_db():
 
     return db_conn
 
-def init_multi_db():
+def init_namespace_dbs():
     db_conn= []
-    if (os.path.isfile('/usr/share/sonic/platform/asic.conf')):
-        fp = open('/usr/share/sonic/platform/asic.conf', 'r')
-        line = fp.readline()
-        while line:
-            line_split = line.split('=')
-            if line_split[0].lower() == "num_asic":
-                num_asic=int(line_split[1])
-                break
-            line = fp.readline()
-        fp.close()
-    else:
-        num_asic = 1 
-
-    if num_asic == 1:
-        db = SonicV2Connector(use_unix_socket_path=True)
-        db_conn.append(db)
-        return db_conn
-
-    for asic_inst in range(num_asic):
-        namespace = "asic" + str(asic_inst)
+    # Global db connector
+    db = SonicV2Connector(**redis_kwargs)
+    db_conn.append(db)
+    namespace_list = get_namespaces()
+    if len(namespace_list) != 0:
+        SonicDBConfig.load_sonic_global_db_config()
+    for namespace in namespace_list:
         db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
         db_conn.append(db)
 
     return db_conn
 
-def get_keys_from_multi_db(multi_db_conn, db_id, pattern='*'):
+def get_keys_from_all_namespace_dbs(all_ns_db, db_id, pattern='*'):
+    """
+    db keys function execute on global and all namespace DBs.
+    """
     result_keys=[]
-    for db_conn in multi_db_conn:
+    for db_conn in all_ns_db:
         db_conn.connect(db_id)
         keys = db_conn.keys(db_id, pattern)
-        result_keys.append(keys)
+        if keys is not None:
+            result_keys.extend(keys)
     return result_keys
 
 
-def get_all_from_multi_db(global_db_conn, multi_db_conn, db_name, _hash, *args, **kwargs):
-    # check if key exisits in global db
-    global_db_conn.connect(db_name)
-    if (global_db_conn.exists(db_name, _hash)):
-        return global_db_conn.get_all(db_name, _hash, *args, **kwargs)
-   
-    for db_conn in multi_db_conn:
-        db_conn.connect(db_id)
+def get_all_from_namespace_dbs(all_ns_db, db_name, _hash, *args, **kwargs):
+    """
+    db get_all function executed on global and all namespace DBs.
+    """
+    for db_conn in all_ns_db:
+        db_conn.connect(db_name)
         if(db_conn.exists(db_name, _hash)):
             return db_conn.get_all(db_name, _hash, *args, **kwargs)
     return {}
@@ -232,25 +231,39 @@ def init_mgmt_interface_tables(db_conn):
 
     return oid_name_map, if_alias_map
 
-def init_multi_sync_d_interface_tables(multi_db_conn):
+def init_namespace_sync_d_interface_tables(all_ns_db):
     if_name_map = {}
     if_alias_map = {}
     if_id_map = {}
     oid_sai_map = {}
     oid_name_map = {}
 
-    for db_conn in multi_db_conn:
-        if_name_map_asic, \
-        if_alias_map_asic, \
-        if_id_map_asic, \
-        oid_sai_map_asic, \
-        oid_name_map_asic = init_sync_d_interface_tables(db_conn)
-        if_name_map.update(if_name_map_asic)
-        if_alias_map.update(if_alias_map_asic)
-        if_id_map.update(if_id_map_asic)
-        oid_sai_map.update(oid_sai_map_asic)
-        oid_name_map.update(oid_name_map_asic)
+    """
+    all_ns_db - will have db_conn to all namespace DBs and
+    global db. First db in the list is global db.
+    Ignore first global db to get interface tables if there
+    are multiple namespaces.
+    """
+    if len(all_ns_db) == 1:
+        if_name_map, \
+        if_alias_map, \
+        if_id_map, \
+        oid_sai_map, \
+        oid_name_map = init_sync_d_interface_tables(all_ns_db[0])
 
+    else: 
+        for db_conn in all_ns_db[1:]:
+            if_name_map_ns, \
+            if_alias_map_ns, \
+            if_id_map_ns, \
+            oid_sai_map_ns, \
+            oid_name_map_ns = init_sync_d_interface_tables(db_conn)
+            if_name_map.update(if_name_map_ns)
+            if_alias_map.update(if_alias_map_ns)
+            if_id_map.update(if_id_map_ns)
+            oid_sai_map.update(oid_sai_map_ns)
+            oid_name_map.update(oid_name_map_ns)
+    
     return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map 
 
 def init_sync_d_interface_tables(db_conn):
@@ -265,6 +278,12 @@ def init_sync_d_interface_tables(db_conn):
     # { if_name (SONiC) -> sai_id }
     # ex: { "Ethernet76" : "1000000000023" }
     if_name_map, if_id_map = port_util.get_interface_oid_map(db_conn)
+    if_name_map = {if_name: sai_id for if_name, sai_id in if_name_map.items() if \
+                   (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode()) or \
+                    re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name.decode()))}
+    if_id_map = {sai_id: if_name for sai_id, if_name in if_id_map.items() if \
+                 (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode()) or \
+                  re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name.decode()))}
     logger.debug("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
     logger.debug("Interface name map:\n" + pprint.pformat(if_id_map, indent=2))
 
@@ -307,19 +326,31 @@ def init_sync_d_interface_tables(db_conn):
 
     return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map
 
-def init_multi_sync_d_lag_tables(multi_db_conn):
+def init_namespace_sync_d_lag_tables(all_ns_db):
 
     lag_name_if_name_map = {}
     if_name_lag_name_map = {}
     oid_lag_name_map = {}
 
-    for db_conn in multi_db_conn:
-        lag_name_if_name_map_asic, \
-        if_name_lag_name_map_asic, \
-        oid_lag_name_map_asic = init_sync_d_lag_tables(db_conn)
-        lag_name_if_name_map.update(lag_name_if_name_map_asic)
-        if_name_lag_name_map.update(if_name_lag_name_map_asic)
-        oid_lag_name_map.update(oid_lag_name_map_asic)
+    """
+    all_ns_db - will have db_conn to all namespace DBs and
+    global db. First db in the list is global db.
+    Ignore first global db to get lag tables if
+    there are multiple namespaces.
+    """
+    if len(all_ns_db) == 1:
+        lag_name_if_name_map, \
+        if_name_lag_name_map, \
+        oid_lag_name_map = init_sync_d_lag_tables(all_ns_db[0])
+    
+    else:
+        for db_conn in all_ns_db[1:]:
+            lag_name_if_name_map_ns, \
+            if_name_lag_name_map_ns, \
+            oid_lag_name_map_ns = init_sync_d_lag_tables(db_conn)
+            lag_name_if_name_map.update(lag_name_if_name_map_ns)
+            if_name_lag_name_map.update(if_name_lag_name_map_ns)
+            oid_lag_name_map.update(oid_lag_name_map_ns)
 
     return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map 
 
@@ -367,18 +398,30 @@ def init_sync_d_lag_tables(db_conn):
 
     return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map
 
-def init_multi_sync_d_queue_tables(multi_db_conn):
+def init_namespace_sync_d_queue_tables(all_ns_db):
     port_queues_map = {}
     queue_stat_map = {}
     port_queue_list_map = {}
 
-    for db_conn in multi_db_conn:
-        port_queues_map_asic, \
-        queue_stat_map_asic, \
-        port_queue_list_map_asic = init_sync_d_queue_tables(db_conn)
-        port_queues_map.update(port_queues_map_asic)
-        queue_stat_map.update(queue_stat_map_asic)
-        port_queue_list_map.update(port_queue_list_map_asic)
+    """
+    all_ns_db - will have db_conn to all namespace DBs and
+    global db. First db in the list is global db.
+    Ignore first global db to get queue tables if there
+    are multiple namespaces.
+    """
+    if len(all_ns_db) == 1:
+        port_queues_map, \
+        queue_stat_map, \
+        port_queue_list_map = init_sync_d_queue_tables(all_ns_db[0])
+
+    else:
+        for db_conn in all_ns_db[1:]:
+            port_queues_map_ns, \
+            queue_stat_map_ns, \
+            port_queue_list_map_ns = init_sync_d_queue_tables(db_conn)
+            port_queues_map.update(port_queues_map_ns)
+            queue_stat_map.update(queue_stat_map_ns)
+            port_queue_list_map.update(port_queue_list_map_ns)
 
     return port_queues_map, queue_stat_map, port_queue_list_map
 

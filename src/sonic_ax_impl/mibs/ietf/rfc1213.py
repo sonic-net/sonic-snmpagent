@@ -93,7 +93,7 @@ class ArpUpdater(MIBUpdater):
 class NextHopUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
-        self.db_conn = mibs.init_db()
+        self.db_conn = mibs.init_namespace_dbs()
         self.nexthop_map = {}
         self.route_list = []
 
@@ -105,8 +105,7 @@ class NextHopUpdater(MIBUpdater):
         self.nexthop_map = {}
         self.route_list = []
 
-        self.db_conn.connect(mibs.APPL_DB)
-        route_entries = self.db_conn.keys(mibs.APPL_DB, "ROUTE_TABLE:*")
+        route_entries = mibs.get_keys_from_all_namespace_dbs(self.db_conn, mibs.APPL_DB, "ROUTE_TABLE:*")
         if not route_entries:
             return
 
@@ -115,7 +114,7 @@ class NextHopUpdater(MIBUpdater):
             ipnstr = routestr[len("ROUTE_TABLE:"):]
             if ipnstr == "0.0.0.0/0":
                 ipn = ipaddress.ip_network(ipnstr)
-                ent = self.db_conn.get_all(mibs.APPL_DB, routestr, blocking=True)
+                ent = mibs.get_all_from_namespace_dbs(self.db_conn, mibs.APPL_DB, routestr, blocking=True)
                 nexthops = ent[b"nexthop"].decode()
                 for nh in nexthops.split(','):
                     # TODO: if ipn contains IP range, create more sub_id here
@@ -152,8 +151,7 @@ class InterfacesUpdater(MIBUpdater):
 
     def __init__(self):
         super().__init__()
-        self.db_conn = mibs.init_db()
-        self.multi_db_conn = mibs.init_multi_db() 
+        self.db_conn = mibs.init_namespace_dbs() 
 
         self.lag_name_if_name_map = {}
         self.if_name_lag_name_map = {}
@@ -178,10 +176,14 @@ class InterfacesUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = mibs.init_multi_sync_d_interface_tables(self.multi_db_conn)
-
+        self.oid_name_map = mibs.init_namespace_sync_d_interface_tables(self.db_conn)
+        """
+        db_conn - will have db_conn to all namespace DBs and
+        global db. First db in the list is global db.
+        Use first global db to get management interface table.
+        """
         self.mgmt_oid_name_map, \
-        self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn)
+        self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn[0])
 
     def update_data(self):
         """
@@ -189,12 +191,12 @@ class InterfacesUpdater(MIBUpdater):
         Pulls the table references for each interface.
         """
         self.if_counters = \
-            {sai_id: mibs.get_all_from_multi_db(self.db_conn, self.multi_db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
+            {sai_id: mibs.get_all_from_namespace_dbs(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
             for sai_id in self.if_id_map}
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
-        self.oid_lag_name_map = mibs.init_multi_sync_d_lag_tables(self.multi_db_conn)
+        self.oid_lag_name_map = mibs.init_namespace_sync_d_lag_tables(self.db_conn)
 
         self.if_range = sorted(list(self.oid_sai_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
@@ -319,7 +321,7 @@ class InterfacesUpdater(MIBUpdater):
         else:
             return None
 
-        return mibs.get_all_from_multi_db(self.db_conn, self.multi_db_conn, db, if_table, blocking=True)
+        return mibs.get_all_from_namespace_dbs(self.db_conn, db, if_table, blocking=True)
 
     def _get_if_entry_state_db(self, sub_id):
         """
@@ -338,7 +340,7 @@ class InterfacesUpdater(MIBUpdater):
         else:
             return None
 
-        return mibs.get_all_from_multi_db(self.db_conn, self.multi_db_conn, db, if_table, blocking=False)
+        return mibs.get_all_from_namespace_dbs(self.db_conn, db, if_table, blocking=False)
 
     def _get_status(self, sub_id, key):
         """
