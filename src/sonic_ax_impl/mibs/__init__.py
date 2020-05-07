@@ -1,7 +1,7 @@
 import pprint
 import re
 import os
-import glob 
+import glob
 
 from swsssdk import SonicV2Connector
 from swsssdk import SonicDBConfig
@@ -263,7 +263,7 @@ def init_namespace_sync_d_interface_tables(all_ns_db):
             if_id_map.update(if_id_map_ns)
             oid_sai_map.update(oid_sai_map_ns)
             oid_name_map.update(oid_name_map_ns)
-    
+
     return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map 
 
 def init_sync_d_interface_tables(db_conn):
