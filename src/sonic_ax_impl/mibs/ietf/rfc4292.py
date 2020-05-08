@@ -12,7 +12,7 @@ class RouteUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
         self.tos = 0 # ipCidrRouteTos
-        self.db_conn = mibs.init_db()
+        self.db_conn = mibs.init_namespace_dbs()
         self.route_dest_map = {}
         self.route_dest_list = []
         ## loopback ip string -> ip address object
@@ -24,8 +24,7 @@ class RouteUpdater(MIBUpdater):
         """
         self.loips = {}
 
-        self.db_conn.connect(mibs.APPL_DB)
-        loopbacks = self.db_conn.keys(mibs.APPL_DB, "INTF_TABLE:lo:*")
+        loopbacks = mibs.get_keys_from_all_namespace_dbs(self.db_conn, mibs.APPL_DB, "INTF_TABLE:lo:*")
         if not loopbacks:
             return
 
@@ -52,8 +51,7 @@ class RouteUpdater(MIBUpdater):
             self.route_dest_list.append(sub_id)
             self.route_dest_map[sub_id] = self.loips[loip].packed
 
-        self.db_conn.connect(mibs.APPL_DB)
-        route_entries = self.db_conn.keys(mibs.APPL_DB, "ROUTE_TABLE:*")
+        route_entries = mibs.get_keys_from_all_namespace_dbs(self.db_conn, mibs.APPL_DB, "ROUTE_TABLE:*")
         if not route_entries:
             return
 
@@ -62,7 +60,7 @@ class RouteUpdater(MIBUpdater):
             ipnstr = routestr[len("ROUTE_TABLE:"):]
             if ipnstr == "0.0.0.0/0":
                 ipn = ipaddress.ip_network(ipnstr)
-                ent = self.db_conn.get_all(mibs.APPL_DB, routestr, blocking=True)
+                ent = mibs.get_all_from_namespace_dbs(self.db_conn, mibs.APPL_DB, routestr, blocking=True)
                 nexthops = ent[b"nexthop"].decode()
                 ifnames = ent[b"ifname"].decode()
                 for nh, ifn in zip(nexthops.split(','), ifnames.split(',')):
