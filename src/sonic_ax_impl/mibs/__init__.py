@@ -241,6 +241,46 @@ def init_sync_d_interface_tables(db_conn):
 
     return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map
 
+def init_sync_d_rif_tables(db_conn):
+    """
+    Initializes interface maps for SyncD-connected MIB(s).
+    :return: tuple(if_name_map, if_id_map, oid_map, if_alias_map)
+    """
+
+    rif_port_map = port_util.get_rif_port_map(db_conn)
+
+    logger.debug("Rif port map:\n" + pprint.pformat(rif_port_map, indent=2))
+
+    if not rif_port_map:
+        return {}
+
+    return rif_port_map
+
+
+def init_sync_d_vlan_tables(db_conn):
+    """
+    Initializes interface maps for SyncD-connected MIB(s).
+    :return: tuple(if_name_map, if_id_map, oid_map, if_alias_map)
+    """
+
+    vlan_name_map = port_util.get_vlan_interface_oid_map(db_conn)
+
+    logger.debug("Vlan oid map:\n" + pprint.pformat(vlan_name_map, indent=2))
+
+    # { OID -> sai_id }
+    oid_sai_map = {get_index(if_name): sai_id for if_name, sai_id in vlan_name_map.items()
+                   # only map the interface if it's a style understood to be a SONiC interface.
+                   if get_index(if_name) is not None}
+    logger.debug("OID sai map:\n" + pprint.pformat(oid_sai_map, indent=2))
+
+    # { OID -> if_name (SONiC) }
+    oid_name_map = {get_index(if_name): if_name for if_name, sai_id in vlan_name_map.items()
+                   # only map the interface if it's a style understood to be a SONiC interface.
+                   if get_index(if_name) is not None}
+
+    logger.debug("OID name map:\n" + pprint.pformat(oid_name_map, indent=2))
+
+    return vlan_name_map, oid_sai_map, oid_name_map
 
 def init_sync_d_lag_tables(db_conn):
     """

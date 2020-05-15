@@ -48,7 +48,8 @@ class DbTables(int, Enum):
 class IfTypes(int, Enum):
     """ IANA ifTypes """
     ethernetCsmacd = 6
-    ieee8023adLag = 161
+    l3ipvlan       = 136
+    ieee8023adLag  = 161
 
 class ArpUpdater(MIBUpdater):
     def __init__(self):
@@ -159,6 +160,8 @@ class InterfacesUpdater(MIBUpdater):
         self.oid_lag_name_map = {}
         self.mgmt_oid_name_map = {}
         self.mgmt_alias_map = {}
+        self.vlan_oid_name_map = {}
+        self.vlan_name_map = {}
 
         # cache of interface counters
         self.if_counters = {}
@@ -182,6 +185,10 @@ class InterfacesUpdater(MIBUpdater):
         self.mgmt_oid_name_map, \
         self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn)
 
+        self.vlan_name_map, \
+        self.vlan_oid_sai_map, \
+        self.vlan_oid_name_map = mibs.init_sync_d_vlan_tables(self.db_conn)
+
     def update_data(self):
         """
         Update redis (caches config)
@@ -197,7 +204,8 @@ class InterfacesUpdater(MIBUpdater):
 
         self.if_range = sorted(list(self.oid_sai_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
-                               list(self.mgmt_oid_name_map.keys()))
+                               list(self.mgmt_oid_name_map.keys()) +
+                               list(self.vlan_oid_name_map.keys()))
         self.if_range = [(i,) for i in self.if_range]
 
     def get_next(self, sub_id):
@@ -241,6 +249,8 @@ class InterfacesUpdater(MIBUpdater):
             return self.oid_lag_name_map[oid]
         elif oid in self.mgmt_oid_name_map:
             return self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
+        elif oid in self.vlan_oid_name_map:
+            return self.vlan_name_map[self.vlan_oid_name_map[oid]]
 
         return self.if_alias_map[self.oid_name_map[oid]]
 
@@ -417,6 +427,7 @@ class InterfacesUpdater(MIBUpdater):
 
         ethernetCsmacd(6), -- for all ethernet-like interfaces,
                            -- regardless of speed, as per RFC3635
+        l3ipvlan(136)      -- Layer 3 Virtual LAN using IP 
         ieee8023adLag(161) -- IEEE 802.3ad Link Aggregate
         """
         oid = self.get_oid(sub_id)
@@ -425,6 +436,8 @@ class InterfacesUpdater(MIBUpdater):
 
         if oid in self.oid_lag_name_map:
             return IfTypes.ieee8023adLag
+        elif oid in self.oid_vlan_name_map:
+            return IfTypes.l3ipvlan
         else:
             return IfTypes.ethernetCsmacd
 
