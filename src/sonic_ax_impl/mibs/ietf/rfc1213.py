@@ -4,6 +4,7 @@ from enum import unique, Enum
 from bisect import bisect_right
 
 from sonic_ax_impl import mibs
+from sonic_ax_impl import logger
 from ax_interface.mib import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
 from ax_interface.encodings import ObjectIdentifier
 from ax_interface.util import mac_decimals, ip2tuple_v4
@@ -162,6 +163,7 @@ class InterfacesUpdater(MIBUpdater):
         self.mgmt_alias_map = {}
         self.vlan_oid_name_map = {}
         self.vlan_name_map = {}
+        self.rif_port_map = {}
 
         # cache of interface counters
         self.if_counters = {}
@@ -171,6 +173,7 @@ class InterfacesUpdater(MIBUpdater):
         self.if_id_map = {}
         self.oid_sai_map = {}
         self.oid_name_map = {}
+        self.rif_counters = {}
 
     def reinit_data(self):
         """
@@ -189,14 +192,24 @@ class InterfacesUpdater(MIBUpdater):
         self.vlan_oid_sai_map, \
         self.vlan_oid_name_map = mibs.init_sync_d_vlan_tables(self.db_conn)
 
+        self.rif_port_map = mibs.init_sync_d_rif_tables(self.db_conn)
+
     def update_data(self):
         """
         Update redis (caches config)
         Pulls the table references for each interface.
         """
+
         self.if_counters = \
             {sai_id: self.db_conn.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
              for sai_id in self.if_id_map}
+
+        self.rif_counters = \
+            {sai_id: self.db_conn.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
+             for sai_id in self.rif_port_map}
+
+        if self.rif_counters:       
+            self.aggregate_counters()
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
@@ -273,6 +286,21 @@ class InterfacesUpdater(MIBUpdater):
         except KeyError as e:
             mibs.logger.warning("SyncD 'COUNTERS_DB' missing attribute '{}'.".format(e))
             return None
+
+    def aggregate_counters(self):
+        """
+        For ports with l3 router interfaces l3 drops may be counted separately (RIF counters)
+        Get l2 and l3 (if any) counters from redis, add l3 counters to l2 counters cache according to mapping
+        """
+
+        for rif_sai_id, port_sai_id in self.rif_port_map.items():
+            for rif_counter_name, port_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
+                try:
+                    self.if_counters[port_sai_id][port_counter_name] = \
+                    int(self.if_counters[port_sai_id][port_counter_name]) + \
+                    int(self.rif_counters[rif_sai_id][rif_counter_name])
+                except KeyError as e:
+                    logger.warning("Not able to aggregate counters for {} and {}\n {}".format(port_sai_id, rif_sai_id, e))
 
     def get_counter(self, sub_id, table_name):
         """
@@ -436,7 +464,7 @@ class InterfacesUpdater(MIBUpdater):
 
         if oid in self.oid_lag_name_map:
             return IfTypes.ieee8023adLag
-        elif oid in self.oid_vlan_name_map:
+        elif oid in self.vlan_oid_name_map:
             return IfTypes.l3ipvlan
         else:
             return IfTypes.ethernetCsmacd

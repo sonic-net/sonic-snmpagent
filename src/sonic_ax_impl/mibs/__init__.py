@@ -41,6 +41,15 @@ SENSOR_PART_ID_MAP = {
     "tx4power":     43,
 }
 
+RIF_COUNTERS_AGGR_MAP = {
+    b"SAI_ROUTER_INTERFACE_STAT_IN_OCTETS": b"SAI_PORT_STAT_IF_IN_OCTETS",
+    b"SAI_PORT_STAT_IF_IN_UCAST_PKTS": b"SAI_ROUTER_INTERFACE_STAT_IN_PACKETS",
+    b"SAI_PORT_STAT_IF_IN_ERRORS": b"SAI_ROUTER_INTERFACE_STAT_IN_ERROR_PACKETS",
+    b"SAI_PORT_STAT_IF_OUT_OCTETS": b"SAI_ROUTER_INTERFACE_STAT_OUT_OCTETS",
+    b"SAI_PORT_STAT_IF_OUT_UCAST_PKTS": b"SAI_ROUTER_INTERFACE_STAT_OUT_PACKETS",
+    b"SAI_PORT_STAT_IF_OUT_ERRORS": b"SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS"
+}
+
 # IfIndex to OID multiplier for transceiver
 IFINDEX_SUB_ID_MULTIPLIER = 1000
 
@@ -182,6 +191,15 @@ def init_mgmt_interface_tables(db_conn):
 
     return oid_name_map, if_alias_map
 
+def get_counters_keys(db_conn):
+
+    
+    db_conn.connect(COUNTERS_DB)
+    counters_keys = db_conn.keys(COUNTERS_DB, counter_table(b'*'))
+    if counters_keys:
+        counters_keys = [key.strip(b'COUNTERS:oid:0x') for key in counters_keys]
+
+    return counters_keys
 
 # TODO: the function name include interface, but only return port by design. Fix the design or the name
 def init_sync_d_interface_tables(db_conn):
@@ -241,18 +259,21 @@ def init_sync_d_interface_tables(db_conn):
 
     return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map
 
+
 def init_sync_d_rif_tables(db_conn):
     """
     Initializes interface maps for SyncD-connected MIB(s).
     :return: tuple(if_name_map, if_id_map, oid_map, if_alias_map)
     """
 
+    counters_keys = get_counters_keys(db_conn)
     rif_port_map = port_util.get_rif_port_map(db_conn)
-
-    logger.debug("Rif port map:\n" + pprint.pformat(rif_port_map, indent=2))
-
+    
     if not rif_port_map:
         return {}
+    rif_port_map = {rif: port for rif, port in rif_port_map.items()
+                    if rif in counters_keys}
+    logger.debug("Rif port map:\n" + pprint.pformat(rif_port_map, indent=2))
 
     return rif_port_map
 
