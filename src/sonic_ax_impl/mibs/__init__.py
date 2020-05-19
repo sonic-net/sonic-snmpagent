@@ -160,8 +160,6 @@ def init_namespace_dbs():
     # Global db connector
     SonicDBConfig.load_sonic_global_db_config()
     for namespace in SonicDBConfig.get_ns_list():
-        print("hello2")
-        print(namespace)
         db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
         db_conn.append(db)
 
