@@ -7,6 +7,20 @@ import mockredis
 import swsssdk.interface
 from swsssdk.interface import redis
 
+def load_namespace_config():
+    """Set SonicDBConfig to initial state before loading multiple namespace
+    configurations.
+    """
+    clean_up_config()
+    swsssdk.dbconnector.SonicDBConfig.load_sonic_global_db_config(
+            global_db_file_path=os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), 'database_global.json'))
+
+
+def clean_up_config():
+    swsssdk.dbconnector.SonicDBConfig._sonic_db_config = {}
+    swsssdk.dbconnector.SonicDBConfig._sonic_db_global_config_init = False
+    swsssdk.dbconnector.SonicDBConfig._sonic_db_config_init = False
 
 def _subscribe_keyspace_notification(self, db_name, client):
     pass
@@ -50,7 +64,16 @@ class SwssSyncClient(mockredis.MockRedis):
             raise ValueError("Invalid db")
         self.pubsub = MockPubSub()
 
-        fname = os.path.join(INPUT_DIR, fname)
+        # unix_socket_path in database_global file reflects
+        # the namespace in case of multi-namespace unit-test.
+        # This is unit-test specific string to help choose the
+        # directory to load the namespace specific json files.
+        sock_path = kwargs['unix_socket_path']
+        print(sock_path)
+        if sock_path == None or sock_path == "/var/run/redis/redis.sock":
+            fname = os.path.join(INPUT_DIR, fname)
+        else:
+            fname = os.path.join(INPUT_DIR, sock_path, fname)
         with open(fname) as f:
             js = json.load(f)
             for h, table in js.items():

@@ -49,15 +49,6 @@ IFINDEX_SUB_ID_MULTIPLIER = 1000
 
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
 
-NAMESPACE_PATH_GLOB = '/run/netns/*'
-
-def get_namespaces():
-    ns_list = []
-    for path in glob.glob(NAMESPACE_PATH_GLOB):
-        ns = os.path.basename(path)
-        ns_list.append(ns)
-    return ns_list
-
 def chassis_info_table(chassis_name):
     """
     :param: chassis_name: chassis name
@@ -167,16 +158,18 @@ def init_db():
 def init_namespace_dbs():
     db_conn= []
     # Global db connector
-    db = SonicV2Connector(**redis_kwargs)
-    db_conn.append(db)
-    namespace_list = get_namespaces()
-    if len(namespace_list) != 0:
-        SonicDBConfig.load_sonic_global_db_config()
-    for namespace in namespace_list:
+    SonicDBConfig.load_sonic_global_db_config()
+    for namespace in SonicDBConfig.get_ns_list():
+        print("hello2")
+        print(namespace)
         db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
         db_conn.append(db)
 
     return db_conn
+
+def connect_all_namespace_dbs(all_ns_db, db_id):
+    for db_conn in all_ns_db:
+        db_conn.connect(db_id)
 
 def get_keys_from_all_namespace_dbs(all_ns_db, db_id, pattern='*'):
     """
@@ -200,6 +193,29 @@ def get_all_from_namespace_dbs(all_ns_db, db_name, _hash, *args, **kwargs):
         if(db_conn.exists(db_name, _hash)):
             return db_conn.get_all(db_name, _hash, *args, **kwargs)
     return {}
+
+def get_bridge_port_map_from_namespace_dbs(all_ns_db, db_name):
+    """
+    get_bridge_port_map from all namespace DBs
+    """
+    if_br_oid_map = {}
+    if len(all_ns_db) == 1:
+        if_br_oid_map = port_util.get_bridge_port_map(all_ns_db[0])
+    else:
+        for db_conn in all_ns_db[1:]:
+            if_br_oid_map_ns = port_util.get_bridge_port_map(db_conn)
+            if_br_oid_map.update(if_br_oid_map_ns)
+    return if_br_oid_map
+
+def get_vlan_id_from_bvid_from_namespace_dbs(all_ns_db, bvid):
+    if len(all_ns_db) == 1:
+        return port_util.get_vlan_id_from_bvid(all_ns_db[0], bvid)
+    else:
+        for db_conn in all_ns_db[1:]:
+            db_conn.connect('ASIC_DB')
+            vlan_obj = db.keys('ASIC_DB', "ASIC_STATE:SAI_OBJECT_TYPE_VLAN:" + bvid)
+            if vlan_obj is not None:
+                return port_util.get_vlan_id_from_bvid(db_conn, bvid)
 
 def init_mgmt_interface_tables(db_conn):
     """
@@ -530,7 +546,7 @@ class RedisOidTreeUpdater(MIBUpdater):
     def __init__(self, prefix_str):
         super().__init__()
 
-        self.db_conn = init_db()
+        self.db_conn = init_namespace_dbs() 
         if prefix_str.startswith('.'):
             prefix_str = prefix_str[1:]
         self.prefix_str = prefix_str
@@ -556,8 +572,7 @@ class RedisOidTreeUpdater(MIBUpdater):
         self.oid_list = []
         self.oid_map = {}
 
-        self.db_conn.connect(SNMP_OVERLAY_DB)
-        keys = self.db_conn.keys(SNMP_OVERLAY_DB, self.prefix_str + '*')
+        keys = get_keys_from_all_namespace_dbs(self.db_conn, SNMP_OVERLAY_DB, self.prefix_str + '*') 
         # TODO: fix db_conn.keys to return empty list instead of None if there is no match
         if keys is None:
             keys = []
@@ -566,7 +581,7 @@ class RedisOidTreeUpdater(MIBUpdater):
             key = key.decode()
             oid = oid2tuple(key, dot_prefix=False)
             self.oid_list.append(oid)
-            value = self.db_conn.get_all(SNMP_OVERLAY_DB, key)
+            value = get_all_from_namespace_dbs(self.db_conn, SNMP_OVERLAY_DB, key) 
             if value[b'type'] in [b'COUNTER_32', b'COUNTER_64']:
                 self.oid_map[oid] = int(value[b'data'])
             else:
