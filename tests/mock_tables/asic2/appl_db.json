@@ -1,21 +1,21 @@
 {
   "PORT_TABLE:Ethernet-BP16": {
-    "description": "snowflake",
+    "description": "backplane",
     "alias": "etp9",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet-BP20": {
-    "description": "snowflake",
+    "description": "backplane",
     "alias": "etp10",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet-BP24": {
-    "description": "snowflake",
+    "description": "backplane",
     "alias": "etp11",
     "speed": 100000
   },
   "PORT_TABLE:Ethernet-BP28": {
-    "description": "snowflake",
+    "description": "backplane",
     "alias": "etp12",
     "speed": 100000
   },

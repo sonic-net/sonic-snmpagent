@@ -1,5 +1,6 @@
 import os
 import sys
+import importlib
 
 # noinspection PyUnresolvedReferences
 import tests.mock_tables.dbconnector
@@ -20,6 +21,8 @@ from sonic_ax_impl.mibs.vendor.cisco import ciscoPfcExtMIB
 class TestPfcPortCounters(TestCase):
     @classmethod
     def setUpClass(cls):
+        tests.mock_tables.dbconnector.load_database_config()
+        importlib.reload(ciscoPfcExtMIB)
         cls.lut_port = MIBTable(ciscoPfcExtMIB.cpfcIfTable)
         cls.lut_prio = MIBTable(ciscoPfcExtMIB.cpfcIfPriorityTable)
 		

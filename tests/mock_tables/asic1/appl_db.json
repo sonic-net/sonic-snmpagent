@@ -46,7 +46,6 @@
     "alias": "etp6"
   },
   "PORT_TABLE:Ethernet-BP8": {
-    "description": "snowflake",
     "alias": "etp7"
   },
   "PORT_TABLE:Ethernet-BP12": {

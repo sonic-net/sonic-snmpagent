@@ -6,21 +6,49 @@ import unittest.mock
 import mockredis
 import swsssdk.interface
 from swsssdk.interface import redis
-
-def load_namespace_config():
-    """Set SonicDBConfig to initial state before loading multiple namespace
-    configurations.
-    """
-    clean_up_config()
-    swsssdk.dbconnector.SonicDBConfig.load_sonic_global_db_config(
-            global_db_file_path=os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), 'database_global.json'))
-
+from swsssdk import SonicV2Connector
+from swsssdk import SonicDBConfig
+import importlib
 
 def clean_up_config():
-    swsssdk.dbconnector.SonicDBConfig._sonic_db_config = {}
-    swsssdk.dbconnector.SonicDBConfig._sonic_db_global_config_init = False
-    swsssdk.dbconnector.SonicDBConfig._sonic_db_config_init = False
+    # set SonicDBConfig variables to initial state 
+    # so that it can be loaded with single or multiple 
+    # namespaces before the test begins.
+    SonicDBConfig._sonic_db_config = {}
+    SonicDBConfig._sonic_db_global_config_init = False
+    SonicDBConfig._sonic_db_config_init = False
+
+def load_namespace_config():
+    # To support testing single namespace and multiple
+    # namespace scenario, SonicDBConfig load_sonic_global_db_config
+    # is invoked to load multiple namespaces to support multiple
+    # namespace testing.
+    clean_up_config()
+    SonicDBConfig.load_sonic_global_db_config(
+        global_db_file_path=os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), 'database_global.json'))
+
+def load_database_config():
+    #load local database_config.json for single namespace test scenario
+    clean_up_config()
+    SonicDBConfig.load_sonic_db_config(
+        sonic_db_file_path=os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), 'database_config.json'))
+
+def init_SonicV2Connector(self, use_unix_socket_path=False, namespace=None, **kwargs):
+    self.namespace = namespace
+    self.use_unix_socket_path = use_unix_socket_path
+    for db_name in SonicDBConfig.get_dblist(self.namespace):
+        setattr(self, db_name, db_name)
+    ns_list = SonicDBConfig.get_ns_list()
+    # In case of multiple namespaces, namespace string passed to
+    # SonicV2Connector will specify the namespace or can be empty.
+    # Empty namespace represents global or host namespace.
+    if len(ns_list) > 1 and namespace == "":
+        kwargs['namespace'] = "global_db"
+    else:
+        kwargs['namespace'] = namespace
+    super(SonicV2Connector, self).__init__(**kwargs)
 
 def _subscribe_keyspace_notification(self, db_name, client):
     pass
@@ -48,6 +76,9 @@ class SwssSyncClient(mockredis.MockRedis):
     def __init__(self, *args, **kwargs):
         super(SwssSyncClient, self).__init__(strict=True, *args, **kwargs)
         db = kwargs.pop('db')
+        #namespace is added in kwargs specifically for unit-test
+        # to identify the file path to load the db json files.
+        namespace = kwargs.pop('namespace')
         if db == 0:
             fname = 'appl_db.json'
         elif db == 1:
@@ -64,16 +95,11 @@ class SwssSyncClient(mockredis.MockRedis):
             raise ValueError("Invalid db")
         self.pubsub = MockPubSub()
 
-        # unix_socket_path in database_global file reflects
-        # the namespace in case of multi-namespace unit-test.
-        # This is unit-test specific string to help choose the
-        # directory to load the namespace specific json files.
-        sock_path = kwargs['unix_socket_path']
-        print(sock_path)
-        if sock_path == None or sock_path == "/var/run/redis/redis.sock":
-            fname = os.path.join(INPUT_DIR, fname)
+        if namespace != None:
+            fname = os.path.join(INPUT_DIR, namespace, fname)
         else:
-            fname = os.path.join(INPUT_DIR, sock_path, fname)
+            fname = os.path.join(INPUT_DIR, fname)
+
         with open(fname) as f:
             js = json.load(f)
             for h, table in js.items():
@@ -107,3 +133,4 @@ class SwssSyncClient(mockredis.MockRedis):
 swsssdk.interface.DBInterface._subscribe_keyspace_notification = _subscribe_keyspace_notification
 mockredis.MockRedis.config_set = config_set
 redis.StrictRedis = SwssSyncClient
+swsssdk.dbconnector.SonicV2Connector.__init__ = init_SonicV2Connector

@@ -28,24 +28,19 @@ from sonic_ax_impl import mibs
 
 from unittest.mock import patch
 from unittest.mock import PropertyMock
-import pdb
+import importlib
 
 
 class TestGetNextPDU(TestCase):
     @classmethod
     def setUpClass(cls):
-            tests.mock_tables.dbconnector.load_namespace_config()
-            cls.lut = MIBTable(rfc1213.InterfacesMIB)
-            for updater in cls.lut.updater_instances:
-                   # initialize the class again to update SonicV2Connector classs
-                   # to reflect connectivity to all namespaces.
-                   if isinstance(updater, rfc1213.InterfacesUpdater):
-                       updater.__init__()
-                   if isinstance(updater, mibs.RedisOidTreeUpdater):
-                       updater.__init__(prefix_str='1.3.6.1.2.1.2')
-                   updater.update_data()
-                   updater.reinit_data()
-                   updater.update_data()
+        tests.mock_tables.dbconnector.load_namespace_config()
+        importlib.reload(rfc1213)
+        cls.lut = MIBTable(rfc1213.InterfacesMIB)
+        for updater in cls.lut.updater_instances:
+           updater.update_data()
+           updater.reinit_data()
+           updater.update_data()
 
     def test_getnextpdu_noneifindex(self):
         # oid.include = 1

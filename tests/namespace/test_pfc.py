@@ -1,5 +1,6 @@
 import os
 import sys
+import importlib
 
 # noinspection PyUnresolvedReferences
 import tests.mock_tables.dbconnector
@@ -16,22 +17,21 @@ from ax_interface.constants import PduTypes
 from ax_interface.pdu import PDU, PDUHeader
 from ax_interface.mib import MIBTable
 from sonic_ax_impl.mibs.vendor.cisco import ciscoPfcExtMIB
-from sonic_ax_impl import mibs
 
 class TestPfcPortCounters(TestCase):
     @classmethod
     def setUpClass(cls):
         tests.mock_tables.dbconnector.load_namespace_config()
+        importlib.reload(ciscoPfcExtMIB)
+
         cls.lut_port = MIBTable(ciscoPfcExtMIB.cpfcIfTable)
         cls.lut_prio = MIBTable(ciscoPfcExtMIB.cpfcIfPriorityTable)
-		
-		# Update MIBs
+
+        # Update MIBs
         for updater in cls.lut_port.updater_instances:
-            updater.__init__()
             updater.reinit_data()
             updater.update_data()
         for updater in cls.lut_prio.updater_instances:
-            updater.__init__()
             updater.reinit_data()
             updater.update_data()
 
@@ -268,4 +268,3 @@ class TestPfcPortCounters(TestCase):
     @classmethod
     def tearDownClass(cls):
         tests.mock_tables.dbconnector.clean_up_config()
-                                                        

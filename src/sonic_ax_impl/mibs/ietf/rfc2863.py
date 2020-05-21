@@ -3,6 +3,7 @@ from bisect import bisect_right
 
 from sonic_ax_impl import mibs
 from ax_interface.mib import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
+from sonic_ax_impl.mibs import Namespace
 
 @unique
 class DbTables32(int, Enum):
@@ -47,7 +48,7 @@ class InterfaceMIBUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
 
-        self.db_conn = mibs.init_namespace_dbs()
+        self.db_conn = Namespace.init_namespace_dbs()
 
         self.lag_name_if_name_map = {}
         self.if_name_lag_name_map = {}
@@ -74,11 +75,11 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = mibs.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
-        self.oid_lag_name_map = mibs.init_namespace_sync_d_lag_tables(self.db_conn)
+        self.oid_lag_name_map = Namespace.init_namespace_sync_d_lag_tables(self.db_conn)
         """
         db_conn - will have db_conn to all namespace DBs and
         global db. First db in the list is global db.
@@ -98,7 +99,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         Pulls the table references for each interface.
         """
         self.if_counters = {
-            sai_id: mibs.get_all_from_namespace_dbs(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
+            sai_id: Namespace.get_all_dbs(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
             for sai_id in self.if_id_map}
 
 
@@ -221,7 +222,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         else:
             return None
 
-        return mibs.get_all_from_namespace_dbs(self.db_conn, db, if_table, blocking=True)
+        return Namespace.get_all_dbs(self.db_conn, db, if_table, blocking=True)
 
     def get_high_speed(self, sub_id):
         """
