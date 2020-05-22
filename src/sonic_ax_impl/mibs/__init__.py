@@ -443,6 +443,7 @@ class RedisOidTreeUpdater(MIBUpdater):
         return self.oid_map[oid]
 
 class Namespace:
+    @staticmethod
     def init_namespace_dbs():
         db_conn= []
         SonicDBConfig.load_sonic_global_db_config()
@@ -452,10 +453,12 @@ class Namespace:
 
         return db_conn
 
+    @staticmethod
     def connect_all_dbs(dbs, db_name):
         for db_conn in dbs:
             db_conn.connect(db_name)
 
+    @staticmethod
     def get_dbs_keys(dbs, db_name, pattern='*'):
         """
         db keys function execute on global and all namespace DBs.
@@ -468,6 +471,7 @@ class Namespace:
                 result_keys.extend(keys)
         return result_keys
 
+    @staticmethod
     def get_all_dbs(dbs, db_name, _hash, *args, **kwargs):
         """
         db get_all function executed on global and all namespace DBs.
@@ -478,6 +482,7 @@ class Namespace:
                 return db_conn.get_all(db_name, _hash, *args, **kwargs)
         return {}
 
+    @staticmethod
     def get_non_host_dbs(dbs):
         """
         From the list of all dbs, return the list of dbs
@@ -492,6 +497,7 @@ class Namespace:
             return dbs[1:]
         
 
+    @staticmethod
     def init_namespace_sync_d_interface_tables(dbs):
         if_name_map = {}
         if_alias_map = {}
@@ -519,6 +525,7 @@ class Namespace:
 
         return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map
 
+    @staticmethod
     def init_namespace_sync_d_lag_tables(dbs):
 
         lag_name_if_name_map = {}
@@ -541,6 +548,7 @@ class Namespace:
 
         return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map
 
+    @staticmethod
     def init_namespace_sync_d_queue_tables(dbs):
         port_queues_map = {}
         queue_stat_map = {}

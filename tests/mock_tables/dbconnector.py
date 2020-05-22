@@ -11,13 +11,14 @@ from swsssdk import SonicDBConfig
 import importlib
 
 def clean_up_config():
-    # set SonicDBConfig variables to initial state 
+    # Set SonicDBConfig variables to initial state 
     # so that it can be loaded with single or multiple 
     # namespaces before the test begins.
     SonicDBConfig._sonic_db_config = {}
     SonicDBConfig._sonic_db_global_config_init = False
     SonicDBConfig._sonic_db_config_init = False
 
+# TODO Convert this to fixture as all Test classes require it.
 def load_namespace_config():
     # To support testing single namespace and multiple
     # namespace scenario, SonicDBConfig load_sonic_global_db_config
@@ -28,8 +29,9 @@ def load_namespace_config():
         global_db_file_path=os.path.join(
             os.path.dirname(os.path.abspath(__file__)), 'database_global.json'))
 
+# TODO Convert this to fixture as all Test classes require it.
 def load_database_config():
-    #load local database_config.json for single namespace test scenario
+    # Load local database_config.json for single namespace test scenario
     clean_up_config()
     SonicDBConfig.load_sonic_db_config(
         sonic_db_file_path=os.path.join(
@@ -76,7 +78,7 @@ class SwssSyncClient(mockredis.MockRedis):
     def __init__(self, *args, **kwargs):
         super(SwssSyncClient, self).__init__(strict=True, *args, **kwargs)
         db = kwargs.pop('db')
-        #namespace is added in kwargs specifically for unit-test
+        # Namespace is added in kwargs specifically for unit-test
         # to identify the file path to load the db json files.
         namespace = kwargs.pop('namespace')
         if db == 0:
@@ -95,7 +97,7 @@ class SwssSyncClient(mockredis.MockRedis):
             raise ValueError("Invalid db")
         self.pubsub = MockPubSub()
 
-        if namespace != None:
+        if namespace is not None:
             fname = os.path.join(INPUT_DIR, namespace, fname)
         else:
             fname = os.path.join(INPUT_DIR, fname)
