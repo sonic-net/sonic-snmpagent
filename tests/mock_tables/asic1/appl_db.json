@@ -71,7 +71,7 @@
   "LAG_MEMBER_TABLE:PortChannel02:Ethernet-BP12": {
     "status": "enabled"
   },
-  "LAG_TABLE:PortChannel01": {
+  "LAG_TABLE:PortChannel02": {
     "admin_status": "up",
     "oper_status": "up",
     "mtu": "9216"
