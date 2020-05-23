@@ -1,7 +1,6 @@
 import pprint
 import re
 import os
-import glob
 
 from swsssdk import SonicV2Connector
 from swsssdk import SonicDBConfig
