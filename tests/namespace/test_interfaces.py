@@ -1,21 +1,14 @@
 import os
 import sys
-import traceback
-import logging
+import importlib
 
 # noinspection PyUnresolvedReferences
 import tests.mock_tables.dbconnector
-
-import swsssdk
-from swsssdk import SonicV2Connector
-from swsssdk import SonicDBConfig
-
 
 modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from unittest import TestCase
-from unittest import mock 
 
 from ax_interface import ValueType
 from ax_interface.pdu_implementations import GetPDU, GetNextPDU
@@ -25,11 +18,6 @@ from ax_interface.pdu import PDU, PDUHeader
 from ax_interface.mib import MIBTable
 from sonic_ax_impl.mibs.ietf import rfc1213
 from sonic_ax_impl import mibs
-
-from unittest.mock import patch
-from unittest.mock import PropertyMock
-import importlib
-
 
 class TestGetNextPDU(TestCase):
     @classmethod
