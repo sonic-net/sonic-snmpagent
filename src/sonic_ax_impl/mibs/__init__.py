@@ -570,26 +570,20 @@ class Namespace:
         return port_queues_map, queue_stat_map, port_queue_list_map
 
     @staticmethod
-    def get_bridge_port_map_from_namespace_dbs(all_ns_db, db_name):
+    def get_bridge_port_map_from_namespace_dbs(dbs, db_name):
         """
         get_bridge_port_map from all namespace DBs
         """
         if_br_oid_map = {}
-        if len(all_ns_db) == 1:
-            if_br_oid_map = port_util.get_bridge_port_map(all_ns_db[0])
-        else:
-            for db_conn in all_ns_db[1:]:
-                if_br_oid_map_ns = port_util.get_bridge_port_map(db_conn)
-                if_br_oid_map.update(if_br_oid_map_ns)
+        for db_conn in Namespace.get_non_host_dbs(dbs):
+            if_br_oid_map_ns = port_util.get_bridge_port_map(db_conn)
+            if_br_oid_map.update(if_br_oid_map_ns)
         return if_br_oid_map
 
     @staticmethod
-    def get_vlan_id_from_bvid_from_namespace_dbs(all_ns_db, bvid):
-        if len(all_ns_db) == 1:
-            return port_util.get_vlan_id_from_bvid(all_ns_db[0], bvid)
-        else:
-            for db_conn in all_ns_db[1:]:
-                db_conn.connect('ASIC_DB')
-                vlan_obj = db.keys('ASIC_DB', "ASIC_STATE:SAI_OBJECT_TYPE_VLAN:" + bvid)
-                if vlan_obj is not None:
-                    return port_util.get_vlan_id_from_bvid(db_conn, bvid)
+    def get_vlan_id_from_bvid_from_namespace_dbs(dbs, bvid):
+        for db_conn in Namespace.get_non_host_dbs(dbs):
+            db_conn.connect('ASIC_DB')
+            vlan_obj = db.keys('ASIC_DB', "ASIC_STATE:SAI_OBJECT_TYPE_VLAN:" + bvid)
+            if vlan_obj is not None:
+                return port_util.get_vlan_id_from_bvid(db_conn, bvid)

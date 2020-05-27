@@ -1,9 +1,7 @@
 import json
-from enum import unique, Enum
 
 from sonic_ax_impl import mibs
 from sonic_ax_impl.mibs import Namespace
-from swsssdk import port_util
 from ax_interface import MIBMeta, ValueType, MIBUpdater, SubtreeMIBEntry
 from ax_interface.util import mac_decimals
 from bisect import bisect_right

@@ -11,8 +11,6 @@ from ax_interface import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry
 from sonic_ax_impl import mibs
 from sonic_ax_impl.mibs import Namespace
 
-import threading
-
 @unique
 class PhysicalClass(int, Enum):
     """
