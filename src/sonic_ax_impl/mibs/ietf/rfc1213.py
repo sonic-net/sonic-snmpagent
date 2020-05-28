@@ -199,14 +199,15 @@ class InterfacesUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
-
         self.if_counters = \
             {sai_id: self.db_conn.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
              for sai_id in self.if_id_map}
 
+        rif_sai_ids = list(self.rif_port_map.keys()) + list(self.vlan_name_map.values())
+
         self.rif_counters = \
             {sai_id: self.db_conn.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
-             for sai_id in self.rif_port_map}
+             for sai_id in rif_sai_ids}
 
         if self.rif_counters:       
             self.aggregate_counters()
@@ -263,7 +264,7 @@ class InterfacesUpdater(MIBUpdater):
         elif oid in self.mgmt_oid_name_map:
             return self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
         elif oid in self.vlan_oid_name_map:
-            return self.vlan_name_map[self.vlan_oid_name_map[oid]]
+            return self.vlan_oid_name_map[oid]
 
         return self.if_alias_map[self.oid_name_map[oid]]
 
@@ -273,7 +274,13 @@ class InterfacesUpdater(MIBUpdater):
         :param table_name: the redis table (either IntEnum or string literal) to query.
         :return: the counter for the respective sub_id/table.
         """
-        sai_id = self.oid_sai_map[oid]
+        sai_id = ''
+        if oid in self.oid_sai_map:
+            sai_id = self.oid_sai_map[oid]
+        elif oid in self.vlan_oid_sai_map:
+            sai_id = self.vlan_oid_sai_map[oid]
+        else:
+            logger.warning("Unexpected oid {}".format(oid))
         # Enum.name or table_name = 'name_of_the_table'
         _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
 
@@ -291,6 +298,8 @@ class InterfacesUpdater(MIBUpdater):
         """
         For ports with l3 router interfaces l3 drops may be counted separately (RIF counters)
         Get l2 and l3 (if any) counters from redis, add l3 counters to l2 counters cache according to mapping
+
+        For l3vlan map l3 counters to l2 counters
         """
 
         for rif_sai_id, port_sai_id in self.rif_port_map.items():
@@ -300,7 +309,16 @@ class InterfacesUpdater(MIBUpdater):
                     int(self.if_counters[port_sai_id][port_counter_name]) + \
                     int(self.rif_counters[rif_sai_id][rif_counter_name])
                 except KeyError as e:
-                    logger.warning("Not able to aggregate counters for {} and {}\n {}".format(port_sai_id, rif_sai_id, e))
+                    logger.warning("Not able to aggregate counters for {}: {}\n {}".format(rif_sai_id, rif_counter_name, e))
+
+        for vlan_sai_id in self.vlan_name_map.values():
+            for rif_counter_name, port_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
+                try:
+                    self.if_counters.setdefault(vlan_sai_id, {})
+                    self.if_counters[vlan_sai_id][port_counter_name] = \
+                    int(self.rif_counters[vlan_sai_id][rif_counter_name])
+                except KeyError as e:
+                    logger.warning("Not able to aggregate counters for {}: {}\n {}".format(vlan_sai_id, rif_counter_name, e))                
 
     def get_counter(self, sub_id, table_name):
         """
