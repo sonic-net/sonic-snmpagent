@@ -50,7 +50,7 @@ def init_SonicV2Connector(self, use_unix_socket_path=False, namespace=None, **kw
         kwargs['namespace'] = "global_db"
     else:
         kwargs['namespace'] = namespace
-    super(SonicV2Connector, self).__init__(**kwargs)
+    self.dbintf = swsssdk.interface.DBInterface(**kwargs)
 
 def _subscribe_keyspace_notification(self, db_name, client):
     pass
