@@ -1,0 +1,82 @@
+{
+  "LLDP_LOC_CHASSIS": {
+    "lldp_loc_chassis_id_subtype": "5",
+    "lldp_loc_chassis_id": "00:11:22:AB:CD:EF",
+    "lldp_loc_sys_name": "SONiC",
+    "lldp_loc_sys_desc": "Gotta go Fast!",
+    "lldp_loc_sys_cap_enabled": "28 00",
+    "lldp_loc_sys_cap_supported": "28 00",
+    "lldp_loc_man_addr": "10.224.25.26,fe80::ce37:abff:feec:de9c"
+  },
+  "PORT_TABLE:Ethernet-BP16": {
+    "description": "backplane",
+    "alias": "etp9",
+    "speed": 100000
+  },
+  "PORT_TABLE:Ethernet-BP20": {
+    "description": "backplane",
+    "alias": "etp10",
+    "speed": 100000
+  },
+  "PORT_TABLE:Ethernet-BP24": {
+    "description": "backplane",
+    "alias": "etp11",
+    "speed": 100000
+  },
+  "PORT_TABLE:Ethernet-BP28": {
+    "description": "backplane",
+    "alias": "etp12",
+    "speed": 100000
+  },
+  "ROUTE_TABLE:10.1.0.32": {
+    "nexthop": "",
+    "ifname": "lo"
+  },
+  "ROUTE_TABLE:fc00:1::32": {
+    "nexthop": "",
+    "ifname": "lo"
+  },
+  "LAG_MEMBER_TABLE:PortChannel03:Ethernet-BP16": {
+    "status": "enabled"
+  },
+  "LAG_MEMBER_TABLE:PortChannel03:Ethernet-BP20": {
+    "status": "enabled"
+  },
+  "LAG_MEMBER_TABLE:PortChannel04:Ethernet-BP24": {
+    "status": "enabled"
+  },
+  "LAG_MEMBER_TABLE:PortChannel04:Ethernet-BP28": {
+    "status": "enabled"
+  },
+  "LAG_TABLE:PortChannel03": {
+    "admin_status": "up",
+    "oper_status": "up",
+    "mtu": "9216"
+  },
+  "LAG_TABLE:PortChannel04": {
+    "admin_status": "up",
+    "oper_status": "up",
+    "mtu": "9216"
+  },
+  "LAG_TABLE:PortChannel_Temp": {
+    "admin_status": "up",
+    "oper_status": "up",
+    "mtu": "9216"
+  },
+  "INTF_TABLE:lo:10.1.0.32/32": {
+    "scope": "global",
+    "family": "IPv4"
+  },
+  "INTF_TABLE:lo:fc00:1::32/128": {
+    "scope": "global",
+    "family": "IPv6"
+  },
+  "INTF_TABLE:PortChannel03:10.10.0.0/31": {
+    "scope": "global",
+    "family": "IPv4"
+  },
+  "INTF_TABLE:PortChannel04:10.10.0.5/31": {
+    "scope": "global",
+    "family": "IPv4"
+  }
+}

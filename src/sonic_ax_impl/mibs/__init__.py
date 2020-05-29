@@ -1,7 +1,9 @@
 import pprint
 import re
+import os
 
 from swsssdk import SonicV2Connector
+from swsssdk import SonicDBConfig
 from swsssdk import port_util
 from swsssdk.port_util import get_index, get_index_from_str
 from ax_interface.mib import MIBUpdater
@@ -148,7 +150,7 @@ def init_db():
     """
     # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
     # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
-    db_conn = SonicV2Connector(**redis_kwargs)
+    db_conn = SonicV2Connector(**redis_kwargs) 
 
     return db_conn
 
@@ -182,8 +184,6 @@ def init_mgmt_interface_tables(db_conn):
 
     return oid_name_map, if_alias_map
 
-
-# TODO: the function name include interface, but only return port by design. Fix the design or the name
 def init_sync_d_interface_tables(db_conn):
     """
     Initializes interface maps for SyncD-connected MIB(s).
@@ -196,9 +196,12 @@ def init_sync_d_interface_tables(db_conn):
     # { if_name (SONiC) -> sai_id }
     # ex: { "Ethernet76" : "1000000000023" }
     if_name_map, if_id_map = port_util.get_interface_oid_map(db_conn)
-    if_name_map = {if_name: sai_id for if_name, sai_id in if_name_map.items() if re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode())}
-    if_id_map = {sai_id: if_name for sai_id, if_name in if_id_map.items() if re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode())}
-
+    if_name_map = {if_name: sai_id for if_name, sai_id in if_name_map.items() if \
+                   (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode()) or \
+                    re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name.decode()))}
+    if_id_map = {sai_id: if_name for sai_id, if_name in if_id_map.items() if \
+                 (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode()) or \
+                  re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name.decode()))}
     logger.debug("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
     logger.debug("Interface name map:\n" + pprint.pformat(if_id_map, indent=2))
 
@@ -240,7 +243,6 @@ def init_sync_d_interface_tables(db_conn):
     logger.debug("Chassis name map:\n" + pprint.pformat(if_alias_map, indent=2))
 
     return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map
-
 
 def init_sync_d_lag_tables(db_conn):
     """
@@ -391,7 +393,7 @@ class RedisOidTreeUpdater(MIBUpdater):
     def __init__(self, prefix_str):
         super().__init__()
 
-        self.db_conn = init_db()
+        self.db_conn = Namespace.init_namespace_dbs() 
         if prefix_str.startswith('.'):
             prefix_str = prefix_str[1:]
         self.prefix_str = prefix_str
@@ -417,8 +419,7 @@ class RedisOidTreeUpdater(MIBUpdater):
         self.oid_list = []
         self.oid_map = {}
 
-        self.db_conn.connect(SNMP_OVERLAY_DB)
-        keys = self.db_conn.keys(SNMP_OVERLAY_DB, self.prefix_str + '*')
+        keys = Namespace.dbs_keys(self.db_conn, SNMP_OVERLAY_DB, self.prefix_str + '*') 
         # TODO: fix db_conn.keys to return empty list instead of None if there is no match
         if keys is None:
             keys = []
@@ -427,7 +428,7 @@ class RedisOidTreeUpdater(MIBUpdater):
             key = key.decode()
             oid = oid2tuple(key, dot_prefix=False)
             self.oid_list.append(oid)
-            value = self.db_conn.get_all(SNMP_OVERLAY_DB, key)
+            value = Namespace.dbs_get_all(self.db_conn, SNMP_OVERLAY_DB, key) 
             if value[b'type'] in [b'COUNTER_32', b'COUNTER_64']:
                 self.oid_map[oid] = int(value[b'data'])
             else:
@@ -439,3 +440,134 @@ class RedisOidTreeUpdater(MIBUpdater):
         if oid not in self.oid_map:
             return None
         return self.oid_map[oid]
+
+class Namespace:
+    @staticmethod
+    def init_namespace_dbs():
+        db_conn= []
+        SonicDBConfig.load_sonic_global_db_config()
+        for namespace in SonicDBConfig.get_ns_list():
+            db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
+            db_conn.append(db)
+
+        return db_conn
+
+    @staticmethod
+    def connect_all_dbs(dbs, db_name):
+        for db_conn in dbs:
+            db_conn.connect(db_name)
+
+    @staticmethod
+    def dbs_keys(dbs, db_name, pattern='*'):
+        """
+        db keys function execute on global and all namespace DBs.
+        """
+        result_keys=[]
+        for db_conn in dbs:
+            db_conn.connect(db_name)
+            keys = db_conn.keys(db_name, pattern)
+            if keys is not None:
+                result_keys.extend(keys)
+        return result_keys
+
+    @staticmethod
+    def dbs_get_all(dbs, db_name, _hash, *args, **kwargs):
+        """
+        db get_all function executed on global and all namespace DBs.
+        """
+        result = {}
+        for db_conn in dbs:
+            db_conn.connect(db_name)
+            if(db_conn.exists(db_name, _hash)):
+                ns_result = db_conn.get_all(db_name, _hash, *args, **kwargs)
+                if ns_result is not None:
+                    result.update(ns_result)
+        return result
+
+    @staticmethod
+    def get_non_host_dbs(dbs):
+        """
+        From the list of all dbs, return the list of dbs
+        which will have interface related tables.
+        For single namespace db, return the single db.
+        For multiple namespace dbs, return all dbs except the
+        host namespace db which is the first db in the list.
+        """
+        if len(dbs) == 1:
+            return dbs
+        else:
+            return dbs[1:]
+        
+
+    @staticmethod
+    def init_namespace_sync_d_interface_tables(dbs):
+        if_name_map = {}
+        if_alias_map = {}
+        if_id_map = {}
+        oid_sai_map = {}
+        oid_name_map = {}
+
+        """
+        all_ns_db - will have db_conn to all namespace DBs and
+        global db. First db in the list is global db.
+        Ignore first global db to get interface tables if there
+        are multiple namespaces.
+        """
+        for db_conn in Namespace.get_non_host_dbs(dbs):
+            if_name_map_ns, \
+            if_alias_map_ns, \
+            if_id_map_ns, \
+            oid_sai_map_ns, \
+            oid_name_map_ns = init_sync_d_interface_tables(db_conn)
+            if_name_map.update(if_name_map_ns)
+            if_alias_map.update(if_alias_map_ns)
+            if_id_map.update(if_id_map_ns)
+            oid_sai_map.update(oid_sai_map_ns)
+            oid_name_map.update(oid_name_map_ns)
+
+        return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map
+
+    @staticmethod
+    def init_namespace_sync_d_lag_tables(dbs):
+
+        lag_name_if_name_map = {}
+        if_name_lag_name_map = {}
+        oid_lag_name_map = {}
+
+        """
+        all_ns_db - will have db_conn to all namespace DBs and
+        global db. First db in the list is global db.
+        Ignore first global db to get lag tables if
+        there are multiple namespaces.
+        """
+        for db_conn in Namespace.get_non_host_dbs(dbs):
+            lag_name_if_name_map_ns, \
+            if_name_lag_name_map_ns, \
+            oid_lag_name_map_ns = init_sync_d_lag_tables(db_conn)
+            lag_name_if_name_map.update(lag_name_if_name_map_ns)
+            if_name_lag_name_map.update(if_name_lag_name_map_ns)
+            oid_lag_name_map.update(oid_lag_name_map_ns)
+
+        return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map
+
+    @staticmethod
+    def init_namespace_sync_d_queue_tables(dbs):
+        port_queues_map = {}
+        queue_stat_map = {}
+        port_queue_list_map = {}
+
+        """
+        all_ns_db - will have db_conn to all namespace DBs and
+        global db. First db in the list is global db.
+        Ignore first global db to get queue tables if there
+        are multiple namespaces.
+        """
+        for db_conn in Namespace.get_non_host_dbs(dbs):
+            port_queues_map_ns, \
+            queue_stat_map_ns, \
+            port_queue_list_map_ns = init_sync_d_queue_tables(db_conn)
+            port_queues_map.update(port_queues_map_ns)
+            queue_stat_map.update(queue_stat_map_ns)
+            port_queue_list_map.update(port_queue_list_map_ns)
+
+        return port_queues_map, queue_stat_map, port_queue_list_map
