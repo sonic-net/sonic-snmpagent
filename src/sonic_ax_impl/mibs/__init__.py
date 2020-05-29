@@ -571,3 +571,22 @@ class Namespace:
             port_queue_list_map.update(port_queue_list_map_ns)
 
         return port_queues_map, queue_stat_map, port_queue_list_map
+
+    @staticmethod
+    def dbs_get_bridge_port_map(dbs, db_name):
+        """
+        get_bridge_port_map from all namespace DBs
+        """
+        if_br_oid_map = {}
+        for db_conn in Namespace.get_non_host_dbs(dbs):
+            if_br_oid_map_ns = port_util.get_bridge_port_map(db_conn)
+            if_br_oid_map.update(if_br_oid_map_ns)
+        return if_br_oid_map
+
+    @staticmethod
+    def dbs_get_vlan_id_from_bvid(dbs, bvid):
+        for db_conn in Namespace.get_non_host_dbs(dbs):
+            db_conn.connect('ASIC_DB')
+            vlan_obj = db.keys('ASIC_DB', "ASIC_STATE:SAI_OBJECT_TYPE_VLAN:" + bvid)
+            if vlan_obj is not None:
+                return port_util.get_vlan_id_from_bvid(db_conn, bvid)

@@ -5,11 +5,11 @@ MIB implementation defined in RFC 2737
 from enum import Enum, unique
 from bisect import bisect_right, insort_right
 
-from swsssdk import SonicV2Connector, port_util
+from swsssdk import port_util
 from ax_interface import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry
 
 from sonic_ax_impl import mibs
-
+from sonic_ax_impl.mibs import Namespace
 
 @unique
 class PhysicalClass(int, Enum):
@@ -120,8 +120,8 @@ class PhysicalTableMIBUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
 
-        self.statedb = SonicV2Connector()
-        self.statedb.connect(self.statedb.STATE_DB)
+        self.statedb = Namespace.init_namespace_dbs()
+        Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
 
         self.if_alias_map = {}
 
@@ -136,7 +136,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_mfg_name_map = {}
         self.physical_model_name_map = {}
 
-        self.pubsub = None
+        self.pubsub = [None] * len(self.statedb)
 
     def reinit_data(self):
         """
@@ -153,9 +153,9 @@ class PhysicalTableMIBUpdater(MIBUpdater):
 
         # update interface maps
         _, self.if_alias_map, _, _, _ = \
-            mibs.init_sync_d_interface_tables(SonicV2Connector())
+            Namespace.init_namespace_sync_d_interface_tables(Namespace.init_namespace_dbs())
 
-        device_metadata = mibs.get_device_metadata(self.statedb)
+        device_metadata = mibs.get_device_metadata(self.statedb[0])
         chassis_sub_id = (self.CHASSIS_ID, )
         self.physical_entities = [chassis_sub_id]
 
@@ -168,7 +168,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_serial_number_map[chassis_sub_id] = chassis_serial_number
 
         # retrieve the initial list of transceivers that are present in the system
-        transceiver_info = self.statedb.keys(self.statedb.STATE_DB, self.TRANSCEIVER_KEY_PATTERN)
+        transceiver_info = Namespace.dbs_keys(self.statedb, mibs.STATE_DB, self.TRANSCEIVER_KEY_PATTERN)
         if transceiver_info:
             self.transceiver_entries = [entry.decode() \
                 for entry in transceiver_info]
@@ -181,7 +181,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
             interface = transceiver_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
             self._update_transceiver_cache(interface)
 
-    def update_data(self):
+    def _update_per_namespace_data(self, statedb, pubsub):
         """
         Update cache.
         Here we listen to changes in STATE_DB TRANSCEIVER_INFO table
@@ -190,14 +190,14 @@ class PhysicalTableMIBUpdater(MIBUpdater):
 
         # This code is not executed in unit test, since mockredis
         # does not support pubsub
-        if not self.pubsub:
-            redis_client = self.statedb.get_redis_client(self.statedb.STATE_DB)
-            db = self.statedb.get_dbid(self.statedb.STATE_DB)
-            self.pubsub = redis_client.pubsub()
-            self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, self.TRANSCEIVER_KEY_PATTERN))
+        if not pubsub:
+            redis_client = statedb.get_redis_client(statedb.STATE_DB)
+            db = statedb.get_dbid(statedb.STATE_DB)
+            pubsub = redis_client.pubsub()
+            pubsub.psubscribe("__keyspace@{}__:{}".format(db, self.TRANSCEIVER_KEY_PATTERN))
 
         while True:
-            msg = self.pubsub.get_message()
+            msg = pubsub.get_message()
 
             if not msg:
                 break
@@ -232,6 +232,10 @@ class PhysicalTableMIBUpdater(MIBUpdater):
                     if sub_id and sub_id in self.physical_entities:
                         self.physical_entities.remove(sub_id)
 
+    def update_data(self):
+        for i in range(len(self.statedb)):
+             self._update_per_namespace_data(self.statedb[i], self.pubsub[i])
+
     def _update_transceiver_cache(self, interface):
         """
         Update data for single transceiver
@@ -249,7 +253,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         insort_right(self.physical_entities, sub_id)
 
         # get transceiver information from transceiver info entry in STATE DB
-        transceiver_info = self.statedb.get_all(self.statedb.STATE_DB,
+        transceiver_info = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB,
                                                 mibs.transceiver_info_table(interface))
 
         if not transceiver_info:
@@ -283,7 +287,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         ifindex = port_util.get_index_from_str(interface)
 
         # get transceiver sensors from transceiver dom entry in STATE DB
-        transceiver_dom_entry = self.statedb.get_all(self.statedb.STATE_DB,
+        transceiver_dom_entry = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB,
                                                      mibs.transceiver_dom_table(interface))
 
         if not transceiver_dom_entry:

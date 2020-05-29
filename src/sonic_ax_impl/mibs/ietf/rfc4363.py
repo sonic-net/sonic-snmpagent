@@ -1,15 +1,16 @@
 import json
 
 from sonic_ax_impl import mibs
-from swsssdk import port_util
+from sonic_ax_impl.mibs import Namespace
 from ax_interface import MIBMeta, ValueType, MIBUpdater, SubtreeMIBEntry
 from ax_interface.util import mac_decimals
 from bisect import bisect_right
+from sonic_ax_impl.mibs import Namespace
 
 class FdbUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
-        self.db_conn = mibs.init_db()
+        self.db_conn = Namespace.init_namespace_dbs()
 
         self.if_name_map = {}
         self.if_alias_map = {}
@@ -28,7 +29,7 @@ class FdbUpdater(MIBUpdater):
             if fdb["bvid"] in self.bvid_vlan_map:
                 vlan_id = self.bvid_vlan_map[fdb["bvid"]]
             else:
-                vlan_id = port_util.get_vlan_id_from_bvid(self.db_conn, fdb["bvid"])
+                vlan_id = Namespace.dbs_get_vlan_id_from_bvid(self.db_conn, fdb["bvid"])
                 self.bvid_vlan_map[fdb["bvid"]] = vlan_id
         return (int(vlan_id),) + mac_decimals(fdb["mac"])
           
@@ -40,9 +41,9 @@ class FdbUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
-        self.if_bpid_map = port_util.get_bridge_port_map(self.db_conn)
+        self.if_bpid_map = Namespace.dbs_get_bridge_port_map(self.db_conn, mibs.ASIC_DB)
         self.bvid_vlan_map.clear()
 
     def update_data(self):
@@ -50,11 +51,10 @@ class FdbUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
-        self.db_conn.connect(mibs.ASIC_DB)
         self.vlanmac_ifindex_map = {}
         self.vlanmac_ifindex_list = []
 
-        fdb_strings = self.db_conn.keys(mibs.ASIC_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:*")
+        fdb_strings = Namespace.dbs_keys(self.db_conn, mibs.ASIC_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:*")
         if not fdb_strings:
             return
 
@@ -66,7 +66,7 @@ class FdbUpdater(MIBUpdater):
                 mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': {}.".format(fdb_str, e))
                 break
 
-            ent = self.db_conn.get_all(mibs.ASIC_DB, s, blocking=True)
+            ent = Namespace.dbs_get_all(self.db_conn, mibs.ASIC_DB, s, blocking=True)
             # Example output: oid:0x3a000000000608
             bridge_port_id = ent[b"SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"][6:]
             if bridge_port_id not in self.if_bpid_map:
