@@ -192,8 +192,10 @@ def init_mgmt_interface_tables(db_conn):
     return oid_name_map, if_alias_map
 
 def get_counters_keys(db_conn):
-
-    
+    """
+    Gets list of all the oids present in COUNTERS table
+    :return: list
+    """
     db_conn.connect(COUNTERS_DB)
     counters_keys = db_conn.keys(COUNTERS_DB, counter_table(b'*'))
     if counters_keys:
@@ -262,13 +264,12 @@ def init_sync_d_interface_tables(db_conn):
 
 def init_sync_d_rif_tables(db_conn):
     """
-    Initializes interface maps for SyncD-connected MIB(s).
-    :return: tuple(if_name_map, if_id_map, oid_map, if_alias_map)
+    Initializes map of RIF SAI oids to port SAI oid.
+    :return: dict
     """
-
     counters_keys = get_counters_keys(db_conn)
     rif_port_map = port_util.get_rif_port_map(db_conn)
-    
+
     if not rif_port_map:
         return {}
     rif_port_map = {rif: port for rif, port in rif_port_map.items()
@@ -280,8 +281,8 @@ def init_sync_d_rif_tables(db_conn):
 
 def init_sync_d_vlan_tables(db_conn):
     """
-    Initializes interface maps for SyncD-connected MIB(s).
-    :return: tuple(if_name_map, if_id_map, oid_map, if_alias_map)
+    Initializes vlan interface maps for SyncD-connected MIB(s).
+    :return: tuple(vlan_name_map, oid_sai_map, oid_name_map)
     """
 
     vlan_name_map = port_util.get_vlan_interface_oid_map(db_conn)

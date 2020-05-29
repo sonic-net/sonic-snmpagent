@@ -209,7 +209,7 @@ class InterfacesUpdater(MIBUpdater):
             {sai_id: self.db_conn.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
              for sai_id in rif_sai_ids}
 
-        if self.rif_counters:       
+        if self.rif_counters: 
             self.aggregate_counters()
 
         self.lag_name_if_name_map, \
@@ -301,7 +301,6 @@ class InterfacesUpdater(MIBUpdater):
 
         For l3vlan map l3 counters to l2 counters
         """
-
         for rif_sai_id, port_sai_id in self.rif_port_map.items():
             for rif_counter_name, port_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
                 try:
@@ -318,7 +317,7 @@ class InterfacesUpdater(MIBUpdater):
                     self.if_counters[vlan_sai_id][port_counter_name] = \
                     int(self.rif_counters[vlan_sai_id][rif_counter_name])
                 except KeyError as e:
-                    logger.warning("Not able to aggregate counters for {}: {}\n {}".format(vlan_sai_id, rif_counter_name, e))                
+                    logger.warning("Not able to aggregate counters for {}: {}\n {}".format(vlan_sai_id, rif_counter_name, e))
 
     def get_counter(self, sub_id, table_name):
         """
