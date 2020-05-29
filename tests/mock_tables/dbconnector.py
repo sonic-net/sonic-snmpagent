@@ -37,20 +37,29 @@ def load_database_config():
         sonic_db_file_path=os.path.join(
             os.path.dirname(os.path.abspath(__file__)), 'database_config.json'))
 
-def init_SonicV2Connector(self, use_unix_socket_path=False, namespace=None, **kwargs):
-    self.namespace = namespace
-    self.use_unix_socket_path = use_unix_socket_path
-    for db_name in SonicDBConfig.get_dblist(self.namespace):
-        setattr(self, db_name, db_name)
+def connect_SonicV2Connector(self, db_name, retry_on=True):
+    if self.use_unix_socket_path:
+        self.dbintf.redis_kwargs["unix_socket_path"] = self.get_db_socket(db_name)
+        self.dbintf.redis_kwargs["host"] = None
+        self.dbintf.redis_kwargs["port"] = None
+    else:
+        self.dbintf.redis_kwargs["host"] = self.get_db_hostname(db_name)
+        self.dbintf.redis_kwargs["port"] = self.get_db_port(db_name)
+        self.dbintf.redis_kwargs["unix_socket_path"] = None
+
     ns_list = SonicDBConfig.get_ns_list()
     # In case of multiple namespaces, namespace string passed to
     # SonicV2Connector will specify the namespace or can be empty.
     # Empty namespace represents global or host namespace.
-    if len(ns_list) > 1 and namespace == "":
-        kwargs['namespace'] = "global_db"
+    if len(ns_list) > 1 and self.namespace == "":
+        self.dbintf.redis_kwargs['namespace'] = "global_db"
     else:
-        kwargs['namespace'] = namespace
-    self.dbintf = swsssdk.interface.DBInterface(**kwargs)
+        self.dbintf.redis_kwargs['namespace'] = self.namespace
+    # Mock DB filename for unit-test
+    self.dbintf.redis_kwargs["filename"] = db_name.lower() + ".json"
+
+    db_id = self.get_dbid(db_name)
+    self.dbintf.connect(db_id, retry_on)
 
 def _subscribe_keyspace_notification(self, db_name, client):
     pass
@@ -81,20 +90,7 @@ class SwssSyncClient(mockredis.MockRedis):
         # Namespace is added in kwargs specifically for unit-test
         # to identify the file path to load the db json files.
         namespace = kwargs.pop('namespace')
-        if db == 0:
-            fname = 'appl_db.json'
-        elif db == 1:
-            fname = 'asic_db.json'
-        elif db == 2:
-            fname = 'counters_db.json'
-        elif db == 4:
-            fname = 'config_db.json'
-        elif db == 6:
-            fname = 'state_db.json'
-        elif db == 7:
-            fname = 'snmp_overlay_db.json'
-        else:
-            raise ValueError("Invalid db")
+        fname = kwargs.pop('filename')
         self.pubsub = MockPubSub()
 
         if namespace is not None:
@@ -135,4 +131,4 @@ class SwssSyncClient(mockredis.MockRedis):
 swsssdk.interface.DBInterface._subscribe_keyspace_notification = _subscribe_keyspace_notification
 mockredis.MockRedis.config_set = config_set
 redis.StrictRedis = SwssSyncClient
-swsssdk.dbconnector.SonicV2Connector.__init__ = init_SonicV2Connector
+swsssdk.dbconnector.SonicV2Connector.connect = connect_SonicV2Connector
