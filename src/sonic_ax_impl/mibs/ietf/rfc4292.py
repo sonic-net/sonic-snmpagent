@@ -1,6 +1,7 @@
 import ipaddress
 
 from sonic_ax_impl import mibs
+from sonic_ax_impl.mibs import Namespace
 from ax_interface import MIBMeta, ValueType, MIBUpdater, SubtreeMIBEntry
 from ax_interface.util import ip2tuple_v4
 from bisect import bisect_right
@@ -9,7 +10,7 @@ class RouteUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
         self.tos = 0 # ipCidrRouteTos
-        self.db_conn = mibs.init_db()
+        self.db_conn = Namespace.init_namespace_dbs()
         self.route_dest_map = {}
         self.route_dest_list = []
         ## loopback ip string -> ip address object
@@ -21,8 +22,7 @@ class RouteUpdater(MIBUpdater):
         """
         self.loips = {}
 
-        self.db_conn.connect(mibs.APPL_DB)
-        loopbacks = self.db_conn.keys(mibs.APPL_DB, "INTF_TABLE:lo:*")
+        loopbacks = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "INTF_TABLE:lo:*")
         if not loopbacks:
             return
 
@@ -49,8 +49,7 @@ class RouteUpdater(MIBUpdater):
             self.route_dest_list.append(sub_id)
             self.route_dest_map[sub_id] = self.loips[loip].packed
 
-        self.db_conn.connect(mibs.APPL_DB)
-        route_entries = self.db_conn.keys(mibs.APPL_DB, "ROUTE_TABLE:*")
+        route_entries = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "ROUTE_TABLE:*")
         if not route_entries:
             return
 
@@ -59,7 +58,7 @@ class RouteUpdater(MIBUpdater):
             ipnstr = routestr[len("ROUTE_TABLE:"):]
             if ipnstr == "0.0.0.0/0":
                 ipn = ipaddress.ip_network(ipnstr)
-                ent = self.db_conn.get_all(mibs.APPL_DB, routestr, blocking=True)
+                ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, routestr, blocking=True)
                 nexthops = ent[b"nexthop"].decode()
                 ifnames = ent[b"ifname"].decode()
                 for nh, ifn in zip(nexthops.split(','), ifnames.split(',')):

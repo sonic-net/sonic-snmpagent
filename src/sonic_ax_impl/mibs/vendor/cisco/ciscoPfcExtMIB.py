@@ -2,6 +2,7 @@ from enum import unique, Enum
 from bisect import bisect_right
 
 from sonic_ax_impl import mibs
+from sonic_ax_impl.mibs import Namespace
 from ax_interface import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry
 from ax_interface.encodings import ObjectIdentifier
 
@@ -11,7 +12,7 @@ class PfcUpdater(MIBUpdater):
     """
     def __init__(self):
         super().__init__()
-        self.db_conn = mibs.init_db()
+        self.db_conn = Namespace.init_namespace_dbs()
 
         self.if_name_map = {}
         self.if_alias_map = {}
@@ -35,7 +36,7 @@ class PfcUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
         self.update_data()
 
@@ -45,12 +46,12 @@ class PfcUpdater(MIBUpdater):
         Pulls the table references for each interface.
         """
         self.if_counters = \
-            {sai_id: self.db_conn.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
+            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
              for sai_id in self.if_id_map}
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
-        self.oid_lag_name_map = mibs.init_sync_d_lag_tables(self.db_conn)
+        self.oid_lag_name_map = Namespace.init_namespace_sync_d_lag_tables(self.db_conn)
 
         self.if_range = sorted(list(self.oid_sai_map.keys()) + list(self.oid_lag_name_map.keys()))
         self.if_range = [(i,) for i in self.if_range]

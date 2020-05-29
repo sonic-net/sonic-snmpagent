@@ -4,6 +4,7 @@ from enum import unique, Enum
 from bisect import bisect_right
 
 from sonic_ax_impl import mibs
+from sonic_ax_impl.mibs import Namespace
 from ax_interface.mib import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
 from ax_interface.encodings import ObjectIdentifier
 from ax_interface.util import mac_decimals, ip2tuple_v4
@@ -93,7 +94,7 @@ class ArpUpdater(MIBUpdater):
 class NextHopUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
-        self.db_conn = mibs.init_db()
+        self.db_conn = Namespace.init_namespace_dbs()
         self.nexthop_map = {}
         self.route_list = []
 
@@ -105,8 +106,7 @@ class NextHopUpdater(MIBUpdater):
         self.nexthop_map = {}
         self.route_list = []
 
-        self.db_conn.connect(mibs.APPL_DB)
-        route_entries = self.db_conn.keys(mibs.APPL_DB, "ROUTE_TABLE:*")
+        route_entries = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "ROUTE_TABLE:*")
         if not route_entries:
             return
 
@@ -115,7 +115,7 @@ class NextHopUpdater(MIBUpdater):
             ipnstr = routestr[len("ROUTE_TABLE:"):]
             if ipnstr == "0.0.0.0/0":
                 ipn = ipaddress.ip_network(ipnstr)
-                ent = self.db_conn.get_all(mibs.APPL_DB, routestr, blocking=True)
+                ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, routestr, blocking=True)
                 nexthops = ent[b"nexthop"].decode()
                 for nh in nexthops.split(','):
                     # TODO: if ipn contains IP range, create more sub_id here
@@ -152,7 +152,7 @@ class InterfacesUpdater(MIBUpdater):
 
     def __init__(self):
         super().__init__()
-        self.db_conn = mibs.init_db()
+        self.db_conn = Namespace.init_namespace_dbs() 
 
         self.lag_name_if_name_map = {}
         self.if_name_lag_name_map = {}
@@ -177,10 +177,14 @@ class InterfacesUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
-
+        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        """
+        db_conn - will have db_conn to all namespace DBs and
+        global db. First db in the list is global db.
+        Use first global db to get management interface table.
+        """
         self.mgmt_oid_name_map, \
-        self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn)
+        self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn[0])
 
     def update_data(self):
         """
@@ -188,12 +192,12 @@ class InterfacesUpdater(MIBUpdater):
         Pulls the table references for each interface.
         """
         self.if_counters = \
-            {sai_id: self.db_conn.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
-             for sai_id in self.if_id_map}
+            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
+            for sai_id in self.if_id_map}
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
-        self.oid_lag_name_map = mibs.init_sync_d_lag_tables(self.db_conn)
+        self.oid_lag_name_map = Namespace.init_namespace_sync_d_lag_tables(self.db_conn)
 
         self.if_range = sorted(list(self.oid_sai_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
@@ -318,7 +322,7 @@ class InterfacesUpdater(MIBUpdater):
         else:
             return None
 
-        return self.db_conn.get_all(db, if_table, blocking=True)
+        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=True)
 
     def _get_if_entry_state_db(self, sub_id):
         """
@@ -337,7 +341,7 @@ class InterfacesUpdater(MIBUpdater):
         else:
             return None
 
-        return self.db_conn.get_all(db, if_table, blocking=False)
+        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=False)
 
     def _get_status(self, sub_id, key):
         """

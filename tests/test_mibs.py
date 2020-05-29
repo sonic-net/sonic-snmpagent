@@ -12,7 +12,8 @@ from sonic_ax_impl import mibs
 class TestGetNextPDU(TestCase):
     @classmethod
     def setUpClass(cls):
-        pass
+        #For single namespace scenario, load database_config.json
+        tests.mock_tables.dbconnector.load_database_config() 
 
     def test_init_sync_d_lag_tables(self):
         db_conn = mibs.init_db()
