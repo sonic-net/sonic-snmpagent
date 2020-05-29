@@ -168,7 +168,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_serial_number_map[chassis_sub_id] = chassis_serial_number
 
         # retrieve the initial list of transceivers that are present in the system
-        transceiver_info = Namespace.get_dbs_keys(self.statedb, mibs.STATE_DB, self.TRANSCEIVER_KEY_PATTERN)
+        transceiver_info = Namespace.dbs_keys(self.statedb, mibs.STATE_DB, self.TRANSCEIVER_KEY_PATTERN)
         if transceiver_info:
             self.transceiver_entries = [entry.decode() \
                 for entry in transceiver_info]
@@ -253,7 +253,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         insort_right(self.physical_entities, sub_id)
 
         # get transceiver information from transceiver info entry in STATE DB
-        transceiver_info = Namespace.get_all_dbs(self.statedb, mibs.STATE_DB,
+        transceiver_info = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB,
                                                 mibs.transceiver_info_table(interface))
 
         if not transceiver_info:
@@ -287,7 +287,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         ifindex = port_util.get_index_from_str(interface)
 
         # get transceiver sensors from transceiver dom entry in STATE DB
-        transceiver_dom_entry = Namespace.get_all_dbs(self.statedb, mibs.STATE_DB,
+        transceiver_dom_entry = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB,
                                                      mibs.transceiver_dom_table(interface))
 
         if not transceiver_dom_entry:

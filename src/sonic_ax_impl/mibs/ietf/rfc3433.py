@@ -277,7 +277,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         self.ent_phy_sensor_value_map = {}
         self.ent_phy_sensor_oper_state_map = {}
 
-        transceiver_dom_encoded = Namespace.get_dbs_keys(self.statedb, mibs.STATE_DB,
+        transceiver_dom_encoded = Namespace.dbs_keys(self.statedb, mibs.STATE_DB,
                                                     self.TRANSCEIVER_DOM_KEY_PATTERN)
         if transceiver_dom_encoded:
             self.transceiver_dom = [entry.decode() for entry in transceiver_dom_encoded]
@@ -305,7 +305,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
                 continue
 
             # get transceiver sensors from transceiver dom entry in STATE DB
-            transceiver_dom_entry_data = Namespace.get_all_dbs(self.statedb, mibs.STATE_DB,
+            transceiver_dom_entry_data = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB,
                                                               transceiver_dom_entry)
 
             if not transceiver_dom_entry_data:

@@ -112,7 +112,7 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
         """
         # establish connection to application database.
         Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
-        self.loc_chassis_data = Namespace.get_all_dbs(self.db_conn, mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
+        self.loc_chassis_data = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
         self.loc_chassis_data[b'lldp_loc_sys_cap_supported'] = parse_sys_capability(self.loc_chassis_data[b'lldp_loc_sys_cap_supported'])
         self.loc_chassis_data[b'lldp_loc_sys_cap_enabled'] = parse_sys_capability(self.loc_chassis_data[b'lldp_loc_sys_cap_enabled'])
     def update_data(self):
@@ -200,7 +200,7 @@ class LocPortUpdater(MIBUpdater):
         else:
             return None
 
-        return Namespace.get_all_dbs(self.db_conn, db, if_table, blocking=True)
+        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=True)
 
     def update_interface_data(self, if_name):
         """
@@ -430,7 +430,7 @@ class LLDPRemTableUpdater(MIBUpdater):
         self.if_range = []
         self.lldp_counters = {}
         for if_oid, if_name in self.oid_name_map.items():
-            lldp_kvs = Namespace.get_all_dbs(self.db_conn, mibs.APPL_DB, mibs.lldp_entry_table(if_name))
+            lldp_kvs = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.lldp_entry_table(if_name))
             if not lldp_kvs:
                 continue
             try:
@@ -499,7 +499,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         self.pubsub = [None] * len(self.db_conn)
 
     def update_rem_if_mgmt(self, if_oid, if_name):
-        lldp_kvs = Namespace.get_all_dbs(self.db_conn, mibs.APPL_DB, mibs.lldp_entry_table(if_name))
+        lldp_kvs = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.lldp_entry_table(if_name))
         if not lldp_kvs or b'lldp_rem_man_addr' not in lldp_kvs:
             # this interfaces doesn't have remote lldp data, or the peer doesn't advertise his mgmt address
             return

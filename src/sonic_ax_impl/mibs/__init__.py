@@ -419,11 +419,7 @@ class RedisOidTreeUpdater(MIBUpdater):
         self.oid_list = []
         self.oid_map = {}
 
-<<<<<<< HEAD
-        keys = Namespace.get_dbs_keys(self.db_conn, SNMP_OVERLAY_DB, self.prefix_str + '*') 
-=======
         keys = Namespace.dbs_keys(self.db_conn, SNMP_OVERLAY_DB, self.prefix_str + '*') 
->>>>>>> remotes/azure/master
         # TODO: fix db_conn.keys to return empty list instead of None if there is no match
         if keys is None:
             keys = []
@@ -432,11 +428,7 @@ class RedisOidTreeUpdater(MIBUpdater):
             key = key.decode()
             oid = oid2tuple(key, dot_prefix=False)
             self.oid_list.append(oid)
-<<<<<<< HEAD
-            value = Namespace.get_all_dbs(self.db_conn, SNMP_OVERLAY_DB, key) 
-=======
             value = Namespace.dbs_get_all(self.db_conn, SNMP_OVERLAY_DB, key) 
->>>>>>> remotes/azure/master
             if value[b'type'] in [b'COUNTER_32', b'COUNTER_64']:
                 self.oid_map[oid] = int(value[b'data'])
             else:
@@ -466,11 +458,7 @@ class Namespace:
             db_conn.connect(db_name)
 
     @staticmethod
-<<<<<<< HEAD
-    def get_dbs_keys(dbs, db_name, pattern='*'):
-=======
     def dbs_keys(dbs, db_name, pattern='*'):
->>>>>>> remotes/azure/master
         """
         db keys function execute on global and all namespace DBs.
         """
@@ -483,17 +471,6 @@ class Namespace:
         return result_keys
 
     @staticmethod
-<<<<<<< HEAD
-    def get_all_dbs(dbs, db_name, _hash, *args, **kwargs):
-        """
-        db get_all function executed on global and all namespace DBs.
-        """
-        for db_conn in dbs:
-            db_conn.connect(db_name)
-            if(db_conn.exists(db_name, _hash)):
-                return db_conn.get_all(db_name, _hash, *args, **kwargs)
-        return {}
-=======
     def dbs_get_all(dbs, db_name, _hash, *args, **kwargs):
         """
         db get_all function executed on global and all namespace DBs.
@@ -506,7 +483,6 @@ class Namespace:
                 if ns_result is not None:
                     result.update(ns_result)
         return result
->>>>>>> remotes/azure/master
 
     @staticmethod
     def get_non_host_dbs(dbs):
@@ -597,7 +573,7 @@ class Namespace:
         return port_queues_map, queue_stat_map, port_queue_list_map
 
     @staticmethod
-    def get_bridge_port_map_from_namespace_dbs(dbs, db_name):
+    def dbs_get_bridge_port_map(dbs, db_name):
         """
         get_bridge_port_map from all namespace DBs
         """
@@ -608,7 +584,7 @@ class Namespace:
         return if_br_oid_map
 
     @staticmethod
-    def get_vlan_id_from_bvid_from_namespace_dbs(dbs, bvid):
+    def dbs_get_vlan_id_from_bvid(dbs, bvid):
         for db_conn in Namespace.get_non_host_dbs(dbs):
             db_conn.connect('ASIC_DB')
             vlan_obj = db.keys('ASIC_DB', "ASIC_STATE:SAI_OBJECT_TYPE_VLAN:" + bvid)
