@@ -635,3 +635,111 @@ class TestGetNextPDU(TestCase):
         self.assertEqual(value0.type_, ValueType.COUNTER_32)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 20, 3000))))
         self.assertEqual(value0.data, 2)
+
+    def test_in_octets_portchannel(self):
+        """
+        For a l3 portchannel interface value is accumulated on members plus added Rif counters 
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 10, 1001))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.COUNTER_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 10, 1001))))
+        self.assertEqual(value0.data, 216)
+
+    def test_in_ucast_portchannel(self):
+        """
+        For a l3 portchannel interface value is accumulated on members plus added Rif counters
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 11, 1001))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.COUNTER_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 11, 1001))))
+        self.assertEqual(value0.data, 106)
+
+    def test_in_errors_portchannel(self):
+        """
+          For a l3 portchannel interface value is accumulated on members plus added Rif counters
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 14, 1001))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.COUNTER_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 14, 1001))))
+        self.assertEqual(value0.data, 106)
+
+    def test_out_octets_portchannel(self):
+        """
+        For a l3 portchannel interface value is accumulated on members plus added Rif counters
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 16, 1001))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.COUNTER_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 16, 1001))))
+        self.assertEqual(value0.data, 312)
+
+    def test_out_ucast_portchannel(self):
+        """
+        For a l3 portchannel interface value is accumulated on members plus added Rif counters
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 17, 1001))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.COUNTER_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 17, 1001))))
+        self.assertEqual(value0.data, 112)
+
+    def test_out_errors_portchannel(self):
+        """
+        For a l3 portchannel interface value is accumulated on members plus added Rif counters
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 20, 1001))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.COUNTER_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 20, 1001))))
+        self.assertEqual(value0.data, 106)
