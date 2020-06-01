@@ -159,11 +159,13 @@ class InterfacesUpdater(MIBUpdater):
         self.lag_name_if_name_map = {}
         self.if_name_lag_name_map = {}
         self.oid_lag_name_map = {}
+        self.lag_sai_map = {}
         self.mgmt_oid_name_map = {}
         self.mgmt_alias_map = {}
         self.vlan_oid_name_map = {}
         self.vlan_name_map = {}
         self.rif_port_map = {}
+        self.port_rif_map = {}
 
         # cache of interface counters
         self.if_counters = {}
@@ -192,7 +194,8 @@ class InterfacesUpdater(MIBUpdater):
         self.vlan_oid_sai_map, \
         self.vlan_oid_name_map = mibs.init_sync_d_vlan_tables(self.db_conn)
 
-        self.rif_port_map = mibs.init_sync_d_rif_tables(self.db_conn)
+        self.rif_port_map, \
+        self.port_rif_map = mibs.init_sync_d_rif_tables(self.db_conn)
 
     def update_data(self):
         """
@@ -203,7 +206,7 @@ class InterfacesUpdater(MIBUpdater):
             {sai_id: self.db_conn.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
              for sai_id in self.if_id_map}
 
-        rif_sai_ids = list(self.rif_port_map.keys()) + list(self.vlan_name_map.values())
+        rif_sai_ids = list(self.rif_port_map) + list(self.vlan_name_map)
 
         self.rif_counters = \
             {sai_id: self.db_conn.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
@@ -214,7 +217,8 @@ class InterfacesUpdater(MIBUpdater):
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
-        self.oid_lag_name_map = mibs.init_sync_d_lag_tables(self.db_conn)
+        self.oid_lag_name_map, \
+        self.lag_sai_map = mibs.init_sync_d_lag_tables(self.db_conn)
 
         self.if_range = sorted(list(self.oid_sai_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
@@ -302,16 +306,14 @@ class InterfacesUpdater(MIBUpdater):
         For l3vlan map l3 counters to l2 counters
         """
         for rif_sai_id, port_sai_id in self.rif_port_map.items():
-            for rif_counter_name, port_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
-                try:
+            if port_sai_id in self.if_id_map:
+                for port_counter_name, rif_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
                     self.if_counters[port_sai_id][port_counter_name] = \
                     int(self.if_counters[port_sai_id][port_counter_name]) + \
                     int(self.rif_counters[rif_sai_id][rif_counter_name])
-                except KeyError as e:
-                    logger.warning("Not able to aggregate counters for {}: {}\n {}".format(rif_sai_id, rif_counter_name, e))
 
-        for vlan_sai_id in self.vlan_name_map.values():
-            for rif_counter_name, port_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
+        for vlan_sai_id in self.vlan_name_map:
+            for port_counter_name, rif_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
                 try:
                     self.if_counters.setdefault(vlan_sai_id, {})
                     self.if_counters[vlan_sai_id][port_counter_name] = \
@@ -338,7 +340,14 @@ class InterfacesUpdater(MIBUpdater):
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
                 counter_value += self._get_counter(mibs.get_index(lag_member), table_name)
-
+            # import pdb; pdb.set_trace()
+            sai_lag_id = self.lag_sai_map[self.oid_lag_name_map[oid]]
+            sai_lag_rif_id = self.port_rif_map[sai_lag_id]
+            if sai_lag_rif_id in self.rif_port_map:
+                _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
+                if _table_name in mibs.RIF_COUNTERS_AGGR_MAP:
+                    rif_table_name = mibs.RIF_COUNTERS_AGGR_MAP[_table_name]
+                    counter_value += int(self.rif_counters[sai_lag_rif_id][rif_table_name])
             # truncate to 32-bit counter
             return counter_value & 0x00000000ffffffff
         else:
