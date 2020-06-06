@@ -1,5 +1,6 @@
 import os
 import sys
+import importlib
 
 # noinspection PyUnresolvedReferences
 import tests.mock_tables.dbconnector
@@ -20,6 +21,8 @@ from sonic_ax_impl.mibs.ietf import rfc1213
 class TestGetNextPDU(TestCase):
     @classmethod
     def setUpClass(cls):
+        tests.mock_tables.dbconnector.load_database_config()
+        importlib.reload(rfc1213)
         cls.lut = MIBTable(rfc1213.InterfacesMIB)
         for updater in cls.lut.updater_instances:
             updater.update_data()

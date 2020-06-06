@@ -5,9 +5,10 @@ RFC 3433 MIB implementation
 from enum import Enum, unique
 from bisect import bisect_right
 
-from swsssdk import SonicV2Connector, port_util
+from swsssdk import port_util
 from ax_interface import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry
 from sonic_ax_impl import mibs
+from sonic_ax_impl.mibs import Namespace
 
 @unique
 class EntitySensorDataType(int, Enum):
@@ -249,8 +250,8 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
 
         super().__init__()
 
-        self.statedb = SonicV2Connector()
-        self.statedb.connect(self.statedb.STATE_DB)
+        self.statedb = Namespace.init_namespace_dbs() 
+        Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
 
         # list of available sub OIDs
         self.sub_ids = []
@@ -276,7 +277,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         self.ent_phy_sensor_value_map = {}
         self.ent_phy_sensor_oper_state_map = {}
 
-        transceiver_dom_encoded = self.statedb.keys(self.statedb.STATE_DB,
+        transceiver_dom_encoded = Namespace.dbs_keys(self.statedb, mibs.STATE_DB,
                                                     self.TRANSCEIVER_DOM_KEY_PATTERN)
         if transceiver_dom_encoded:
             self.transceiver_dom = [entry.decode() for entry in transceiver_dom_encoded]
@@ -304,7 +305,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
                 continue
 
             # get transceiver sensors from transceiver dom entry in STATE DB
-            transceiver_dom_entry_data = self.statedb.get_all(self.statedb.STATE_DB,
+            transceiver_dom_entry_data = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB,
                                                               transceiver_dom_entry)
 
             if not transceiver_dom_entry_data:

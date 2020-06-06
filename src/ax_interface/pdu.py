@@ -255,7 +255,3 @@ class ContextOptionalPDU(PDU):
         if self.context is not None:
             ret += self.context.to_bytes(self.header.endianness)
         return ret
-
-
-# noinspection PyUnresolvedReferences
-from . import pdu_implementations
