@@ -344,13 +344,12 @@ class InterfacesUpdater(MIBUpdater):
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
                 counter_value += self._get_counter(mibs.get_index(lag_member), table_name)
-            # import pdb; pdb.set_trace()
             sai_lag_id = self.lag_sai_map[self.oid_lag_name_map[oid]]
             sai_lag_rif_id = self.port_rif_map[sai_lag_id]
             if sai_lag_rif_id in self.rif_port_map:
-                _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
-                if _table_name in mibs.RIF_COUNTERS_AGGR_MAP:
-                    rif_table_name = mibs.RIF_COUNTERS_AGGR_MAP[_table_name]
+                table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
+                if table_name in mibs.RIF_COUNTERS_AGGR_MAP:
+                    rif_table_name = mibs.RIF_COUNTERS_AGGR_MAP[table_name]
                     counter_value += int(self.rif_counters[sai_lag_rif_id][rif_table_name])
             # truncate to 32-bit counter
             return counter_value & 0x00000000ffffffff
