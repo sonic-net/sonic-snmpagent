@@ -20,7 +20,8 @@ class TestGetNextPDU(TestCase):
 
         lag_name_if_name_map, \
         if_name_lag_name_map, \
-        oid_lag_name_map = Namespace.init_namespace_sync_d_lag_tables(dbs)
+        oid_lag_name_map, \
+        lag_sai_map = Namespace.init_namespace_sync_d_lag_tables(dbs)
         #PortChannel in asic0 Namespace
         self.assertTrue(b"PortChannel01" in lag_name_if_name_map)
         self.assertTrue(b"Ethernet-BP0" in lag_name_if_name_map[b"PortChannel01"])
@@ -32,6 +33,7 @@ class TestGetNextPDU(TestCase):
 
         self.assertTrue(b"PortChannel_Temp" in lag_name_if_name_map)
         self.assertTrue(lag_name_if_name_map[b"PortChannel_Temp"] == [])
+        self.assertTrue(lag_sai_map[b"PortChannel01"] == b"2000000000006")
 
     @classmethod
     def tearDownClass(cls):
