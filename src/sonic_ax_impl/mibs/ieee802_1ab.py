@@ -113,6 +113,8 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
         # establish connection to application database.
         Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.loc_chassis_data = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
+        if not self.loc_chassis_data:
+            return
         self.loc_chassis_data[b'lldp_loc_sys_cap_supported'] = parse_sys_capability(self.loc_chassis_data[b'lldp_loc_sys_cap_supported'])
         self.loc_chassis_data[b'lldp_loc_sys_cap_enabled'] = parse_sys_capability(self.loc_chassis_data[b'lldp_loc_sys_cap_enabled'])
     def update_data(self):
@@ -124,6 +126,8 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
 
     def table_lookup(self, table_name):
         try:
+            if not self.loc_chassis_data:
+                return None
             _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
             return self.loc_chassis_data[_table_name]
         except KeyError as e:
