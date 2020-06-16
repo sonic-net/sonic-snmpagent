@@ -587,6 +587,6 @@ class Namespace:
     def dbs_get_vlan_id_from_bvid(dbs, bvid):
         for db_conn in Namespace.get_non_host_dbs(dbs):
             db_conn.connect('ASIC_DB')
-            vlan_obj = db.keys('ASIC_DB', "ASIC_STATE:SAI_OBJECT_TYPE_VLAN:" + bvid)
+            vlan_obj = db_conn.keys('ASIC_DB', "ASIC_STATE:SAI_OBJECT_TYPE_VLAN:" + bvid)
             if vlan_obj is not None:
                 return port_util.get_vlan_id_from_bvid(db_conn, bvid)

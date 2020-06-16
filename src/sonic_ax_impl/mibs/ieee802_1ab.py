@@ -222,18 +222,18 @@ class LocPortUpdater(MIBUpdater):
             return None
         return self.if_range[right]
 
-    def _update_per_namespace_data(self, db_conn, pubsub):
+    def _update_per_namespace_data(self, inst):
         """
         Listen to updates in APP DB, update local cache
         """
-        if not pubsub:
-            redis_client = db_conn.get_redis_client(db_conn.APPL_DB)
-            db = db_conn.get_dbid(db_conn.APPL_DB)
-            pubsub = redis_client.pubsub()
+        if not self.pubsub[inst]:
+            redis_client = self.db_conn[inst].get_redis_client(self.db_conn[inst].APPL_DB)
+            db = self.db_conn[inst].get_dbid(self.db_conn[inst].APPL_DB)
+            self.pubsub[inst] = redis_client.pubsub()
             pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
 
         while True:
-            data, interface, if_id = poll_lldp_entry_updates(pubsub)
+            data, interface, if_id = poll_lldp_entry_updates(self.pubsub[inst])
 
             if not data:
                 break
@@ -243,7 +243,7 @@ class LocPortUpdater(MIBUpdater):
 
     def update_data(self):
         for i in range(len(self.db_conn)):
-            self._update_per_namespace_data(self.db_conn[i], self.pubsub[i])
+            self._update_per_namespace_data(i)
 
     def local_port_num(self, sub_id):
         if len(sub_id) == 0:
