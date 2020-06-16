@@ -17,6 +17,8 @@ class TestGetNextPDU(TestCase):
 
     def test_init_sync_d_lag_tables(self):
         db_conn = mibs.init_db()
+        db_conn.connect(mibs.APPL_DB)
+        db_conn.connect(mibs.COUNTERS_DB)
 
         lag_name_if_name_map, \
         if_name_lag_name_map, \

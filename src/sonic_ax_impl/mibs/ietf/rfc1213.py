@@ -95,6 +95,7 @@ class NextHopUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
         self.db_conn = Namespace.init_namespace_dbs()
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.nexthop_map = {}
         self.route_list = []
 
@@ -152,7 +153,11 @@ class InterfacesUpdater(MIBUpdater):
 
     def __init__(self):
         super().__init__()
-        self.db_conn = Namespace.init_namespace_dbs() 
+        self.db_conn = Namespace.init_namespace_dbs()
+        Namespace.connect_all_dbs(self.db_conn, mibs.COUNTERS_DB)
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
+        Namespace.connect_all_dbs(self.db_conn, mibs.CONFIG_DB)
+        Namespace.connect_all_dbs(self.db_conn, mibs.STATE_DB)
 
         self.lag_name_if_name_map = {}
         self.if_name_lag_name_map = {}
