@@ -250,7 +250,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
 
         super().__init__()
 
-        self.statedb = Namespace.init_namespace_dbs() 
+        self.statedb = Namespace.init_namespace_dbs()
         Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
 
         # list of available sub OIDs
@@ -378,7 +378,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         """
         Get sensor precision value based on sub OID
         :param sub_id: sub ID of the sensor
-        :return: sensor precision in range (-8, 9) 
+        :return: sensor precision in range (-8, 9)
                  or None if sub_id not in the cache.
         """
 

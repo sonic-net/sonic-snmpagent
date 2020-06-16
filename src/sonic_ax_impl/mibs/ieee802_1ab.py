@@ -160,7 +160,7 @@ class LocPortUpdater(MIBUpdater):
         # cache of port data
         # { if_name -> { 'key': 'value' } }
         self.loc_port_data = {}
-        self.pubsub = [None] * len(self.db_conn) 
+        self.pubsub = [None] * len(self.db_conn)
 
     def reinit_data(self):
         """
@@ -310,7 +310,7 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         self.mgmt_ip_str = None
 
         # establish connection to application database.
-        self.db_conn.connect(mibs.APPL_DB) 
+        self.db_conn.connect(mibs.APPL_DB)
         mgmt_ip_bytes = self.db_conn.get(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE, b'lldp_loc_man_addr')
 
         if not mgmt_ip_bytes:
@@ -494,7 +494,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
 
-        self.db_conn = Namespace.init_namespace_dbs() 
+        self.db_conn = Namespace.init_namespace_dbs()
         # establish connection to application database.
         Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         Namespace.connect_all_dbs(self.db_conn, mibs.COUNTERS_DB)

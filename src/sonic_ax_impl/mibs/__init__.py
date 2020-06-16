@@ -150,7 +150,7 @@ def init_db():
     """
     # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
     # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
-    db_conn = SonicV2Connector(**redis_kwargs) 
+    db_conn = SonicV2Connector(**redis_kwargs)
 
     return db_conn
 
@@ -404,7 +404,7 @@ class RedisOidTreeUpdater(MIBUpdater):
         self.oid_list = []
         self.oid_map = {}
 
-        keys = Namespace.dbs_keys(self.db_conn, SNMP_OVERLAY_DB, self.prefix_str + '*') 
+        keys = Namespace.dbs_keys(self.db_conn, SNMP_OVERLAY_DB, self.prefix_str + '*')
         # TODO: fix db_conn.keys to return empty list instead of None if there is no match
         if keys is None:
             keys = []
@@ -413,7 +413,7 @@ class RedisOidTreeUpdater(MIBUpdater):
             key = key.decode()
             oid = oid2tuple(key, dot_prefix=False)
             self.oid_list.append(oid)
-            value = Namespace.dbs_get_all(self.db_conn, SNMP_OVERLAY_DB, key) 
+            value = Namespace.dbs_get_all(self.db_conn, SNMP_OVERLAY_DB, key)
             if value[b'type'] in [b'COUNTER_32', b'COUNTER_64']:
                 self.oid_map[oid] = int(value[b'data'])
             else:

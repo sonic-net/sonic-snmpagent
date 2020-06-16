@@ -193,7 +193,7 @@ class PfcPrioUpdater(PfcUpdater):
         """
         :param sub_id: The 0-based sub-identifier query.
         :return: the counter for the respective sub_id/table.
-        """        
+        """
         port_oid = ''
         queue_index = ''
         try:
