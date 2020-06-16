@@ -233,7 +233,7 @@ class LocPortUpdater(MIBUpdater):
             redis_client = self.db_conn[inst].get_redis_client(self.db_conn[inst].APPL_DB)
             db = self.db_conn[inst].get_dbid(self.db_conn[inst].APPL_DB)
             self.pubsub[inst] = redis_client.pubsub()
-            pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
+            self.pubsub[inst].psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
 
         while True:
             data, interface, if_id = poll_lldp_entry_updates(self.pubsub[inst])
