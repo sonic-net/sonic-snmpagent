@@ -52,6 +52,11 @@ RIF_COUNTERS_AGGR_MAP = {
     b"SAI_PORT_STAT_IF_OUT_ERRORS": b"SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS"
 }
 
+RIF_DROPS_AGGR_MAP = {
+    b"SAI_PORT_STAT_IF_IN_ERRORS": b"SAI_ROUTER_INTERFACE_STAT_IN_ERROR_PACKETS",
+    b"SAI_PORT_STAT_IF_OUT_ERRORS": b"SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS"
+}
+
 # IfIndex to OID multiplier for transceiver
 IFINDEX_SUB_ID_MULTIPLIER = 1000
 
@@ -616,6 +621,35 @@ class Namespace:
             lag_sai_map.update(lag_sai_map_ns)
 
         return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map
+
+    @staticmethod
+    def init_namespace_sync_d_rif_tables(dbs):
+        rif_port_map = {}
+        port_rif_map = {}
+
+        for db_conn in Namespace.get_non_host_dbs(dbs):
+            rif_port_map_ns, \
+            port_rif_map_ns = init_sync_d_rif_tables(db_conn)
+            rif_port_map.update(rif_port_map_ns)
+            port_rif_map.update(port_rif_map_ns)
+
+        return rif_port_map, port_rif_map
+
+    @staticmethod
+    def init_namespace_sync_d_vlan_tables(dbs):
+        vlan_name_map = {}
+        oid_sai_map = {}
+        oid_name_map = {}
+
+        for db_conn in Namespace.get_non_host_dbs(dbs):
+            vlan_name_map_ns, \
+            oid_sai_map_ns, \
+            oid_name_map_ns = init_sync_d_vlan_tables(db_conn)
+            vlan_name_map.update(vlan_name_map_ns)
+            oid_sai_map.update(oid_sai_map_ns)
+            oid_name_map.update(oid_name_map_ns)
+
+        return vlan_name_map, oid_sai_map, oid_name_map
 
     @staticmethod
     def init_namespace_sync_d_queue_tables(dbs):

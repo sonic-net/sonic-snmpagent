@@ -196,10 +196,10 @@ class InterfacesUpdater(MIBUpdater):
 
         self.vlan_name_map, \
         self.vlan_oid_sai_map, \
-        self.vlan_oid_name_map = mibs.init_sync_d_vlan_tables(self.db_conn)
+        self.vlan_oid_name_map = Namespace.init_namespace_sync_d_vlan_tables(self.db_conn)
 
         self.rif_port_map, \
-        self.port_rif_map = mibs.init_sync_d_rif_tables(self.db_conn)
+        self.port_rif_map = Namespace.init_namespace_sync_d_rif_tables(self.db_conn)
 
     def update_data(self):
         """
@@ -213,7 +213,7 @@ class InterfacesUpdater(MIBUpdater):
         rif_sai_ids = list(self.rif_port_map) + list(self.vlan_name_map)
 
         self.rif_counters = \
-            {sai_id: self.db_conn.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
+            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
              for sai_id in rif_sai_ids}
 
         if self.rif_counters: 
@@ -305,13 +305,13 @@ class InterfacesUpdater(MIBUpdater):
     def aggregate_counters(self):
         """
         For ports with l3 router interfaces l3 drops may be counted separately (RIF counters)
-        Get l2 and l3 (if any) counters from redis, add l3 counters to l2 counters cache according to mapping
+        add l3 drops to l2 drop counters cache according to mapping
 
         For l3vlan map l3 counters to l2 counters
         """
         for rif_sai_id, port_sai_id in self.rif_port_map.items():
             if port_sai_id in self.if_id_map:
-                for port_counter_name, rif_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
+                for port_counter_name, rif_counter_name in mibs.RIF_DROPS_AGGR_MAP.items():
                     self.if_counters[port_sai_id][port_counter_name] = \
                     int(self.if_counters[port_sai_id][port_counter_name]) + \
                     int(self.rif_counters[rif_sai_id][rif_counter_name])
@@ -348,8 +348,8 @@ class InterfacesUpdater(MIBUpdater):
             sai_lag_rif_id = self.port_rif_map[sai_lag_id]
             if sai_lag_rif_id in self.rif_port_map:
                 table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
-                if table_name in mibs.RIF_COUNTERS_AGGR_MAP:
-                    rif_table_name = mibs.RIF_COUNTERS_AGGR_MAP[table_name]
+                if table_name in mibs.RIF_DROPS_AGGR_MAP:
+                    rif_table_name = mibs.RIF_DROPS_AGGR_MAP[table_name]
                     counter_value += int(self.rif_counters[sai_lag_rif_id][rif_table_name])
             # truncate to 32-bit counter
             return counter_value & 0x00000000ffffffff
