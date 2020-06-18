@@ -97,8 +97,10 @@ class TestLLDPMIB(TestCase):
 
     def test_subtype_lldp_rem_man_addr_table(self):
         for entry in range(3, 6):
+            interface_number = 9
+            time_mark = 18543
             mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, entry)]
-            ret = mib_entry(sub_id=(1, 1))
+            ret = mib_entry(sub_id=(time_mark, interface_number, 1, 1, 4, 10, 224, 25, 102, ))
             self.assertIsNotNone(ret)
             print(ret)
 
