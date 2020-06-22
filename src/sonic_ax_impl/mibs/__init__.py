@@ -329,7 +329,7 @@ def init_sync_d_lag_tables(db_conn):
     lag_entries = db_conn.keys(APPL_DB, b"LAG_TABLE:*")
 
     if not lag_entries:
-        return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map
+        return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map
 
     db_conn.connect(COUNTERS_DB)
     lag_sai_map = db_conn.get_all(COUNTERS_DB, b"COUNTERS_LAG_NAME_MAP")
