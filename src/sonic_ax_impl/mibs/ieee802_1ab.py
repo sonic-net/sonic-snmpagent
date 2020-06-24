@@ -519,15 +519,13 @@ class LLDPRemManAddrUpdater(MIBUpdater):
 
                 if subtype == ManAddrConst.man_addr_subtype_ipv4:
                     addr_subtype_sub_oid = 4
-                    mgmt_ip_sub_oid = (addr_subtype_sub_oid,) + tuple(i for i in ipa.packed)
                 elif subtype == ManAddrConst.man_addr_subtype_ipv6:
-
                     addr_subtype_sub_oid = 16
-                    mgmt_ip_sub_oid = (addr_subtype_sub_oid,) + tuple(i for i in ipa.packed)
                 else:
                     logger.warning("Invalid management IP {}".format(mgmt_ip_str))
                     return
 
+                mgmt_ip_sub_oid = (addr_subtype_sub_oid,) + tuple(i for i in ipa.packed)
                 sub_id = (if_oid,) + (remote_index,) + (subtype,) + mgmt_ip_sub_oid
                 self.if_range.append( (time_mark,  *sub_id))
 
