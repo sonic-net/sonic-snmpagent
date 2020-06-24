@@ -275,7 +275,7 @@ def init_sync_d_rif_tables(db_conn):
     rif_port_map = port_util.get_rif_port_map(db_conn)
 
     if not rif_port_map:
-        return {}
+        return {}, {}
     port_rif_map = {port: rif for rif, port in rif_port_map.items()}
     logger.debug("Rif port map:\n" + pprint.pformat(rif_port_map, indent=2))
 

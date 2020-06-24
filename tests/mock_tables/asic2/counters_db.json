@@ -621,6 +621,12 @@
     "PortChannel03": "oid:0x1000000000017",
     "PortChannel04": "oid:0x1000000000018"
   },
+  "COUNTERS_RIF_NAME_MAP": {
+    "PortChannel03": "oid:0x6000000000017"
+  },
+  "COUNTERS_RIF_TYPE_MAP": {
+    "oid:0x6000000000017": "SAI_ROUTER_INTERFACE_TYPE_PORT"
+  },
   "COUNTERS_QUEUE_NAME_MAP": {
     "Ethernet-BP16:0":  "oid:0x15000000000330",
     "Ethernet-BP16:1":  "oid:0x15000000000331",
