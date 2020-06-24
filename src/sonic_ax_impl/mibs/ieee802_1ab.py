@@ -536,18 +536,18 @@ class LLDPRemManAddrUpdater(MIBUpdater):
             return
         self.if_range.sort()
 
-    def _update_per_namespace_data(self, db_conn, pubsub):
+    def _update_per_namespace_data(self, inst):
         """
         Listen to updates in APP DB, update local cache
         """
-        if not pubsub:
-            redis_client = db_conn.get_redis_client(db_conn.APPL_DB)
-            db = db_conn.get_dbid(db_conn.APPL_DB)
-            pubsub = redis_client.pubsub()
-            pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
+        if not self.pubsub[inst]:
+            redis_client = self.db_conn[inst].get_redis_client(self.db_conn[inst].APPL_DB)
+            db = self.db_conn[inst].get_dbid(self.db_conn[inst].APPL_DB)
+            self.pubsub[inst] = redis_client.pubsub()
+            self.pubsub[inst].psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
 
         while True:
-            data, interface, if_index = poll_lldp_entry_updates(pubsub)
+            data, interface, if_index = poll_lldp_entry_updates(self.pubsub[inst])
 
             if not data:
                 break
@@ -561,7 +561,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
 
     def update_data(self):
         for i in range(len(self.db_conn)):
-             self._update_per_namespace_data(self.db_conn[i], self.pubsub[i])
+             self._update_per_namespace_data(i)
 
 
     def reinit_data(self):
