@@ -33,7 +33,6 @@ class TestGetNextPDU(TestCase):
 
         self.assertTrue(b"PortChannel_Temp" in lag_name_if_name_map)
         self.assertTrue(lag_name_if_name_map[b"PortChannel_Temp"] == [])
-        self.assertTrue(lag_sai_map[b"PortChannel01"] == b"2000000000006")
 
     @classmethod
     def tearDownClass(cls):
