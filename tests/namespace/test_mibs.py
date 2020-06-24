@@ -17,8 +17,6 @@ class TestGetNextPDU(TestCase):
 
     def test_init_namespace_sync_d_lag_tables(self):
         dbs = Namespace.init_namespace_dbs()
-        Namespace.connect_all_dbs(dbs, mibs.APPL_DB)
-        Namespace.connect_all_dbs(dbs, mibs.COUNTERS_DB)
 
         lag_name_if_name_map, \
         if_name_lag_name_map, \

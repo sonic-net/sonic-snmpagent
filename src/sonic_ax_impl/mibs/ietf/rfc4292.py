@@ -11,7 +11,6 @@ class RouteUpdater(MIBUpdater):
         super().__init__()
         self.tos = 0 # ipCidrRouteTos
         self.db_conn = Namespace.init_namespace_dbs()
-        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.route_dest_map = {}
         self.route_dest_list = []
         ## loopback ip string -> ip address object

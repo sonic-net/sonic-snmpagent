@@ -49,9 +49,6 @@ class InterfaceMIBUpdater(MIBUpdater):
         super().__init__()
 
         self.db_conn = Namespace.init_namespace_dbs()
-        Namespace.connect_all_dbs(self.db_conn, mibs.COUNTERS_DB)
-        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
-        Namespace.connect_all_dbs(self.db_conn, mibs.CONFIG_DB)
 
         self.lag_name_if_name_map = {}
         self.if_name_lag_name_map = {}

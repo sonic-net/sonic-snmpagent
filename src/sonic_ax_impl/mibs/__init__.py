@@ -160,6 +160,10 @@ def init_mgmt_interface_tables(db_conn):
     :param db_conn: db connector
     :return: tuple of mgmt name to oid map and mgmt name to alias map
     """
+
+    db_conn.connect(CONFIG_DB)
+    db_conn.connect(STATE_DB)
+
     mgmt_ports_keys = db_conn.keys(CONFIG_DB, mgmt_if_entry_table(b'*'))
 
     if not mgmt_ports_keys:
@@ -185,6 +189,9 @@ def init_sync_d_interface_tables(db_conn):
     Initializes interface maps for SyncD-connected MIB(s).
     :return: tuple(if_name_map, if_id_map, oid_map, if_alias_map)
     """
+
+    # Make sure we're connected to COUNTERS_DB
+    db_conn.connect(COUNTERS_DB)
 
     # { if_name (SONiC) -> sai_id }
     # ex: { "Ethernet76" : "1000000000023" }
@@ -225,6 +232,8 @@ def init_sync_d_interface_tables(db_conn):
                        .format(port_util.SONIC_ETHERNET_RE_PATTERN))
         logger.warning("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
 
+    db_conn.connect(APPL_DB)
+
     if_alias_map = dict()
 
     for if_name in if_name_map:
@@ -249,6 +258,8 @@ def init_sync_d_lag_tables(db_conn):
     if_name_lag_name_map = {}
     # { OID -> lag_name (SONiC) }
     oid_lag_name_map = {}
+
+    db_conn.connect(APPL_DB)
 
     lag_entries = db_conn.keys(APPL_DB, b"LAG_TABLE:*")
 
@@ -282,6 +293,10 @@ def init_sync_d_queue_tables(db_conn):
     Initializes queue maps for SyncD-connected MIB(s).
     :return: tuple(port_queues_map, queue_stat_map)
     """
+
+    # Make sure we're connected to COUNTERS_DB
+    db_conn.connect(COUNTERS_DB)
+
     # { Port index : Queue index (SONiC) -> sai_id }
     # ex: { "1:2" : "1000000000023" }
     queue_name_map = db_conn.get_all(COUNTERS_DB, COUNTERS_QUEUE_NAME_MAP, blocking=True)
@@ -334,6 +349,7 @@ def get_device_metadata(db_conn):
     """
 
     DEVICE_METADATA = "DEVICE_METADATA|localhost"
+    db_conn.connect(db_conn.STATE_DB)
 
     device_metadata = db_conn.get_all(db_conn.STATE_DB, DEVICE_METADATA)
     return device_metadata
@@ -377,8 +393,7 @@ class RedisOidTreeUpdater(MIBUpdater):
     def __init__(self, prefix_str):
         super().__init__()
 
-        self.db_conn = Namespace.init_namespace_dbs()
-        Namespace.connect_all_dbs(self.db_conn, SNMP_OVERLAY_DB)
+        self.db_conn = Namespace.init_namespace_dbs() 
         if prefix_str.startswith('.'):
             prefix_str = prefix_str[1:]
         self.prefix_str = prefix_str
@@ -449,6 +464,7 @@ class Namespace:
         """
         result_keys=[]
         for db_conn in dbs:
+            db_conn.connect(db_name)
             keys = db_conn.keys(db_name, pattern)
             if keys is not None:
                 result_keys.extend(keys)
@@ -461,6 +477,7 @@ class Namespace:
         """
         result = {}
         for db_conn in dbs:
+            db_conn.connect(db_name)
             if(db_conn.exists(db_name, _hash)):
                 ns_result = db_conn.get_all(db_name, _hash, *args, **kwargs)
                 if ns_result is not None:
@@ -569,6 +586,7 @@ class Namespace:
     @staticmethod
     def dbs_get_vlan_id_from_bvid(dbs, bvid):
         for db_conn in Namespace.get_non_host_dbs(dbs):
+            db_conn.connect('ASIC_DB')
             vlan_obj = db_conn.keys('ASIC_DB', "ASIC_STATE:SAI_OBJECT_TYPE_VLAN:" + bvid)
             if vlan_obj is not None:
                 return port_util.get_vlan_id_from_bvid(db_conn, bvid)

@@ -122,8 +122,6 @@ class PhysicalTableMIBUpdater(MIBUpdater):
 
         self.statedb = Namespace.init_namespace_dbs()
         Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
-        Namespace.connect_all_dbs(self.statedb, mibs.COUNTERS_DB)
-        Namespace.connect_all_dbs(self.statedb, mibs.APPL_DB)
 
         self.if_alias_map = {}
 
@@ -155,7 +153,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
 
         # update interface maps
         _, self.if_alias_map, _, _, _ = \
-            Namespace.init_namespace_sync_d_interface_tables(self.statedb)
+            Namespace.init_namespace_sync_d_interface_tables(Namespace.init_namespace_dbs())
 
         device_metadata = mibs.get_device_metadata(self.statedb[0])
         chassis_sub_id = (self.CHASSIS_ID, )
