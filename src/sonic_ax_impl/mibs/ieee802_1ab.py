@@ -71,7 +71,6 @@ class ManAddrConst:
     """
     man_addr_oid = (1, 3, 6, 1, 2, 1, 2, 2, 1, 1)
 
-
 def poll_lldp_entry_updates(pubsub):
     ret = None, None, None
     msg = pubsub.get_message()
@@ -157,7 +156,7 @@ class LocPortUpdater(MIBUpdater):
         # cache of port data
         # { if_name -> { 'key': 'value' } }
         self.loc_port_data = {}
-        self.pubsub = [None] * len(self.db_conn) 
+        self.pubsub = [None] * len(self.db_conn)
 
     def reinit_data(self):
         """
@@ -222,16 +221,10 @@ class LocPortUpdater(MIBUpdater):
             return None
         return self.if_range[right]
 
-    def _update_per_namespace_data(self, db_conn, pubsub):
+    def _update_per_namespace_data(self, pubsub):
         """
         Listen to updates in APP DB, update local cache
         """
-        if not pubsub:
-            redis_client = db_conn.get_redis_client(db_conn.APPL_DB)
-            db = db_conn.get_dbid(db_conn.APPL_DB)
-            pubsub = redis_client.pubsub()
-            pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
-
         while True:
             data, interface, if_id = poll_lldp_entry_updates(pubsub)
 
@@ -243,7 +236,10 @@ class LocPortUpdater(MIBUpdater):
 
     def update_data(self):
         for i in range(len(self.db_conn)):
-            self._update_per_namespace_data(self.db_conn[i], self.pubsub[i])
+            if not self.pubsub[i]:
+                pattern = mibs.lldp_entry_table(b'*')
+                self.pubsub[i] = mibs.get_redis_pubsub(self.db_conn[i], self.db_conn[i].APPL_DB, pattern)
+            self._update_per_namespace_data(self.pubsub[i])
 
     def local_port_num(self, sub_id):
         if len(sub_id) == 0:
@@ -307,7 +303,7 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         self.mgmt_ip_str = None
 
         # establish connection to application database.
-        self.db_conn.connect(mibs.APPL_DB) 
+        self.db_conn.connect(mibs.APPL_DB)
         mgmt_ip_bytes = self.db_conn.get(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE, b'lldp_loc_man_addr')
 
         if not mgmt_ip_bytes:
@@ -488,7 +484,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
 
-        self.db_conn = Namespace.init_namespace_dbs() 
+        self.db_conn = Namespace.init_namespace_dbs()
         # establish connection to application database.
         Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.if_range = []
@@ -536,16 +532,10 @@ class LLDPRemManAddrUpdater(MIBUpdater):
             return
         self.if_range.sort()
 
-    def _update_per_namespace_data(self, db_conn, pubsub):
+    def _update_per_namespace_data(self, pubsub):
         """
         Listen to updates in APP DB, update local cache
         """
-        if not pubsub:
-            redis_client = db_conn.get_redis_client(db_conn.APPL_DB)
-            db = db_conn.get_dbid(db_conn.APPL_DB)
-            pubsub = redis_client.pubsub()
-            pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
-
         while True:
             data, interface, if_index = poll_lldp_entry_updates(pubsub)
 
@@ -561,7 +551,10 @@ class LLDPRemManAddrUpdater(MIBUpdater):
 
     def update_data(self):
         for i in range(len(self.db_conn)):
-             self._update_per_namespace_data(self.db_conn[i], self.pubsub[i])
+            if not self.pubsub[i]:
+                pattern = mibs.lldp_entry_table(b'*')
+                self.pubsub[i] = mibs.get_redis_pubsub(self.db_conn[i], self.db_conn[i].APPL_DB, pattern)
+            self._update_per_namespace_data(self.pubsub[i])
 
 
     def reinit_data(self):

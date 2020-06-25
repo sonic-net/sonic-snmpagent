@@ -150,7 +150,7 @@ def init_db():
     """
     # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
     # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
-    db_conn = SonicV2Connector(**redis_kwargs) 
+    db_conn = SonicV2Connector(**redis_kwargs)
 
     return db_conn
 
@@ -389,6 +389,13 @@ def get_transceiver_sensor_sub_id(ifindex, sensor):
     transceiver_oid, = get_transceiver_sub_id(ifindex)
     return (transceiver_oid + SENSOR_PART_ID_MAP[sensor], )
 
+def get_redis_pubsub(db_conn, db_name, pattern):
+    redis_client = db_conn.get_redis_client(db_name)
+    db = db_conn.get_dbid(db_name)
+    pubsub = redis_client.pubsub()
+    pubsub.psubscribe("__keyspace@{}__:{}".format(db, pattern))
+    return pubsub
+
 class RedisOidTreeUpdater(MIBUpdater):
     def __init__(self, prefix_str):
         super().__init__()
@@ -419,7 +426,7 @@ class RedisOidTreeUpdater(MIBUpdater):
         self.oid_list = []
         self.oid_map = {}
 
-        keys = Namespace.dbs_keys(self.db_conn, SNMP_OVERLAY_DB, self.prefix_str + '*') 
+        keys = Namespace.dbs_keys(self.db_conn, SNMP_OVERLAY_DB, self.prefix_str + '*')
         # TODO: fix db_conn.keys to return empty list instead of None if there is no match
         if keys is None:
             keys = []
@@ -428,7 +435,7 @@ class RedisOidTreeUpdater(MIBUpdater):
             key = key.decode()
             oid = oid2tuple(key, dot_prefix=False)
             self.oid_list.append(oid)
-            value = Namespace.dbs_get_all(self.db_conn, SNMP_OVERLAY_DB, key) 
+            value = Namespace.dbs_get_all(self.db_conn, SNMP_OVERLAY_DB, key)
             if value[b'type'] in [b'COUNTER_32', b'COUNTER_64']:
                 self.oid_map[oid] = int(value[b'data'])
             else:
@@ -587,6 +594,6 @@ class Namespace:
     def dbs_get_vlan_id_from_bvid(dbs, bvid):
         for db_conn in Namespace.get_non_host_dbs(dbs):
             db_conn.connect('ASIC_DB')
-            vlan_obj = db.keys('ASIC_DB', "ASIC_STATE:SAI_OBJECT_TYPE_VLAN:" + bvid)
+            vlan_obj = db_conn.keys('ASIC_DB', "ASIC_STATE:SAI_OBJECT_TYPE_VLAN:" + bvid)
             if vlan_obj is not None:
                 return port_util.get_vlan_id_from_bvid(db_conn, bvid)
