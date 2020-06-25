@@ -71,7 +71,6 @@ class ManAddrConst:
     """
     man_addr_oid = (1, 3, 6, 1, 2, 1, 2, 2, 1, 1)
 
-
 def poll_lldp_entry_updates(pubsub):
     ret = None, None, None
     msg = pubsub.get_message()
@@ -222,18 +221,12 @@ class LocPortUpdater(MIBUpdater):
             return None
         return self.if_range[right]
 
-    def _update_per_namespace_data(self, inst):
+    def _update_per_namespace_data(self, pubsub):
         """
         Listen to updates in APP DB, update local cache
         """
-        if not self.pubsub[inst]:
-            redis_client = self.db_conn[inst].get_redis_client(self.db_conn[inst].APPL_DB)
-            db = self.db_conn[inst].get_dbid(self.db_conn[inst].APPL_DB)
-            self.pubsub[inst] = redis_client.pubsub()
-            self.pubsub[inst].psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
-
         while True:
-            data, interface, if_id = poll_lldp_entry_updates(self.pubsub[inst])
+            data, interface, if_id = poll_lldp_entry_updates(pubsub)
 
             if not data:
                 break
@@ -243,7 +236,10 @@ class LocPortUpdater(MIBUpdater):
 
     def update_data(self):
         for i in range(len(self.db_conn)):
-            self._update_per_namespace_data(i)
+            if not self.pubsub[i]:
+                pattern = mibs.lldp_entry_table(b'*')
+                self.pubsub[i] = mibs.get_redis_pubsub(self.db_conn[i], self.db_conn[i].APPL_DB, pattern)
+            self._update_per_namespace_data(self.pubsub[i])
 
     def local_port_num(self, sub_id):
         if len(sub_id) == 0:
@@ -536,18 +532,12 @@ class LLDPRemManAddrUpdater(MIBUpdater):
             return
         self.if_range.sort()
 
-    def _update_per_namespace_data(self, inst):
+    def _update_per_namespace_data(self, pubsub):
         """
         Listen to updates in APP DB, update local cache
         """
-        if not self.pubsub[inst]:
-            redis_client = self.db_conn[inst].get_redis_client(self.db_conn[inst].APPL_DB)
-            db = self.db_conn[inst].get_dbid(self.db_conn[inst].APPL_DB)
-            self.pubsub[inst] = redis_client.pubsub()
-            self.pubsub[inst].psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
-
         while True:
-            data, interface, if_index = poll_lldp_entry_updates(self.pubsub[inst])
+            data, interface, if_index = poll_lldp_entry_updates(pubsub)
 
             if not data:
                 break
@@ -561,7 +551,10 @@ class LLDPRemManAddrUpdater(MIBUpdater):
 
     def update_data(self):
         for i in range(len(self.db_conn)):
-             self._update_per_namespace_data(i)
+            if not self.pubsub[i]:
+                pattern = mibs.lldp_entry_table(b'*')
+                self.pubsub[i] = mibs.get_redis_pubsub(self.db_conn[i], self.db_conn[i].APPL_DB, pattern)
+            self._update_per_namespace_data(self.pubsub[i])
 
 
     def reinit_data(self):

@@ -181,7 +181,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
             interface = transceiver_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
             self._update_transceiver_cache(interface)
 
-    def _update_per_namespace_data(self, inst):
+    def _update_per_namespace_data(self, pubsub):
         """
         Update cache.
         Here we listen to changes in STATE_DB TRANSCEIVER_INFO table
@@ -190,14 +190,8 @@ class PhysicalTableMIBUpdater(MIBUpdater):
 
         # This code is not executed in unit test, since mockredis
         # does not support pubsub
-        if not self.pubsub[inst]:
-            redis_client = self.statedb[inst].get_redis_client(self.statedb[inst].STATE_DB)
-            db = self.statedb[inst].get_dbid(self.statedb[inst].STATE_DB)
-            self.pubsub[inst] = redis_client.pubsub()
-            self.pubsub[inst].psubscribe("__keyspace@{}__:{}".format(db, self.TRANSCEIVER_KEY_PATTERN))
-
         while True:
-            msg = self.pubsub[inst].get_message()
+            msg = pubsub.get_message()
 
             if not msg:
                 break
@@ -233,8 +227,13 @@ class PhysicalTableMIBUpdater(MIBUpdater):
                         self.physical_entities.remove(sub_id)
 
     def update_data(self):
+        # This code is not executed in unit test, since mockredis
+        # does not support pubsub
         for i in range(len(self.statedb)):
-             self._update_per_namespace_data(i)
+            if not self.pubsub[i]:
+                pattern = self.TRANSCEIVER_KEY_PATTERN
+                self.pubsub[i] = mibs.get_redis_pubsub(self.statedb[i], self.statedb[i].STATE_DB, pattern)
+            self._update_per_namespace_data(self.pubsub[i])
 
     def _update_transceiver_cache(self, interface):
         """

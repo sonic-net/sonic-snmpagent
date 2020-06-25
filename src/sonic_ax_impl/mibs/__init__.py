@@ -389,6 +389,13 @@ def get_transceiver_sensor_sub_id(ifindex, sensor):
     transceiver_oid, = get_transceiver_sub_id(ifindex)
     return (transceiver_oid + SENSOR_PART_ID_MAP[sensor], )
 
+def get_redis_pubsub(db_conn, db_name, pattern):
+    redis_client = db_conn.get_redis_client(db_name)
+    db = db_conn.get_dbid(db_name)
+    pubsub = redis_client.pubsub()
+    pubsub.psubscribe("__keyspace@{}__:{}".format(db, pattern))
+    return pubsub
+
 class RedisOidTreeUpdater(MIBUpdater):
     def __init__(self, prefix_str):
         super().__init__()
