@@ -496,20 +496,6 @@ class Namespace:
         return result_keys
 
     @staticmethod
-    def dbs_get_all(dbs, db_name, _hash, *args, **kwargs):
-        """
-        db get_all function executed on global and all namespace DBs.
-        """
-        result = {}
-        for db_conn in dbs:
-            db_conn.connect(db_name)
-            if(db_conn.exists(db_name, _hash)):
-                ns_result = db_conn.get_all(db_name, _hash, *args, **kwargs)
-                if ns_result is not None:
-                    result.update(ns_result)
-        return result
-
-    @staticmethod
     def get_non_host_dbs(dbs):
         """
         From the list of all dbs, return the list of dbs

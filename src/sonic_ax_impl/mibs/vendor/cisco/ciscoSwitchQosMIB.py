@@ -84,7 +84,10 @@ class QueueStatUpdater(MIBUpdater):
         self.port_queues_map, self.queue_stat_map, self.port_queue_list_map = \
             Namespace.init_namespace_sync_d_queue_tables(self.db_conn)
 
-        self.queue_type_map = Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, "COUNTERS_QUEUE_TYPE_MAP", blocking=False)
+        for db_inst in range(Namespace.get_start_idx_of_non_host(dbs), len(dbs)):
+            queue_type_map_ns = self.db_conn[db_inst].get_all(mibs.COUNTERS_DB, "COUNTERS_QUEUE_TYPE_MAP", blocking=False)
+            if queue_type_map_ns is not None:
+                self.queue_type_map.update(queue_type_map_ns)
 
         self.update_data()
 
