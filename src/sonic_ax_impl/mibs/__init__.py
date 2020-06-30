@@ -81,6 +81,9 @@ def queue_table(sai_id):
 def queue_key(port_index, queue_index):
     return str(port_index) + ':' + str(queue_index)
 
+def get_port_index_from_queue_key(queue_key):
+    return int(queue_key.split(':')[0])
+
 def transceiver_info_table(port_name):
     """
     :param: port_name: port name

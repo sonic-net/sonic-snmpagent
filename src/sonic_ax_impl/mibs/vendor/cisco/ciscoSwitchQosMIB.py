@@ -98,9 +98,9 @@ class QueueStatUpdater(MIBUpdater):
         """
         for queue_key, sai_id in self.port_queues_map.items():
             queue_stat_name = mibs.queue_table(sai_id)
-            if_idx = int(queue_key.split(':')[0])
-            namespace = self.if_oid_namespace[if_idx]
-            queue_stat = self.db_conn[namespace].get_all(mibs.COUNTERS_DB, queue_stat_name, blocking=False)
+            if_idx = mibs.get_port_index_from_queue_key(queue_key)
+            db_inst = self.if_oid_namespace[if_idx]
+            queue_stat = self.db_conn[db_inst].get_all(mibs.COUNTERS_DB, queue_stat_name, blocking=False)
             if queue_stat is not None:
                 self.queue_stat_map[queue_stat_name] = queue_stat
 
