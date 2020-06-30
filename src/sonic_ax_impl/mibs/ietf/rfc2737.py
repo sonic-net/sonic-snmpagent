@@ -152,7 +152,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_model_name_map = {}
 
         # update interface maps
-        _, self.if_alias_map, _, _, _ = \
+        _, self.if_alias_map, _, _, _, _ = \
             Namespace.init_namespace_sync_d_interface_tables(Namespace.init_namespace_dbs())
 
         device_metadata = mibs.get_device_metadata(self.statedb[0])
@@ -168,20 +168,20 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_serial_number_map[chassis_sub_id] = chassis_serial_number
 
         # retrieve the initial list of transceivers that are present in the system
-        transceiver_info = Namespace.dbs_keys(self.statedb, mibs.STATE_DB, self.TRANSCEIVER_KEY_PATTERN)
+        transceiver_info = Namespace.dbs_keys_namespace(self.statedb, mibs.STATE_DB, self.TRANSCEIVER_KEY_PATTERN)
         if transceiver_info:
-            self.transceiver_entries = [entry.decode() \
+            self.transceiver_entries = [(entry.decode(), transceiver_info[entry]) \
                 for entry in transceiver_info]
         else:
-            self.transceiver_entries = []
+            self.transceiver_entries = {}
 
         # update cache with initial data
-        for transceiver_entry in self.transceiver_entries:
+        for transceiver_entry,namespace in self.transceiver_entries:
             # extract interface name
             interface = transceiver_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
-            self._update_transceiver_cache(interface)
+            self._update_transceiver_cache(interface, namespace)
 
-    def _update_per_namespace_data(self, pubsub):
+    def _update_per_namespace_data(self, pubsub, db_instance):
         """
         Update cache.
         Here we listen to changes in STATE_DB TRANSCEIVER_INFO table
@@ -213,7 +213,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
                 continue
 
             if b"set" in data:
-                self._update_transceiver_cache(interface)
+                self._update_transceiver_cache(interface, db_instance)
             elif b"del" in data:
                 # remove deleted transceiver
                 remove_sub_ids = [mibs.get_transceiver_sub_id(ifindex)]
@@ -233,9 +233,9 @@ class PhysicalTableMIBUpdater(MIBUpdater):
             if not self.pubsub[i]:
                 pattern = self.TRANSCEIVER_KEY_PATTERN
                 self.pubsub[i] = mibs.get_redis_pubsub(self.statedb[i], self.statedb[i].STATE_DB, pattern)
-            self._update_per_namespace_data(self.pubsub[i])
+            self._update_per_namespace_data(self.pubsub[i], i)
 
-    def _update_transceiver_cache(self, interface):
+    def _update_transceiver_cache(self, interface, db_instance):
         """
         Update data for single transceiver
         :param: interface: Interface name associated with transceiver
@@ -252,7 +252,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         insort_right(self.physical_entities, sub_id)
 
         # get transceiver information from transceiver info entry in STATE DB
-        transceiver_info = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB,
+        transceiver_info = self.statedb[db_instance].get_all(mibs.STATE_DB,
                                                 mibs.transceiver_info_table(interface))
 
         if not transceiver_info:
@@ -274,9 +274,9 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_description_map[sub_id] = get_transceiver_description(sfp_type, ifalias)
 
         # update transceiver sensor cache
-        self._update_transceiver_sensor_cache(interface)
+        self._update_transceiver_sensor_cache(interface, db_instance)
 
-    def _update_transceiver_sensor_cache(self, interface):
+    def _update_transceiver_sensor_cache(self, interface, db_instance):
         """
         Update sensor data for single transceiver
         :param: interface: Interface name associated with transceiver
@@ -286,7 +286,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         ifindex = port_util.get_index_from_str(interface)
 
         # get transceiver sensors from transceiver dom entry in STATE DB
-        transceiver_dom_entry = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB,
+        transceiver_dom_entry = self.statedb[db_instance].get_all(mibs.STATE_DB,
                                                      mibs.transceiver_dom_table(interface))
 
         if not transceiver_dom_entry:

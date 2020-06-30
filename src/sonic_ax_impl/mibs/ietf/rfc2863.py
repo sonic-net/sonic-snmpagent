@@ -67,6 +67,10 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.if_name_lag_name_map = {}
         self.oid_lag_name_map = {}
 
+        # map of if_idx/oid and db instance
+        self.if_oid_namespace = {}
+        self.oid_lag_namespace = {}
+
     def reinit_data(self):
         """
         Subclass update interface information
@@ -75,11 +79,13 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map, \
+        self.if_oid_namespace = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
-        self.oid_lag_name_map = Namespace.init_namespace_sync_d_lag_tables(self.db_conn)
+        self.oid_lag_name_map, \
+        self.oid_lag_namespace = Namespace.init_namespace_sync_d_lag_tables(self.db_conn)
         """
         db_conn - will have db_conn to all namespace DBs and
         global db. First db in the list is global db.
@@ -87,6 +93,11 @@ class InterfaceMIBUpdater(MIBUpdater):
         """
         self.mgmt_oid_name_map, \
         self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn[0])
+        """
+        mgmt interface idx will be mapped to host db or the first db instance.
+        """
+        self.if_oid_namespace.update(dict.fromkeys(self.mgmt_oid_name_map.keys(), 0))
+
 
         self.if_range = sorted(list(self.oid_sai_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
@@ -98,10 +109,9 @@ class InterfaceMIBUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
-        self.if_counters = {
-            sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
-            for sai_id in self.if_id_map}
-
+        self.if_counters = \
+            {self.oid_sai_map[if_idx]: self.db_conn[self.if_oid_namespace[if_idx]].get_all(mibs.COUNTERS_DB, mibs.counter_table(self.oid_sai_map[if_idx]), blocking=True)
+            for if_idx in self.oid_sai_map}
 
     def get_next(self, sub_id):
         """
@@ -214,15 +224,18 @@ class InterfaceMIBUpdater(MIBUpdater):
         db = mibs.APPL_DB
         if oid in self.oid_lag_name_map:
             if_table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
+            db_inst = self.oid_lag_namespace[oid]
         elif oid in self.mgmt_oid_name_map:
             if_table = mibs.mgmt_if_entry_table(self.mgmt_oid_name_map[oid])
+            db_inst =  0
             db = mibs.CONFIG_DB
         elif oid in self.oid_name_map:
             if_table = mibs.if_entry_table(self.oid_name_map[oid])
+            db_inst = self.if_oid_namespace[oid]
         else:
             return None
 
-        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=True)
+        return self.db_conn[db_inst].get_all(db, if_table, blocking=True)
 
     def get_high_speed(self, sub_id):
         """

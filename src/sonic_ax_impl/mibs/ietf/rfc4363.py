@@ -41,7 +41,7 @@ class FdbUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map, _ = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
         self.if_bpid_map = Namespace.dbs_get_bridge_port_map(self.db_conn, mibs.ASIC_DB)
         self.bvid_vlan_map.clear()
@@ -54,7 +54,8 @@ class FdbUpdater(MIBUpdater):
         self.vlanmac_ifindex_map = {}
         self.vlanmac_ifindex_list = []
 
-        fdb_strings = Namespace.dbs_keys(self.db_conn, mibs.ASIC_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:*")
+        Namespace.connect_all_dbs(self.db_conn, mibs.ASIC_DB)
+        fdb_strings = Namespace.dbs_keys_namespace(self.db_conn, mibs.ASIC_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:*")
         if not fdb_strings:
             return
 
@@ -66,7 +67,8 @@ class FdbUpdater(MIBUpdater):
                 mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': {}.".format(fdb_str, e))
                 break
 
-            ent = Namespace.dbs_get_all(self.db_conn, mibs.ASIC_DB, s, blocking=True)
+            db_inst = fdb_strings[s]
+            ent = self.db_conn[db_inst].get_all(mibs.ASIC_DB, s, blocking=True)
             # Example output: oid:0x3a000000000608
             bridge_port_id = ent[b"SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"][6:]
             if bridge_port_id not in self.if_bpid_map:

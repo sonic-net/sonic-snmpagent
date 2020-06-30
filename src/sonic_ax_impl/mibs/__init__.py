@@ -426,16 +426,18 @@ class RedisOidTreeUpdater(MIBUpdater):
         self.oid_list = []
         self.oid_map = {}
 
-        keys = Namespace.dbs_keys(self.db_conn, SNMP_OVERLAY_DB, self.prefix_str + '*')
+        Namespace.connect_all_dbs(self.db_conn, SNMP_OVERLAY_DB)
+        keys = Namespace.dbs_keys_namespace(self.db_conn, SNMP_OVERLAY_DB, self.prefix_str + '*') 
         # TODO: fix db_conn.keys to return empty list instead of None if there is no match
         if keys is None:
-            keys = []
+            keys = {}
 
         for key in keys:
+            db_instance = keys[key]
             key = key.decode()
             oid = oid2tuple(key, dot_prefix=False)
             self.oid_list.append(oid)
-            value = Namespace.dbs_get_all(self.db_conn, SNMP_OVERLAY_DB, key)
+            value = self.db_conn[db_instance].get_all(SNMP_OVERLAY_DB, key) 
             if value[b'type'] in [b'COUNTER_32', b'COUNTER_64']:
                 self.oid_map[oid] = int(value[b'data'])
             else:
@@ -478,6 +480,22 @@ class Namespace:
         return result_keys
 
     @staticmethod
+    def dbs_keys_namespace(dbs, db_name, pattern='*'):
+        """
+        dbs_keys_namespace function execute on global 
+        and all namespace DBs. Provides a map of keys
+        and namespace(db instance).
+        """
+        result_keys={}
+        #for db_conn in dbs:
+        for inst in range(len(dbs)):
+            keys = dbs[inst].keys(db_name, pattern)
+            if keys is not None:
+                keys_ns = dict.fromkeys(keys, inst)
+                result_keys.update(keys_ns)
+        return result_keys
+
+    @staticmethod
     def dbs_get_all(dbs, db_name, _hash, *args, **kwargs):
         """
         db get_all function executed on global and all namespace DBs.
@@ -504,7 +522,20 @@ class Namespace:
             return dbs
         else:
             return dbs[1:]
-        
+
+    @staticmethod
+    def get_start_idx_of_non_host(dbs):
+        """
+        From the list of all dbs, return the list of dbs
+        which will have interface related tables.
+        For single namespace db, return the single db.
+        For multiple namespace dbs, return all dbs except the
+        host namespace db which is the first db in the list.
+        """
+        if len(dbs) == 1:
+            return 0
+        else:
+            return 1        
 
     @staticmethod
     def init_namespace_sync_d_interface_tables(dbs):
@@ -513,6 +544,7 @@ class Namespace:
         if_id_map = {}
         oid_sai_map = {}
         oid_name_map = {}
+        if_oid_namespace = {}
 
         """
         all_ns_db - will have db_conn to all namespace DBs and
@@ -520,19 +552,21 @@ class Namespace:
         Ignore first global db to get interface tables if there
         are multiple namespaces.
         """
-        for db_conn in Namespace.get_non_host_dbs(dbs):
+        for inst in range(Namespace.get_start_idx_of_non_host(dbs), len(dbs)):
             if_name_map_ns, \
             if_alias_map_ns, \
             if_id_map_ns, \
             oid_sai_map_ns, \
-            oid_name_map_ns = init_sync_d_interface_tables(db_conn)
+            oid_name_map_ns = init_sync_d_interface_tables(dbs[inst])
             if_name_map.update(if_name_map_ns)
             if_alias_map.update(if_alias_map_ns)
             if_id_map.update(if_id_map_ns)
             oid_sai_map.update(oid_sai_map_ns)
             oid_name_map.update(oid_name_map_ns)
+            if_oid_namespace_ns = dict.fromkeys(oid_name_map_ns.keys(),inst)
+            if_oid_namespace.update(if_oid_namespace_ns)
 
-        return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map
+        return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map, if_oid_namespace
 
     @staticmethod
     def init_namespace_sync_d_lag_tables(dbs):
@@ -540,6 +574,7 @@ class Namespace:
         lag_name_if_name_map = {}
         if_name_lag_name_map = {}
         oid_lag_name_map = {}
+        oid_lag_namespace = {}
 
         """
         all_ns_db - will have db_conn to all namespace DBs and
@@ -547,15 +582,17 @@ class Namespace:
         Ignore first global db to get lag tables if
         there are multiple namespaces.
         """
-        for db_conn in Namespace.get_non_host_dbs(dbs):
+        for inst in range(Namespace.get_start_idx_of_non_host(dbs), len(dbs)):
             lag_name_if_name_map_ns, \
             if_name_lag_name_map_ns, \
-            oid_lag_name_map_ns = init_sync_d_lag_tables(db_conn)
+            oid_lag_name_map_ns = init_sync_d_lag_tables(dbs[inst])
             lag_name_if_name_map.update(lag_name_if_name_map_ns)
             if_name_lag_name_map.update(if_name_lag_name_map_ns)
             oid_lag_name_map.update(oid_lag_name_map_ns)
+            oid_lag_namespace_ns = dict.fromkeys(oid_lag_name_map_ns.keys(),inst)
+            oid_lag_namespace.update(oid_lag_namespace_ns)
 
-        return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map
+        return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, oid_lag_namespace
 
     @staticmethod
     def init_namespace_sync_d_queue_tables(dbs):

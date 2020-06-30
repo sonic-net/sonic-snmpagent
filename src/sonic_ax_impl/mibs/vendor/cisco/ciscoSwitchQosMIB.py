@@ -66,6 +66,9 @@ class QueueStatUpdater(MIBUpdater):
 
         self.queue_type_map = {}
 
+        self.queue_type_map = {}
+        self.if_oid_namespace = {}
+
     def reinit_data(self):
         """
         Subclass update interface information
@@ -74,7 +77,9 @@ class QueueStatUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map, \
+        self.if_oid_namespace = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+
 
         self.port_queues_map, self.queue_stat_map, self.port_queue_list_map = \
             Namespace.init_namespace_sync_d_queue_tables(self.db_conn)
@@ -90,7 +95,9 @@ class QueueStatUpdater(MIBUpdater):
         """
         for queue_key, sai_id in self.port_queues_map.items():
             queue_stat_name = mibs.queue_table(sai_id)
-            queue_stat = Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, queue_stat_name, blocking=False)
+            if_idx = int(queue_key.split(':')[0])
+            namespace = self.if_oid_namespace[if_idx]
+            queue_stat = self.db_conn[namespace].get_all(mibs.COUNTERS_DB, queue_stat_name, blocking=False)
             if queue_stat is not None:
                 self.queue_stat_map[queue_stat_name] = queue_stat
 
