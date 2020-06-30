@@ -400,7 +400,7 @@ class RedisOidTreeUpdater(MIBUpdater):
     def __init__(self, prefix_str):
         super().__init__()
 
-        self.db_conn = Namespace.init_namespace_dbs() 
+        self.db_conn = Namespace.init_namespace_dbs()
         if prefix_str.startswith('.'):
             prefix_str = prefix_str[1:]
         self.prefix_str = prefix_str
@@ -427,7 +427,7 @@ class RedisOidTreeUpdater(MIBUpdater):
         self.oid_map = {}
 
         Namespace.connect_all_dbs(self.db_conn, SNMP_OVERLAY_DB)
-        keys = Namespace.dbs_keys_namespace(self.db_conn, SNMP_OVERLAY_DB, self.prefix_str + '*') 
+        keys = Namespace.dbs_keys_namespace(self.db_conn, SNMP_OVERLAY_DB, self.prefix_str + '*')
         # TODO: fix db_conn.keys to return empty list instead of None if there is no match
         if keys is None:
             keys = {}
@@ -437,7 +437,7 @@ class RedisOidTreeUpdater(MIBUpdater):
             key = key.decode()
             oid = oid2tuple(key, dot_prefix=False)
             self.oid_list.append(oid)
-            value = self.db_conn[db_instance].get_all(SNMP_OVERLAY_DB, key) 
+            value = self.db_conn[db_instance].get_all(SNMP_OVERLAY_DB, key)
             if value[b'type'] in [b'COUNTER_32', b'COUNTER_64']:
                 self.oid_map[oid] = int(value[b'data'])
             else:
@@ -482,7 +482,7 @@ class Namespace:
     @staticmethod
     def dbs_keys_namespace(dbs, db_name, pattern='*'):
         """
-        dbs_keys_namespace function execute on global 
+        dbs_keys_namespace function execute on global
         and all namespace DBs. Provides a map of keys
         and namespace(db instance).
         """
@@ -535,7 +535,7 @@ class Namespace:
         if len(dbs) == 1:
             return 0
         else:
-            return 1        
+            return 1
 
     @staticmethod
     def init_namespace_sync_d_interface_tables(dbs):
