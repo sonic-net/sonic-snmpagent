@@ -176,7 +176,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
             self.transceiver_entries = {}
 
         # update cache with initial data
-        for transceiver_entry,namespace in self.transceiver_entries:
+        for transceiver_entry, namespace in self.transceiver_entries:
             # extract interface name
             interface = transceiver_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
             self._update_transceiver_cache(interface, namespace)

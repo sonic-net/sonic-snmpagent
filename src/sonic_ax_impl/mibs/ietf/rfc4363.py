@@ -32,7 +32,7 @@ class FdbUpdater(MIBUpdater):
                 vlan_id = Namespace.dbs_get_vlan_id_from_bvid(self.db_conn, fdb["bvid"])
                 self.bvid_vlan_map[fdb["bvid"]] = vlan_id
         return (int(vlan_id),) + mac_decimals(fdb["mac"])
-          
+
     def reinit_data(self):
         """
         Subclass update interface information

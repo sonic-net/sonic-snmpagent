@@ -456,7 +456,7 @@ class RedisOidTreeUpdater(MIBUpdater):
 class Namespace:
     @staticmethod
     def init_namespace_dbs():
-        db_conn= []
+        db_conn = []
         SonicDBConfig.load_sonic_global_db_config()
         for namespace in SonicDBConfig.get_ns_list():
             db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
@@ -474,7 +474,7 @@ class Namespace:
         """
         db keys function execute on global and all namespace DBs.
         """
-        result_keys=[]
+        result_keys = []
         for db_conn in dbs:
             db_conn.connect(db_name)
             keys = db_conn.keys(db_name, pattern)
@@ -489,8 +489,7 @@ class Namespace:
         and all namespace DBs. Provides a map of keys
         and namespace(db instance).
         """
-        result_keys={}
-        #for db_conn in dbs:
+        result_keys = {}
         for inst in range(len(dbs)):
             keys = dbs[inst].keys(db_name, pattern)
             if keys is not None:
@@ -552,7 +551,7 @@ class Namespace:
             if_id_map.update(if_id_map_ns)
             oid_sai_map.update(oid_sai_map_ns)
             oid_name_map.update(oid_name_map_ns)
-            if_oid_namespace_ns = dict.fromkeys(oid_name_map_ns.keys(),inst)
+            if_oid_namespace_ns = dict.fromkeys(oid_name_map_ns.keys(), inst)
             if_oid_namespace.update(if_oid_namespace_ns)
 
         return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map, if_oid_namespace
@@ -578,7 +577,7 @@ class Namespace:
             lag_name_if_name_map.update(lag_name_if_name_map_ns)
             if_name_lag_name_map.update(if_name_lag_name_map_ns)
             oid_lag_name_map.update(oid_lag_name_map_ns)
-            oid_lag_namespace_ns = dict.fromkeys(oid_lag_name_map_ns.keys(),inst)
+            oid_lag_namespace_ns = dict.fromkeys(oid_lag_name_map_ns.keys(), inst)
             oid_lag_namespace.update(oid_lag_namespace_ns)
 
         return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, oid_lag_namespace
