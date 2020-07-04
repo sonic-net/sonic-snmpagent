@@ -511,7 +511,7 @@ class Namespace:
             start_index = 0
         else:
             start_index = 1
-        return (start_index, len(dbs))
+        return range(start_index, len(dbs))
 
     @staticmethod
     def init_namespace_sync_d_interface_tables(dbs):
