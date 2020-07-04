@@ -504,7 +504,7 @@ class Namespace:
         which will have interface related tables.
         For single namespace db, return the single db.
         For multiple namespace dbs, return db index ofall dbs
-        except the host namespace db which is the first db 
+        except the host namespace db which is the first db
         in the list.
         """
         if len(dbs) == 1:
@@ -528,7 +528,7 @@ class Namespace:
         Ignore first global db to get interface tables if there
         are multiple namespaces.
         """
-        for db_index in self.get_non_host_db_indexes(dbs):
+        for db_index in Namespace.get_non_host_db_indexes(dbs):
             if_name_map_ns, \
             if_alias_map_ns, \
             if_id_map_ns, \
@@ -558,7 +558,7 @@ class Namespace:
         Ignore first global db to get lag tables if
         there are multiple namespaces.
         """
-        for db_index in self.get_non_host_db_indexes(dbs):
+        for db_index in Namespace.get_non_host_db_indexes(dbs):
             lag_name_if_name_map_ns, \
             if_name_lag_name_map_ns, \
             oid_lag_name_map_ns = init_sync_d_lag_tables(dbs[db_index])
@@ -582,7 +582,7 @@ class Namespace:
         Ignore first global db to get queue tables if there
         are multiple namespaces.
         """
-        for db_index in self.get_non_host_db_indexes(dbs):
+        for db_index in Namespace.get_non_host_db_indexes(dbs):
             port_queues_map_ns, \
             queue_stat_map_ns, \
             port_queue_list_map_ns = init_sync_d_queue_tables(dbs[db_index])
@@ -598,14 +598,14 @@ class Namespace:
         get_bridge_port_map from all namespace DBs
         """
         if_br_oid_map = {}
-        for db_index in self.get_non_host_db_indexes(dbs):
+        for db_index in Namespace.get_non_host_db_indexes(dbs):
             if_br_oid_map_ns = port_util.get_bridge_port_map(dbs[db_index])
             if_br_oid_map.update(if_br_oid_map_ns)
         return if_br_oid_map
 
     @staticmethod
     def dbs_get_vlan_id_from_bvid(dbs, bvid):
-        for db_index in self.get_non_host_db_indexes(dbs):
+        for db_index in Namespace.get_non_host_db_indexes(dbs):
             dbs[db_index].connect('ASIC_DB')
             vlan_obj = dbs[db_index].keys('ASIC_DB', "ASIC_STATE:SAI_OBJECT_TYPE_VLAN:" + bvid)
             if vlan_obj is not None:

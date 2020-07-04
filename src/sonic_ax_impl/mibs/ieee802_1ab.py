@@ -516,7 +516,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         self.mgmt_ip_str = None
         self.pubsub = [None] * len(self.db_conn)
 
-        # map of if_idx/oid and db index 
+        # map of if_idx/oid and db index
         self.if_oid_namespace = {}
 
     def update_rem_if_mgmt(self, if_oid, if_name):
