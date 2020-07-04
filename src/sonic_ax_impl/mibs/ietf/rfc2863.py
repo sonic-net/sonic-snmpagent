@@ -98,10 +98,9 @@ class InterfaceMIBUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
-        self.if_counters = {
-            sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
-            for sai_id in self.if_id_map}
-
+        self.if_counters = \
+            {if_idx: self.db_conn[self.if_oid_namespace[if_idx]].get_all(
+                mibs.COUNTERS_DB, mibs.counter_table(self.oid_sai_map[if_idx]), blocking=True)
 
     def get_next(self, sub_id):
         """
@@ -186,11 +185,10 @@ class InterfaceMIBUpdater(MIBUpdater):
 
             return counter_value & mask
 
-        sai_id = self.oid_sai_map[oid]
         # Enum.name or table_name = 'name_of_the_table'
         _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
         try:
-            counter_value = self.if_counters[sai_id][_table_name]
+            counter_value = self.if_counters[oid][_table_name]
             # truncate to 32-bit counter (database implements 64-bit counters)
             counter_value = int(counter_value) & mask
             # done!

@@ -105,7 +105,7 @@ class TestSonicMIB(TestCase):
 
     def test_getnextpdu_exactmatch_asic1(self):
         # oid.include = 1
-        oid = ObjectIdentifier(20, 0, 1, 0, (1, 3, 6, 1, 2, 1, 17, 7, 1, 2, 2, 1, 2, 1000, 124, 254, 144, 128, 159, 8))
+        oid = ObjectIdentifier(20, 0, 1, 0, (1, 3, 6, 1, 2, 1, 17, 7, 1, 2, 2, 1, 2, 1000, 124, 254, 144, 128, 159, 16))
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=[oid]

@@ -304,7 +304,7 @@ def init_sync_d_queue_tables(db_conn):
 
     # Parse the queue_name_map and create the following maps:
     # port_queues_map -> {"if_index : queue_index" : sai_oid}
-    # queue_stat_map -> {queue stat table name : {counter name : value}}
+    # queue_stat_map -> {"if_index : queue stat table name" : {counter name : value}} 
     # port_queue_list_map -> {if_index: [sorted queue list]}
     port_queues_map = {}
     queue_stat_map = {}
@@ -320,7 +320,8 @@ def init_sync_d_queue_tables(db_conn):
         queue_stat_name = queue_table(sai_id)
         queue_stat = db_conn.get_all(COUNTERS_DB, queue_stat_name, blocking=False)
         if queue_stat is not None:
-            queue_stat_map[queue_stat_name] = queue_stat
+            queue_stat_key = queue_key(port_index, queue_stat_name)
+            queue_stat_map[queue_stat_key] = queue_stat
 
         if not port_queue_list_map.get(int(port_index)):
             port_queue_list_map[int(port_index)] = [int(queue_index)]
@@ -519,6 +520,7 @@ class Namespace:
         global db. First db in the list is global db.
         Ignore first global db to get interface tables if there
         are multiple namespaces.
+        if_id_map = {db_index: {sai_oid : if_name}}
         """
         for db_conn in Namespace.get_non_host_dbs(dbs):
             if_name_map_ns, \
@@ -528,7 +530,7 @@ class Namespace:
             oid_name_map_ns = init_sync_d_interface_tables(db_conn)
             if_name_map.update(if_name_map_ns)
             if_alias_map.update(if_alias_map_ns)
-            if_id_map.update(if_id_map_ns)
+            if_id_map[inst] = if_id_map_ns
             oid_sai_map.update(oid_sai_map_ns)
             oid_name_map.update(oid_name_map_ns)
 
@@ -580,20 +582,13 @@ class Namespace:
         return port_queues_map, queue_stat_map, port_queue_list_map
 
     @staticmethod
-    def dbs_get_bridge_port_map(dbs, db_name):
+    def dbs_get_bridge_port_map(dbs):
         """
         get_bridge_port_map from all namespace DBs
         """
         if_br_oid_map = {}
-        for db_conn in Namespace.get_non_host_dbs(dbs):
-            if_br_oid_map_ns = port_util.get_bridge_port_map(db_conn)
-            if_br_oid_map.update(if_br_oid_map_ns)
+        for inst in range(Namespace.get_start_idx_of_non_host(dbs), len(dbs)):
+            if_br_oid_map_ns = port_util.get_bridge_port_map(dbs[inst])
+            if_br_oid_map[inst] = if_br_oid_map_ns
         return if_br_oid_map
 
-    @staticmethod
-    def dbs_get_vlan_id_from_bvid(dbs, bvid):
-        for db_conn in Namespace.get_non_host_dbs(dbs):
-            db_conn.connect('ASIC_DB')
-            vlan_obj = db_conn.keys('ASIC_DB', "ASIC_STATE:SAI_OBJECT_TYPE_VLAN:" + bvid)
-            if vlan_obj is not None:
-                return port_util.get_vlan_id_from_bvid(db_conn, bvid)

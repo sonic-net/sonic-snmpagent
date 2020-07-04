@@ -79,8 +79,13 @@ class QueueStatUpdater(MIBUpdater):
         self.port_queues_map, self.queue_stat_map, self.port_queue_list_map = \
             Namespace.init_namespace_sync_d_queue_tables(self.db_conn)
 
-        self.queue_type_map = Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, "COUNTERS_QUEUE_TYPE_MAP", blocking=False)
-
+        """
+        COUNTERS_QUEUE_TYPE_MAP OID will be the same for all namespaces.
+        Get OID list from first namespace.
+        """
+        db_start_idx = Namespace.get_start_idx_of_non_host(self.db_conn)
+        self.queue_type_map = self.db_conn[db_start_idx].get_all(mibs.COUNTERS_DB, "COUNTERS_QUEUE_TYPE_MAP", blocking=False)
+ 
         self.update_data()
 
     def update_data(self):
@@ -90,7 +95,8 @@ class QueueStatUpdater(MIBUpdater):
         """
         for queue_key, sai_id in self.port_queues_map.items():
             queue_stat_name = mibs.queue_table(sai_id)
-            queue_stat = Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, queue_stat_name, blocking=False)
+            queue_stat_idx = mibs.queue_key(if_index, queue_stat_table_name)
+            queue_stat = self.queue_stat_map.get(queue_stat_idx, {})
             if queue_stat is not None:
                 self.queue_stat_map[queue_stat_name] = queue_stat
 
