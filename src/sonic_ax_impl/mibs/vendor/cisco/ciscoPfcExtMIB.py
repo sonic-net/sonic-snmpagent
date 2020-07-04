@@ -36,7 +36,7 @@ class PfcUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map, _ = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
         self.update_data()
 
@@ -47,8 +47,8 @@ class PfcUpdater(MIBUpdater):
         """
         Namespace.connect_all_dbs(self.db_conn, mibs.COUNTERS_DB)
         self.if_counters = \
-            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
-             for sai_id in self.if_id_map}
+            {if_idx: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(self.oid_sai_map[if_idx]), blocking=True)
+            for if_idx in self.oid_sai_map}
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
@@ -89,13 +89,12 @@ class PfcUpdater(MIBUpdater):
         :param counter_name: the redis table (either IntEnum or string literal) to query.
         :return: the counter for the respective sub_id/table.
         """
-        sai_id = self.oid_sai_map[oid]
 
         # Enum.name or counter_name = 'name_of_the_table'
         _counter_name = bytes(getattr(counter_name, 'name', counter_name), 'utf-8')
 
         try:
-            counter_value = self.if_counters[sai_id][_counter_name]
+            counter_value = self.if_counters[oid][_counter_name] 
             counter_value = int(counter_value) & 0xffffffffffffffff
             # done!
             return counter_value

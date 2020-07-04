@@ -373,7 +373,7 @@ def init_sync_d_queue_tables(db_conn):
 
     # Parse the queue_name_map and create the following maps:
     # port_queues_map -> {"if_index : queue_index" : sai_oid}
-    # queue_stat_map -> {queue stat table name : {counter name : value}}
+    # queue_stat_map -> {"if_index : queue stat table name" : {counter name : value}} 
     # port_queue_list_map -> {if_index: [sorted queue list]}
     port_queues_map = {}
     queue_stat_map = {}
@@ -389,7 +389,8 @@ def init_sync_d_queue_tables(db_conn):
         queue_stat_name = queue_table(sai_id)
         queue_stat = db_conn.get_all(COUNTERS_DB, queue_stat_name, blocking=False)
         if queue_stat is not None:
-            queue_stat_map[queue_stat_name] = queue_stat
+            queue_stat_key = queue_key(port_index, queue_stat_name)
+            queue_stat_map[queue_stat_key] = queue_stat
 
         if not port_queue_list_map.get(int(port_index)):
             port_queue_list_map[int(port_index)] = [int(queue_index)]
@@ -571,7 +572,22 @@ class Namespace:
             return dbs
         else:
             return dbs[1:]
-        
+
+    @staticmethod
+    def get_non_host_db_indexes(dbs):
+        """
+        From the list of all dbs, return the list of dbs
+        which will have interface related tables.
+        For single namespace db, return the single db.
+        For multiple namespace dbs, return db index ofall dbs
+        except the host namespace db which is the first db
+        in the list.
+        """
+        if len(dbs) == 1:
+            start_index = 0
+        else:
+            start_index = 1
+        return range(start_index, len(dbs))
 
     @staticmethod
     def init_namespace_sync_d_interface_tables(dbs):
@@ -580,6 +596,7 @@ class Namespace:
         if_id_map = {}
         oid_sai_map = {}
         oid_name_map = {}
+        if_oid_namespace = {}
 
         """
         all_ns_db - will have db_conn to all namespace DBs and
@@ -587,19 +604,21 @@ class Namespace:
         Ignore first global db to get interface tables if there
         are multiple namespaces.
         """
-        for db_conn in Namespace.get_non_host_dbs(dbs):
+        for db_index in Namespace.get_non_host_db_indexes(dbs):
             if_name_map_ns, \
             if_alias_map_ns, \
             if_id_map_ns, \
             oid_sai_map_ns, \
-            oid_name_map_ns = init_sync_d_interface_tables(db_conn)
+            oid_name_map_ns = init_sync_d_interface_tables(dbs[db_index])
             if_name_map.update(if_name_map_ns)
             if_alias_map.update(if_alias_map_ns)
             if_id_map.update(if_id_map_ns)
             oid_sai_map.update(oid_sai_map_ns)
             oid_name_map.update(oid_name_map_ns)
+            if_oid_namespace_ns = dict.fromkeys(oid_name_map_ns.keys(), db_index)
+            if_oid_namespace.update(if_oid_namespace_ns)
 
-        return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map
+        return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map, if_oid_namespace
 
     @staticmethod
     def init_namespace_sync_d_lag_tables(dbs):
@@ -679,20 +698,13 @@ class Namespace:
         return port_queues_map, queue_stat_map, port_queue_list_map
 
     @staticmethod
-    def dbs_get_bridge_port_map(dbs, db_name):
+    def dbs_get_bridge_port_map(dbs):
         """
         get_bridge_port_map from all namespace DBs
         """
         if_br_oid_map = {}
-        for db_conn in Namespace.get_non_host_dbs(dbs):
-            if_br_oid_map_ns = port_util.get_bridge_port_map(db_conn)
-            if_br_oid_map.update(if_br_oid_map_ns)
+        for inst in Namespace.get_non_host_db_indexes(dbs):
+            if_br_oid_map_ns = port_util.get_bridge_port_map(dbs[inst])
+            if_br_oid_map[inst] = if_br_oid_map_ns
         return if_br_oid_map
 
-    @staticmethod
-    def dbs_get_vlan_id_from_bvid(dbs, bvid):
-        for db_conn in Namespace.get_non_host_dbs(dbs):
-            db_conn.connect('ASIC_DB')
-            vlan_obj = db_conn.keys('ASIC_DB', "ASIC_STATE:SAI_OBJECT_TYPE_VLAN:" + bvid)
-            if vlan_obj is not None:
-                return port_util.get_vlan_id_from_bvid(db_conn, bvid)

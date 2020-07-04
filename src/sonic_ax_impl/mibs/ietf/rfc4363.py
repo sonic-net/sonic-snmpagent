@@ -22,17 +22,17 @@ class FdbUpdater(MIBUpdater):
         self.if_bpid_map = {}
         self.bvid_vlan_map = {}
 
-    def fdb_vlanmac(self, fdb):
+    def fdb_vlanmac(self, fdb, db_index):
         if 'vlan' in fdb:
             vlan_id = fdb["vlan"]
         elif 'bvid' in fdb:
             if fdb["bvid"] in self.bvid_vlan_map:
                 vlan_id = self.bvid_vlan_map[fdb["bvid"]]
             else:
-                vlan_id = Namespace.dbs_get_vlan_id_from_bvid(self.db_conn, fdb["bvid"])
+                vlan_id = port_util.get_vlan_id_from_bvid(self.db_conn[db_index], fdb["bvid"])
                 self.bvid_vlan_map[fdb["bvid"]] = vlan_id
         return (int(vlan_id),) + mac_decimals(fdb["mac"])
-          
+
     def reinit_data(self):
         """
         Subclass update interface information
@@ -41,9 +41,9 @@ class FdbUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map, _ = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
-        self.if_bpid_map = Namespace.dbs_get_bridge_port_map(self.db_conn, mibs.ASIC_DB)
+        self.if_bpid_map = Namespace.dbs_get_bridge_port_map(self.db_conn)
         self.bvid_vlan_map.clear()
 
     def update_data(self):
@@ -54,28 +54,33 @@ class FdbUpdater(MIBUpdater):
         self.vlanmac_ifindex_map = {}
         self.vlanmac_ifindex_list = []
 
-        fdb_strings = Namespace.dbs_keys(self.db_conn, mibs.ASIC_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:*")
-        if not fdb_strings:
-            return
+        Namespace.connect_all_dbs(self.db_conn, mibs.ASIC_DB)
 
-        for s in fdb_strings:
-            fdb_str = s.decode()
-            try:
-                fdb = json.loads(fdb_str.split(":", maxsplit=2)[-1])
-            except ValueError as e:  # includes simplejson.decoder.JSONDecodeError
-                mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': {}.".format(fdb_str, e))
-                break
-            Namespace.connect_all_dbs(self.db_conn, mibs.ASIC_DB)
-            ent = Namespace.dbs_get_all(self.db_conn, mibs.ASIC_DB, s, blocking=True)
-            # Example output: oid:0x3a000000000608
-            bridge_port_id = ent[b"SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"][6:]
-            if bridge_port_id not in self.if_bpid_map:
-                continue
-            port_id = self.if_bpid_map[bridge_port_id]
+        for db_index in Namespace.get_non_host_db_indexes(self.db_conn):
+            fdb_strings = self.db_conn[db_index].keys(mibs.ASIC_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:*")
+            if not fdb_strings:
+                 continue
+            for s in fdb_strings:
+                fdb_str = s.decode()
+                try:
+                    fdb = json.loads(fdb_str.split(":", maxsplit=2)[-1])
+                except ValueError as e:  # includes simplejson.decoder.JSONDecodeError
+                    mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': {}.".format(fdb_str, e))
+                    break
 
-            vlanmac = self.fdb_vlanmac(fdb)
-            self.vlanmac_ifindex_map[vlanmac] = mibs.get_index(self.if_id_map[port_id])
-            self.vlanmac_ifindex_list.append(vlanmac)
+                ent = self.db_conn[db_index].get_all(mibs.ASIC_DB, s, blocking=True)
+                # Example output: oid:0x3a000000000608
+                bridge_port_id = ent[b"SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"][6:]
+                #if_bpid_map = self.if_bpid_map[db_index]
+                if db_index not in self.if_bpid_map or db_index not in self.if_id_map:
+                    continue
+                if bridge_port_id not in self.if_bpid_map[db_index]:
+                    continue
+                port_id = self.if_bpid_map[db_index][bridge_port_id]
+
+                vlanmac = self.fdb_vlanmac(fdb, db_index)
+                self.vlanmac_ifindex_map[vlanmac] = mibs.get_index(self.if_id_map[db_index][port_id])
+                self.vlanmac_ifindex_list.append(vlanmac)
         self.vlanmac_ifindex_list.sort()
 
     def fdb_ifindex(self, sub_id):

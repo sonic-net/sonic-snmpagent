@@ -167,7 +167,7 @@ class LocPortUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map,_ = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
         self.mgmt_oid_name_map, \
         self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn[0])
@@ -402,7 +402,7 @@ class LLDPRemTableUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map, _ = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
         self.mgmt_oid_name_map, _ = mibs.init_mgmt_interface_tables(self.db_conn[0])
 
@@ -563,7 +563,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         """
         Subclass reinit data routine.
         """
-        _, _, _, _, self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        _, _, _, _, self.oid_name_map, _ = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
         self.mgmt_oid_name_map, _ = mibs.init_mgmt_interface_tables(self.db_conn[0])
 
