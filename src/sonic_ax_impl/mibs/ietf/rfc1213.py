@@ -116,8 +116,8 @@ class NextHopUpdater(MIBUpdater):
             ipnstr = routestr[len("ROUTE_TABLE:"):]
             if ipnstr == "0.0.0.0/0":
                 ipn = ipaddress.ip_network(ipnstr)
-                db_inst = route_entries[route_entry]
-                ent = self.db_conn[db_inst].get_all(mibs.APPL_DB, routestr, blocking=True)
+                db_index = route_entries[route_entry]
+                ent = self.db_conn[db_index].get_all(mibs.APPL_DB, routestr, blocking=True)
                 nexthops = ent[b"nexthop"].decode()
                 for nh in nexthops.split(','):
                     # TODO: if ipn contains IP range, create more sub_id here
@@ -326,18 +326,18 @@ class InterfacesUpdater(MIBUpdater):
         db = mibs.APPL_DB
         if oid in self.oid_lag_name_map:
             if_table = mibs.lag_entry_table(self.oid_lag_name_map[oid])
-            db_inst = self.oid_lag_namespace[oid]
+            db_index = self.oid_lag_namespace[oid]
         elif oid in self.mgmt_oid_name_map:
             if_table = mibs.mgmt_if_entry_table(self.mgmt_oid_name_map[oid])
-            db_inst =  0
+            db_index =  0
             db = mibs.CONFIG_DB
         elif oid in self.oid_name_map:
             if_table = mibs.if_entry_table(self.oid_name_map[oid])
-            db_inst = self.if_oid_namespace[oid]
+            db_index = self.if_oid_namespace[oid]
         else:
             return None
 
-        return self.db_conn[db_inst].get_all(db, if_table, blocking=True)
+        return self.db_conn[db_index].get_all(db, if_table, blocking=True)
 
     def _get_if_entry_state_db(self, sub_id):
         """

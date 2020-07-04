@@ -161,7 +161,7 @@ class LocPortUpdater(MIBUpdater):
         self.loc_port_data = {}
         self.pubsub = [None] * len(self.db_conn)
 
-        # map of if_idx/oid and db instance
+        # map of if_idx/oid and db index
         self.if_oid_namespace = {}
 
     def reinit_data(self):
@@ -182,7 +182,7 @@ class LocPortUpdater(MIBUpdater):
         self.oid_name_map.update(self.mgmt_oid_name_map)
         self.if_alias_map.update(self.mgmt_alias_map)
         """
-        mgmt interface idx will be mapped to host db or the first db instance.
+        mgmt interface idx will be mapped to host db or the first db index.
         """
         self.if_oid_namespace.update(dict.fromkeys(self.mgmt_oid_name_map.keys(), 0))
 
@@ -196,7 +196,7 @@ class LocPortUpdater(MIBUpdater):
         if not self.loc_port_data:
             logger.warning("0 - b'PORT_TABLE' is empty. No local port information could be retrieved.")
 
-    def _get_if_entry(self, if_name, db_inst):
+    def _get_if_entry(self, if_name, db_index):
         if_table = ""
 
         # Once PORT_TABLE will be moved to CONFIG DB
@@ -206,19 +206,19 @@ class LocPortUpdater(MIBUpdater):
             if_table = mibs.if_entry_table(if_name)
         elif if_name in self.mgmt_oid_name_map.values():
             if_table = mibs.mgmt_if_entry_table(if_name)
-            db_inst = 0
+            db_index = 0
             db = mibs.CONFIG_DB
         else:
             return None
 
-        return self.db_conn[db_inst].get_all(db, if_table, blocking=True)
+        return self.db_conn[db_index].get_all(db, if_table, blocking=True)
 
-    def update_interface_data(self, if_name, db_inst):
+    def update_interface_data(self, if_name, db_index):
         """
         Update data from the DB for a single interface
         """
 
-        loc_port_kvs = self._get_if_entry(if_name, db_inst)
+        loc_port_kvs = self._get_if_entry(if_name, db_index)
         if not loc_port_kvs:
             return
         self.loc_port_data.update({if_name: loc_port_kvs})
@@ -233,7 +233,7 @@ class LocPortUpdater(MIBUpdater):
             return None
         return self.if_range[right]
 
-    def _update_per_namespace_data(self, pubsub, db_inst):
+    def _update_per_namespace_data(self, pubsub, db_index):
         """
         Listen to updates in APP DB, update local cache
         """
@@ -244,7 +244,7 @@ class LocPortUpdater(MIBUpdater):
                 break
 
             if b"set" in data:
-                self.update_interface_data(interface.encode(), db_inst)
+                self.update_interface_data(interface.encode(), db_index)
 
     def update_data(self):
         for i in range(len(self.db_conn)):
@@ -405,7 +405,7 @@ class LLDPRemTableUpdater(MIBUpdater):
         # { sai_id -> { 'counter': 'value' } }
         self.lldp_counters = {}
 
-        # map of if_idx/oid and db instance
+        # map of if_idx/oid and db index
         self.if_oid_namespace = {}
 
     def reinit_data(self):
@@ -421,7 +421,7 @@ class LLDPRemTableUpdater(MIBUpdater):
 
         self.mgmt_oid_name_map, _ = mibs.init_mgmt_interface_tables(self.db_conn[0])
         """
-        mgmt interface idx will be mapped to host db or the first db instance.
+        mgmt interface idx will be mapped to host db or the first db index.
         """
         self.if_oid_namespace.update(dict.fromkeys(self.mgmt_oid_name_map.keys(), 0))
 
@@ -447,8 +447,8 @@ class LLDPRemTableUpdater(MIBUpdater):
         self.if_range = []
         self.lldp_counters = {}
         for if_oid, if_name in self.oid_name_map.items():
-            db_inst = self.if_oid_namespace[if_oid]
-            lldp_kvs = self.db_conn[db_inst].get_all(mibs.APPL_DB, mibs.lldp_entry_table(if_name))
+            db_index = self.if_oid_namespace[if_oid]
+            lldp_kvs = self.db_conn[db_index].get_all(mibs.APPL_DB, mibs.lldp_entry_table(if_name))
             if not lldp_kvs:
                 continue
             try:
@@ -516,12 +516,12 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         self.mgmt_ip_str = None
         self.pubsub = [None] * len(self.db_conn)
 
-        # map of if_idx/oid and db instance
+        # map of if_idx/oid and db index 
         self.if_oid_namespace = {}
 
     def update_rem_if_mgmt(self, if_oid, if_name):
-        db_inst = self.if_oid_namespace[if_oid]
-        lldp_kvs = self.db_conn[db_inst].get_all(mibs.APPL_DB, mibs.lldp_entry_table(if_name))
+        db_index = self.if_oid_namespace[if_oid]
+        lldp_kvs = self.db_conn[db_index].get_all(mibs.APPL_DB, mibs.lldp_entry_table(if_name))
         if not lldp_kvs or b'lldp_rem_man_addr' not in lldp_kvs:
             # this interfaces doesn't have remote lldp data, or the peer doesn't advertise his mgmt address
             return
@@ -593,7 +593,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
 
         self.oid_name_map.update(self.mgmt_oid_name_map)
         """
-        mgmt interface idx will be mapped to host db or the first db instance.
+        mgmt interface idx will be mapped to host db or the first db index.
         """
         self.if_oid_namespace.update(dict.fromkeys(self.mgmt_oid_name_map.keys(), 0))
 

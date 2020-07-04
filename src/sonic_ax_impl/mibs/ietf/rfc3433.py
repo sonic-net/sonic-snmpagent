@@ -293,7 +293,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
             return
 
         # update transceiver sensors cache
-        for transceiver_dom_entry, db_inst in self.transceiver_dom:
+        for transceiver_dom_entry, db_index in self.transceiver_dom:
             # extract interface name
             interface = transceiver_dom_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
             ifindex = port_util.get_index_from_str(interface)
@@ -305,7 +305,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
                 continue
 
             # get transceiver sensors from transceiver dom entry in STATE DB
-            transceiver_dom_entry_data = self.statedb[db_inst].get_all(mibs.STATE_DB,
+            transceiver_dom_entry_data = self.statedb[db_index].get_all(mibs.STATE_DB,
                                                               transceiver_dom_entry)
 
             if not transceiver_dom_entry_data:
