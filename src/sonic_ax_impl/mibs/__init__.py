@@ -1,5 +1,6 @@
 import pprint
 import re
+import os
 
 from swsssdk import SonicV2Connector
 from swsssdk import SonicDBConfig
@@ -58,7 +59,6 @@ RIF_DROPS_AGGR_MAP = {
 
 # IfIndex to OID multiplier for transceiver
 IFINDEX_SUB_ID_MULTIPLIER = 1000
-NET_NS_PATH = "/var/run/netns/"
 
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
 
