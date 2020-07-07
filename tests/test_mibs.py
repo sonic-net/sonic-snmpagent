@@ -12,14 +12,16 @@ from sonic_ax_impl import mibs
 class TestGetNextPDU(TestCase):
     @classmethod
     def setUpClass(cls):
-        pass
+        #For single namespace scenario, load database_config.json
+        tests.mock_tables.dbconnector.load_database_config() 
 
     def test_init_sync_d_lag_tables(self):
         db_conn = mibs.init_db()
 
         lag_name_if_name_map, \
         if_name_lag_name_map, \
-        oid_lag_name_map = mibs.init_sync_d_lag_tables(db_conn)
+        oid_lag_name_map, \
+        lag_sai_map = mibs.init_sync_d_lag_tables(db_conn)
 
         self.assertTrue(b"PortChannel04" in lag_name_if_name_map)
         self.assertTrue(lag_name_if_name_map[b"PortChannel04"] == [b"Ethernet124"])
@@ -28,3 +30,4 @@ class TestGetNextPDU(TestCase):
 
         self.assertTrue(b"PortChannel_Temp" in lag_name_if_name_map)
         self.assertTrue(lag_name_if_name_map[b"PortChannel_Temp"] == [])
+        self.assertTrue(lag_sai_map[b"PortChannel01"] == b"2000000000006")

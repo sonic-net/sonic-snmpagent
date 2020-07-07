@@ -1,3 +1,6 @@
+[![Total alerts](https://img.shields.io/lgtm/alerts/g/Azure/sonic-snmpagent.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Azure/sonic-snmpagent/alerts/)
+[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/Azure/sonic-snmpagent.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Azure/sonic-snmpagent/context:python)
+
 ## SNMP Subagent
 
 [AgentX](https://www.ietf.org/rfc/rfc2741.txt) implementation for SONiC Switch State Service. See the [SONiC website](http://azure.github.io/SONiC/) for more information on the SONiC project.

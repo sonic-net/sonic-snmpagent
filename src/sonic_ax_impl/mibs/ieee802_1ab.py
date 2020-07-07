@@ -7,6 +7,7 @@ from bisect import bisect_right
 
 from swsssdk import port_util
 from sonic_ax_impl import mibs, logger
+from sonic_ax_impl.mibs import Namespace
 from ax_interface import MIBMeta, SubtreeMIBEntry, MIBEntry, MIBUpdater, ValueType
 
 
@@ -70,7 +71,6 @@ class ManAddrConst:
     """
     man_addr_oid = (1, 3, 6, 1, 2, 1, 2, 2, 1, 1)
 
-
 def poll_lldp_entry_updates(pubsub):
     ret = None, None, None
     msg = pubsub.get_message()
@@ -102,7 +102,7 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
 
-        self.db_conn = mibs.init_db()
+        self.db_conn = Namespace.init_namespace_dbs()
         self.loc_chassis_data = {}
 
     def reinit_data(self):
@@ -110,8 +110,8 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
         Subclass update data routine.
         """
         # establish connection to application database.
-        self.db_conn.connect(mibs.APPL_DB)
-        self.loc_chassis_data = self.db_conn.get_all(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
+        self.loc_chassis_data = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
         self.loc_chassis_data[b'lldp_loc_sys_cap_supported'] = parse_sys_capability(self.loc_chassis_data[b'lldp_loc_sys_cap_supported'])
         self.loc_chassis_data[b'lldp_loc_sys_cap_enabled'] = parse_sys_capability(self.loc_chassis_data[b'lldp_loc_sys_cap_enabled'])
     def update_data(self):
@@ -139,9 +139,9 @@ class LocPortUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
 
-        self.db_conn = mibs.init_db()
+        self.db_conn = Namespace.init_namespace_dbs()
         # establish connection to application database.
-        self.db_conn.connect(mibs.APPL_DB)
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.if_name_map = {}
         self.if_alias_map = {}
         self.if_id_map = {}
@@ -156,7 +156,7 @@ class LocPortUpdater(MIBUpdater):
         # cache of port data
         # { if_name -> { 'key': 'value' } }
         self.loc_port_data = {}
-        self.pubsub = None
+        self.pubsub = [None] * len(self.db_conn)
 
     def reinit_data(self):
         """
@@ -166,10 +166,10 @@ class LocPortUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
         self.mgmt_oid_name_map, \
-        self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn)
+        self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn[0])
 
         # merge dataplane and mgmt ports
         self.oid_name_map.update(self.mgmt_oid_name_map)
@@ -199,7 +199,7 @@ class LocPortUpdater(MIBUpdater):
         else:
             return None
 
-        return self.db_conn.get_all(db, if_table, blocking=True)
+        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=True)
 
     def update_interface_data(self, if_name):
         """
@@ -221,24 +221,25 @@ class LocPortUpdater(MIBUpdater):
             return None
         return self.if_range[right]
 
-    def update_data(self):
+    def _update_per_namespace_data(self, pubsub):
         """
         Listen to updates in APP DB, update local cache
         """
-        if not self.pubsub:
-            redis_client = self.db_conn.get_redis_client(self.db_conn.APPL_DB)
-            db = self.db_conn.get_dbid(self.db_conn.APPL_DB)
-            self.pubsub = redis_client.pubsub()
-            self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
-
         while True:
-            data, interface, if_id = poll_lldp_entry_updates(self.pubsub)
+            data, interface, if_id = poll_lldp_entry_updates(pubsub)
 
             if not data:
                 break
 
             if b"set" in data:
                 self.update_interface_data(interface.encode())
+
+    def update_data(self):
+        for i in range(len(self.db_conn)):
+            if not self.pubsub[i]:
+                pattern = mibs.lldp_entry_table(b'*')
+                self.pubsub[i] = mibs.get_redis_pubsub(self.db_conn[i], self.db_conn[i].APPL_DB, pattern)
+            self._update_per_namespace_data(self.pubsub[i])
 
     def local_port_num(self, sub_id):
         if len(sub_id) == 0:
@@ -377,7 +378,7 @@ class LLDPRemTableUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
 
-        self.db_conn = mibs.init_db()
+        self.db_conn = Namespace.init_namespace_dbs()
         self.if_name_map = {}
         self.if_alias_map = {}
         self.if_id_map = {}
@@ -400,9 +401,9 @@ class LLDPRemTableUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
-        self.mgmt_oid_name_map, _ = mibs.init_mgmt_interface_tables(self.db_conn)
+        self.mgmt_oid_name_map, _ = mibs.init_mgmt_interface_tables(self.db_conn[0])
 
         self.oid_name_map.update(self.mgmt_oid_name_map)
 
@@ -421,12 +422,11 @@ class LLDPRemTableUpdater(MIBUpdater):
         Subclass update data routine. Updates available LLDP counters.
         """
         # establish connection to application database.
-        self.db_conn.connect(mibs.APPL_DB)
 
         self.if_range = []
         self.lldp_counters = {}
         for if_oid, if_name in self.oid_name_map.items():
-            lldp_kvs = self.db_conn.get_all(mibs.APPL_DB, mibs.lldp_entry_table(if_name))
+            lldp_kvs = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.lldp_entry_table(if_name))
             if not lldp_kvs:
                 continue
             try:
@@ -484,18 +484,18 @@ class LLDPRemManAddrUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
 
-        self.db_conn = mibs.init_db()
+        self.db_conn = Namespace.init_namespace_dbs()
         # establish connection to application database.
-        self.db_conn.connect(self.db_conn.APPL_DB)
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.if_range = []
         self.mgmt_ips = {}
         self.oid_name_map = {}
         self.mgmt_oid_name_map = {}
         self.mgmt_ip_str = None
-        self.pubsub = None
+        self.pubsub = [None] * len(self.db_conn)
 
     def update_rem_if_mgmt(self, if_oid, if_name):
-        lldp_kvs = self.db_conn.get_all(mibs.APPL_DB, mibs.lldp_entry_table(if_name))
+        lldp_kvs = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.lldp_entry_table(if_name))
         if not lldp_kvs or b'lldp_rem_man_addr' not in lldp_kvs:
             # this interfaces doesn't have remote lldp data, or the peer doesn't advertise his mgmt address
             return
@@ -532,18 +532,12 @@ class LLDPRemManAddrUpdater(MIBUpdater):
             return
         self.if_range.sort()
 
-    def update_data(self):
+    def _update_per_namespace_data(self, pubsub):
         """
         Listen to updates in APP DB, update local cache
         """
-        if not self.pubsub:
-            redis_client = self.db_conn.get_redis_client(self.db_conn.APPL_DB)
-            db = self.db_conn.get_dbid(self.db_conn.APPL_DB)
-            self.pubsub = redis_client.pubsub()
-            self.pubsub.psubscribe("__keyspace@{}__:{}".format(db, mibs.lldp_entry_table(b'*')))
-
         while True:
-            data, interface, if_index = poll_lldp_entry_updates(self.pubsub)
+            data, interface, if_index = poll_lldp_entry_updates(pubsub)
 
             if not data:
                 break
@@ -555,18 +549,26 @@ class LLDPRemManAddrUpdater(MIBUpdater):
                 self.if_range = [sub_oid for sub_oid in self.if_range if sub_oid[0] != if_index]
                 self.update_rem_if_mgmt(if_index, interface.encode())
 
+    def update_data(self):
+        for i in range(len(self.db_conn)):
+            if not self.pubsub[i]:
+                pattern = mibs.lldp_entry_table(b'*')
+                self.pubsub[i] = mibs.get_redis_pubsub(self.db_conn[i], self.db_conn[i].APPL_DB, pattern)
+            self._update_per_namespace_data(self.pubsub[i])
+
+
     def reinit_data(self):
         """
         Subclass reinit data routine.
         """
-        _, _, _, _, self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
+        _, _, _, _, self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
-        self.mgmt_oid_name_map, _ = mibs.init_mgmt_interface_tables(self.db_conn)
+        self.mgmt_oid_name_map, _ = mibs.init_mgmt_interface_tables(self.db_conn[0])
 
         self.oid_name_map.update(self.mgmt_oid_name_map)
 
         # establish connection to application database.
-        self.db_conn.connect(mibs.APPL_DB)
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
 
         self.if_range = []
         self.mgmt_ips = {}

@@ -5,6 +5,8 @@ from bisect import bisect_right
 import os
 
 from sonic_ax_impl import mibs
+from sonic_ax_impl import logger
+from sonic_ax_impl.mibs import Namespace
 from ax_interface.mib import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
 from ax_interface.encodings import ObjectIdentifier
 from ax_interface.util import mac_decimals, ip2tuple_v4
@@ -49,7 +51,8 @@ class DbTables(int, Enum):
 class IfTypes(int, Enum):
     """ IANA ifTypes """
     ethernetCsmacd = 6
-    ieee8023adLag = 161
+    l3ipvlan       = 136
+    ieee8023adLag  = 161
 
 class ArpUpdater(MIBUpdater):
     def __init__(self):
@@ -119,7 +122,7 @@ class ArpUpdater(MIBUpdater):
 class NextHopUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
-        self.db_conn = mibs.init_db()
+        self.db_conn = Namespace.init_namespace_dbs()
         self.nexthop_map = {}
         self.route_list = []
 
@@ -131,8 +134,7 @@ class NextHopUpdater(MIBUpdater):
         self.nexthop_map = {}
         self.route_list = []
 
-        self.db_conn.connect(mibs.APPL_DB)
-        route_entries = self.db_conn.keys(mibs.APPL_DB, "ROUTE_TABLE:*")
+        route_entries = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "ROUTE_TABLE:*")
         if not route_entries:
             return
 
@@ -141,7 +143,7 @@ class NextHopUpdater(MIBUpdater):
             ipnstr = routestr[len("ROUTE_TABLE:"):]
             if ipnstr == "0.0.0.0/0":
                 ipn = ipaddress.ip_network(ipnstr)
-                ent = self.db_conn.get_all(mibs.APPL_DB, routestr, blocking=True)
+                ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, routestr, blocking=True)
                 nexthops = ent[b"nexthop"].decode()
                 for nh in nexthops.split(','):
                     # TODO: if ipn contains IP range, create more sub_id here
@@ -178,13 +180,18 @@ class InterfacesUpdater(MIBUpdater):
 
     def __init__(self):
         super().__init__()
-        self.db_conn = mibs.init_db()
+        self.db_conn = Namespace.init_namespace_dbs() 
 
         self.lag_name_if_name_map = {}
         self.if_name_lag_name_map = {}
         self.oid_lag_name_map = {}
+        self.lag_sai_map = {}
         self.mgmt_oid_name_map = {}
         self.mgmt_alias_map = {}
+        self.vlan_oid_name_map = {}
+        self.vlan_name_map = {}
+        self.rif_port_map = {}
+        self.port_rif_map = {}
 
         # cache of interface counters
         self.if_counters = {}
@@ -194,6 +201,7 @@ class InterfacesUpdater(MIBUpdater):
         self.if_id_map = {}
         self.oid_sai_map = {}
         self.oid_name_map = {}
+        self.rif_counters = {}
 
     def reinit_data(self):
         """
@@ -203,10 +211,21 @@ class InterfacesUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = mibs.init_sync_d_interface_tables(self.db_conn)
-
+        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        """
+        db_conn - will have db_conn to all namespace DBs and
+        global db. First db in the list is global db.
+        Use first global db to get management interface table.
+        """
         self.mgmt_oid_name_map, \
-        self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn)
+        self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn[0])
+
+        self.vlan_name_map, \
+        self.vlan_oid_sai_map, \
+        self.vlan_oid_name_map = Namespace.init_namespace_sync_d_vlan_tables(self.db_conn)
+
+        self.rif_port_map, \
+        self.port_rif_map = Namespace.init_namespace_sync_d_rif_tables(self.db_conn)
 
     def update_data(self):
         """
@@ -214,16 +233,27 @@ class InterfacesUpdater(MIBUpdater):
         Pulls the table references for each interface.
         """
         self.if_counters = \
-            {sai_id: self.db_conn.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
-             for sai_id in self.if_id_map}
+            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
+            for sai_id in self.if_id_map}
+
+        rif_sai_ids = list(self.rif_port_map) + list(self.vlan_name_map)
+
+        self.rif_counters = \
+            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
+             for sai_id in rif_sai_ids}
+
+        if self.rif_counters: 
+            self.aggregate_counters()
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
-        self.oid_lag_name_map = mibs.init_sync_d_lag_tables(self.db_conn)
+        self.oid_lag_name_map, \
+        self.lag_sai_map = Namespace.init_namespace_sync_d_lag_tables(self.db_conn)
 
         self.if_range = sorted(list(self.oid_sai_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
-                               list(self.mgmt_oid_name_map.keys()))
+                               list(self.mgmt_oid_name_map.keys()) +
+                               list(self.vlan_oid_name_map.keys()))
         self.if_range = [(i,) for i in self.if_range]
 
     def get_next(self, sub_id):
@@ -267,6 +297,8 @@ class InterfacesUpdater(MIBUpdater):
             return self.oid_lag_name_map[oid]
         elif oid in self.mgmt_oid_name_map:
             return self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
+        elif oid in self.vlan_oid_name_map:
+            return self.vlan_oid_name_map[oid]
 
         return self.if_alias_map[self.oid_name_map[oid]]
 
@@ -276,7 +308,13 @@ class InterfacesUpdater(MIBUpdater):
         :param table_name: the redis table (either IntEnum or string literal) to query.
         :return: the counter for the respective sub_id/table.
         """
-        sai_id = self.oid_sai_map[oid]
+        sai_id = ''
+        if oid in self.oid_sai_map:
+            sai_id = self.oid_sai_map[oid]
+        elif oid in self.vlan_oid_sai_map:
+            sai_id = self.vlan_oid_sai_map[oid]
+        else:
+            logger.warning("Unexpected oid {}".format(oid))
         # Enum.name or table_name = 'name_of_the_table'
         _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
 
@@ -289,6 +327,29 @@ class InterfacesUpdater(MIBUpdater):
         except KeyError as e:
             mibs.logger.warning("SyncD 'COUNTERS_DB' missing attribute '{}'.".format(e))
             return None
+
+    def aggregate_counters(self):
+        """
+        For ports with l3 router interfaces l3 drops may be counted separately (RIF counters)
+        add l3 drops to l2 drop counters cache according to mapping
+
+        For l3vlan map l3 counters to l2 counters
+        """
+        for rif_sai_id, port_sai_id in self.rif_port_map.items():
+            if port_sai_id in self.if_id_map:
+                for port_counter_name, rif_counter_name in mibs.RIF_DROPS_AGGR_MAP.items():
+                    self.if_counters[port_sai_id][port_counter_name] = \
+                    int(self.if_counters[port_sai_id][port_counter_name]) + \
+                    int(self.rif_counters[rif_sai_id][rif_counter_name])
+
+        for vlan_sai_id in self.vlan_name_map:
+            for port_counter_name, rif_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
+                try:
+                    self.if_counters.setdefault(vlan_sai_id, {})
+                    self.if_counters[vlan_sai_id][port_counter_name] = \
+                    int(self.rif_counters[vlan_sai_id][rif_counter_name])
+                except KeyError as e:
+                    logger.warning("Not able to aggregate counters for {}: {}\n {}".format(vlan_sai_id, rif_counter_name, e))
 
     def get_counter(self, sub_id, table_name):
         """
@@ -309,7 +370,13 @@ class InterfacesUpdater(MIBUpdater):
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
                 counter_value += self._get_counter(mibs.get_index(lag_member), table_name)
-
+            sai_lag_id = self.lag_sai_map[self.oid_lag_name_map[oid]]
+            sai_lag_rif_id = self.port_rif_map[sai_lag_id]
+            if sai_lag_rif_id in self.rif_port_map:
+                table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
+                if table_name in mibs.RIF_DROPS_AGGR_MAP:
+                    rif_table_name = mibs.RIF_DROPS_AGGR_MAP[table_name]
+                    counter_value += int(self.rif_counters[sai_lag_rif_id][rif_table_name])
             # truncate to 32-bit counter
             return counter_value & 0x00000000ffffffff
         else:
@@ -339,12 +406,14 @@ class InterfacesUpdater(MIBUpdater):
         elif oid in self.mgmt_oid_name_map:
             if_table = mibs.mgmt_if_entry_table(self.mgmt_oid_name_map[oid])
             db = mibs.CONFIG_DB
+        elif oid in self.vlan_oid_name_map:
+            if_table = mibs.vlan_entry_table(self.vlan_oid_name_map[oid])
         elif oid in self.oid_name_map:
             if_table = mibs.if_entry_table(self.oid_name_map[oid])
         else:
             return None
 
-        return self.db_conn.get_all(db, if_table, blocking=True)
+        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=True)
 
     def _get_if_entry_state_db(self, sub_id):
         """
@@ -363,7 +432,7 @@ class InterfacesUpdater(MIBUpdater):
         else:
             return None
 
-        return self.db_conn.get_all(db, if_table, blocking=False)
+        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=False)
 
     def _get_status(self, sub_id, key):
         """
@@ -443,6 +512,7 @@ class InterfacesUpdater(MIBUpdater):
 
         ethernetCsmacd(6), -- for all ethernet-like interfaces,
                            -- regardless of speed, as per RFC3635
+        l3ipvlan(136)      -- Layer 3 Virtual LAN using IP 
         ieee8023adLag(161) -- IEEE 802.3ad Link Aggregate
         """
         oid = self.get_oid(sub_id)
@@ -451,6 +521,8 @@ class InterfacesUpdater(MIBUpdater):
 
         if oid in self.oid_lag_name_map:
             return IfTypes.ieee8023adLag
+        elif oid in self.vlan_oid_name_map:
+            return IfTypes.l3ipvlan
         else:
             return IfTypes.ethernetCsmacd
 

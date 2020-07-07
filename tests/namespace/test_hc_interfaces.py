@@ -19,11 +19,10 @@ from ax_interface.constants import PduTypes
 from ax_interface.pdu import PDU, PDUHeader
 from sonic_ax_impl.mibs.ietf import rfc2863
 
-
 class TestGetNextPDU(TestCase):
     @classmethod
     def setUpClass(cls):
-        tests.mock_tables.dbconnector.load_database_config()
+        tests.mock_tables.dbconnector.load_namespace_config()
         importlib.reload(rfc2863)
         cls.lut = MIBTable(rfc2863.InterfaceMIBObjects)
         for updater in cls.lut.updater_instances:
@@ -46,6 +45,23 @@ class TestGetNextPDU(TestCase):
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 1))))
         self.assertEqual(str(value0.data), 'snowflake')
+
+    def test_getnextpdu_lastifalias(self):
+        oid = ObjectIdentifier(10, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 9028))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.OCTET_STRING)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 9028))))
+        self.assertEqual(str(value0.data), 'backplane')
+
 
     def test_get_next_alias(self):
         if_alias = b'\x01\x06\x10\x00\x00\x00\x00o\x00\x01\xcc4\x00\x01\xcc5\x00\x00\x000\x07\x02\x00\x00\x00\x00\x00\x01\x00\x00\x00\x1f\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x11\x00\x00\x00}\x03\x02\x00\x00\x00\x00\x00\x01\x00\x00\x00\x1f\x00\x00\x00\x02'
@@ -75,7 +91,7 @@ class TestGetNextPDU(TestCase):
         """
         For a port with no description in the db the result should be ian empty string
         """
-        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 113))
+        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 9))
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=[oid]
@@ -87,14 +103,14 @@ class TestGetNextPDU(TestCase):
 
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
-        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 117))))
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 13))))
         self.assertEqual(str(value0.data), '')
 
     def test_low_speed(self):
         """
         For an interface with a speed inside the 32 bit counter returns the speed of the interface in Mbps
         """
-        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 113))
+        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 9))
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=[oid]
@@ -106,7 +122,7 @@ class TestGetNextPDU(TestCase):
 
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.GAUGE_32)
-        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 117))))
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 13))))
         self.assertEqual(value0.data, 1000)
 
     def test_high_speed(self):
@@ -132,7 +148,7 @@ class TestGetNextPDU(TestCase):
         """
         For a port with no speed in the db the result should be 40000
         """
-        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 117))
+        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 9004))
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=[oid]
@@ -144,14 +160,14 @@ class TestGetNextPDU(TestCase):
 
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.GAUGE_32)
-        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 121))))
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 9008))))
         self.assertEqual(value0.data, 40000)
 
     def test_no_description(self):
         """
         For a port with no speed in the db the result should be 40000
         """
-        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 113))
+        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 9004))
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=[oid]
@@ -165,7 +181,7 @@ class TestGetNextPDU(TestCase):
         # self.assertEqual(n, 7)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
-        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 117))))
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 9008))))
         self.assertEqual(str(value0.data), '')
 
     def test_mgmt_iface_name(self):
@@ -229,7 +245,7 @@ class TestGetNextPDU(TestCase):
         """
         For a port with no speed in the db the result should be 0
         """
-        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 6, 1))
+        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 6, 9028))
         get_pdu = GetPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=[oid]
@@ -240,8 +256,8 @@ class TestGetNextPDU(TestCase):
 
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.COUNTER_64)
-        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 6, 1))))
-        self.assertEqual(value0.data, 4321)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 6, 9028))))
+        self.assertEqual(value0.data, 40321)
 
     def test_in_octets_override(self):
         """
@@ -260,3 +276,7 @@ class TestGetNextPDU(TestCase):
         self.assertEqual(value0.type_, ValueType.COUNTER_64)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 6, 5))))
         self.assertEqual(value0.data, 654321)
+
+    @classmethod
+    def tearDownClass(cls):
+        tests.mock_tables.dbconnector.clean_up_config()

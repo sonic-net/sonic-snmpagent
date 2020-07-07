@@ -83,7 +83,6 @@ class AgentX(asyncio.Protocol):
         else:
             # TODO: some other administrative PDU
             logger.debug("admin_recv[{}]".format(pdu))
-            pass
 
     def data_received(self, data):
         """
