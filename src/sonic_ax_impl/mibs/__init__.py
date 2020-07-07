@@ -1,7 +1,5 @@
 import pprint
 import re
-from ctypes import cdll
-import os
 
 from swsssdk import SonicV2Connector
 from swsssdk import SonicDBConfig
@@ -10,10 +8,6 @@ from swsssdk.port_util import get_index, get_index_from_str
 from ax_interface.mib import MIBUpdater
 from ax_interface.util import oid2tuple
 from sonic_ax_impl import logger
-
-libc = cdll.LoadLibrary('libc.so.6')
-_setns = libc.setns
-CLONE_NEWNET = 0x40000000
 
 COUNTERS_PORT_NAME_MAP = b'COUNTERS_PORT_NAME_MAP'
 COUNTERS_QUEUE_NAME_MAP = b'COUNTERS_QUEUE_NAME_MAP'
@@ -67,31 +61,6 @@ IFINDEX_SUB_ID_MULTIPLIER = 1000
 NET_NS_PATH = "/var/run/netns/"
 
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
-
-def setns(fd, nstype):
-    if hasattr(fd, 'fileno'):
-        fd = fd.fileno()
-    _setns(fd, nstype)
-
-def get_netns_path(nspath=None, nsname=None, nspid=None):
-    if nsname:
-        if (os.path.isdir(NET_NS_PATH) == False):
-            return None
-        else:
-            nspath = NET_NS_PATH + nsname
-    elif nspid:
-        nspath = '/proc/%d/ns/net' % nspid
-    return nspath
-
-def get_namespace_list():
-    if (os.path.isdir(NET_NS_PATH) == False):
-        return None
-    else:
-        ns_list = os.listdir(NET_NS_PATH)
-        if ns_list is None:
-            return None
-        else:
-            return ns_list
 
 def chassis_info_table(chassis_name):
     """

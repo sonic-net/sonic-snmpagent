@@ -2,7 +2,6 @@ import ipaddress
 import python_arptable
 from enum import unique, Enum
 from bisect import bisect_right
-import os
 
 from sonic_ax_impl import mibs
 from sonic_ax_impl import logger
@@ -61,11 +60,10 @@ class ArpUpdater(MIBUpdater):
         self.arp_dest_list = []
         self.arp_dest_map = {}
         self.arp_dest_list = []
-        self.ns_list = mibs.get_namespace_list()
 
-    def get_arp_table(self):
-        arp_dest_map = {}
-        arp_dest_list = []
+    def update_data(self):
+        self.arp_dest_map = {}
+        self.arp_dest_list = []
         for entry in python_arptable.get_arp_table():
             dev = entry['Device']
             mac = entry['HW address']
@@ -82,32 +80,8 @@ class ArpUpdater(MIBUpdater):
             iptuple = ip2tuple_v4(ip)
 
             subid = (if_index,) + iptuple
-            arp_dest_map[subid] = machex
-            arp_dest_list.append(subid)
-        return arp_dest_map, arp_dest_list
-
-    def update_data(self):
-        self.arp_dest_map = {}
-        self.arp_dest_list = []
-        self.arp_dest_map, self.arp_dest_list = self.get_arp_table()
-        # For platform with multiple namespaces
-        # get arp table information from all namespace
-        if self.ns_list is not None:
-            # Get the current process namespace
-            current_fd = open(mibs.get_netns_path(nspid = os.getpid()))
-            for ns in self.ns_list:
-                dest_map = {}
-                dest_list = []
-                ns_fd = open(mibs.get_netns_path(nsname = ns))
-                # Change namespace temporarily
-                mibs.setns(ns_fd, mibs.CLONE_NEWNET)
-                dest_map, dest_list = self.get_arp_table()
-                self.arp_dest_map.update(dest_map)
-                self.arp_dest_list.extend(dest_list)
-                # Revert back to original namespace
-                mibs.setns(current_fd, mibs.CLONE_NEWNET)
-                ns_fd.close()
-            current_fd.close()
+            self.arp_dest_map[subid] = machex
+            self.arp_dest_list.append(subid)
         self.arp_dest_list.sort()
 
     def arp_dest(self, sub_id):
