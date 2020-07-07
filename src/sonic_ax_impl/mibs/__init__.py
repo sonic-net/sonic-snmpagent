@@ -62,6 +62,13 @@ NET_NS_PATH = "/var/run/netns/"
 
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
 
+
+def get_neigh_info(neigh_key):
+    neigh_key = neigh_key[neigh_key.find(':')+1:len(neigh_key)]
+    device = neigh_key[0:neigh_key.find(':')]
+    ip = neigh_key[neigh_key.find(':')+1:len(neigh_key)]
+    return device, ip
+
 def chassis_info_table(chassis_name):
     """
     :param: chassis_name: chassis name

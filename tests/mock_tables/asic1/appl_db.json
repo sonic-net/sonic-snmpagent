@@ -87,5 +87,13 @@
   "INTF_TABLE:PortChannel02:10.10.0.5/31": {
     "scope": "global",
     "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet8:10.0.0.6": {
+    "neigh": "52:54:00:b4:59:59",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet12:10.0.0.8": {
+    "neigh": "52:54:00:55:2d:fe",
+    "family": "IPv4"
   }
 }
