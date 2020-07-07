@@ -631,7 +631,7 @@ class Namespace:
         for db_index in Namespace.get_non_host_db_indexes(dbs):
             lag_name_if_name_map_ns, \
             if_name_lag_name_map_ns, \
-            oid_lag_name_map_ns, \ 
+            oid_lag_name_map_ns, \
             lag_sai_map_ns = init_sync_d_lag_tables(dbs[db_index])
             lag_name_if_name_map.update(lag_name_if_name_map_ns)
             if_name_lag_name_map.update(if_name_lag_name_map_ns)
