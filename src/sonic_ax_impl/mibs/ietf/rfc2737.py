@@ -181,7 +181,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
             interface = transceiver_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
             self._update_transceiver_cache(interface, namespace)
 
-    def _update_per_namespace_data(self, pubsub, db_instance):
+    def _update_per_namespace_data(self, pubsub, db_index):
         """
         Update cache.
         Here we listen to changes in STATE_DB TRANSCEIVER_INFO table
@@ -213,7 +213,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
                 continue
 
             if b"set" in data:
-                self._update_transceiver_cache(interface, db_instance)
+                self._update_transceiver_cache(interface, db_index)
             elif b"del" in data:
                 # remove deleted transceiver
                 remove_sub_ids = [mibs.get_transceiver_sub_id(ifindex)]
@@ -235,7 +235,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
                 self.pubsub[i] = mibs.get_redis_pubsub(self.statedb[i], self.statedb[i].STATE_DB, pattern)
             self._update_per_namespace_data(self.pubsub[i], i)
 
-    def _update_transceiver_cache(self, interface, db_instance):
+    def _update_transceiver_cache(self, interface, db_index):
         """
         Update data for single transceiver
         :param: interface: Interface name associated with transceiver
@@ -252,7 +252,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         insort_right(self.physical_entities, sub_id)
 
         # get transceiver information from transceiver info entry in STATE DB
-        transceiver_info = self.statedb[db_instance].get_all(mibs.STATE_DB,
+        transceiver_info = self.statedb[db_index].get_all(mibs.STATE_DB,
                                                 mibs.transceiver_info_table(interface))
 
         if not transceiver_info:
@@ -274,9 +274,9 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_description_map[sub_id] = get_transceiver_description(sfp_type, ifalias)
 
         # update transceiver sensor cache
-        self._update_transceiver_sensor_cache(interface, db_instance)
+        self._update_transceiver_sensor_cache(interface, db_index)
 
-    def _update_transceiver_sensor_cache(self, interface, db_instance):
+    def _update_transceiver_sensor_cache(self, interface, db_index):
         """
         Update sensor data for single transceiver
         :param: interface: Interface name associated with transceiver
@@ -286,7 +286,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         ifindex = port_util.get_index_from_str(interface)
 
         # get transceiver sensors from transceiver dom entry in STATE DB
-        transceiver_dom_entry = self.statedb[db_instance].get_all(mibs.STATE_DB,
+        transceiver_dom_entry = self.statedb[db_index].get_all(mibs.STATE_DB,
                                                      mibs.transceiver_dom_table(interface))
 
         if not transceiver_dom_entry:
