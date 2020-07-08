@@ -142,6 +142,7 @@ class LocPortUpdater(MIBUpdater):
         self.db_conn = Namespace.init_namespace_dbs()
         # establish connection to application database.
         Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
+        Namespace.connect_all_dbs(self.db_conn, mibs.CONFIG_DB)
         self.if_name_map = {}
         self.if_alias_map = {}
         self.if_id_map = {}
@@ -406,6 +407,7 @@ class LLDPRemTableUpdater(MIBUpdater):
         self.mgmt_oid_name_map, _ = mibs.init_mgmt_interface_tables(self.db_conn[0])
 
         self.oid_name_map.update(self.mgmt_oid_name_map)
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
 
     def get_next(self, sub_id):
         """

@@ -107,7 +107,7 @@ class NextHopUpdater(MIBUpdater):
         """
         self.nexthop_map = {}
         self.route_list = []
-
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         route_entries = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "ROUTE_TABLE:*")
         if not route_entries:
             return
@@ -206,6 +206,7 @@ class InterfacesUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
+        Namespace.connect_all_dbs(self.db_conn, mibs.COUNTERS_DB)
         self.if_counters = \
             {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
             for sai_id in self.if_id_map}
@@ -386,7 +387,7 @@ class InterfacesUpdater(MIBUpdater):
             if_table = mibs.if_entry_table(self.oid_name_map[oid])
         else:
             return None
-
+        Namespace.connect_all_dbs(self.db_conn, db)
         return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=True)
 
     def _get_if_entry_state_db(self, sub_id):
@@ -406,6 +407,7 @@ class InterfacesUpdater(MIBUpdater):
         else:
             return None
 
+        Namespace.connect_all_dbs(self.db_conn, db)
         return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=False)
 
     def _get_status(self, sub_id, key):

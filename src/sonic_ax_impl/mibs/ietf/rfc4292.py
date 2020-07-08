@@ -58,6 +58,7 @@ class RouteUpdater(MIBUpdater):
             ipnstr = routestr[len("ROUTE_TABLE:"):]
             if ipnstr == "0.0.0.0/0":
                 ipn = ipaddress.ip_network(ipnstr)
+                Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
                 ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, routestr, blocking=True)
                 nexthops = ent[b"nexthop"].decode()
                 ifnames = ent[b"ifname"].decode()

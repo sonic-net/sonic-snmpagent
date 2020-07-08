@@ -553,11 +553,9 @@ class Namespace:
         """
         result = {}
         for db_conn in dbs:
-            db_conn.connect(db_name)
-            if(db_conn.exists(db_name, _hash)):
-                ns_result = db_conn.get_all(db_name, _hash, *args, **kwargs)
-                if ns_result is not None:
-                    result.update(ns_result)
+            ns_result = db_conn.get_all(db_name, _hash, fail_on_exception=False, *args, **kwargs)
+            if ns_result is not None:
+                result.update(ns_result)
         return result
 
     @staticmethod
