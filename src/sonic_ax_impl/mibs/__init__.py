@@ -646,30 +646,36 @@ class Namespace:
     def init_namespace_sync_d_rif_tables(dbs):
         rif_port_map = {}
         port_rif_map = {}
+        port_namespace = {}
 
-        for db_conn in Namespace.get_non_host_dbs(dbs):
+        for db_index in Namespace.get_non_host_db_indexes(dbs):
             rif_port_map_ns, \
-            port_rif_map_ns = init_sync_d_rif_tables(db_conn)
+            port_rif_map_ns = init_sync_d_rif_tables(dbs[db_index])
             rif_port_map.update(rif_port_map_ns)
             port_rif_map.update(port_rif_map_ns)
+            port_namespace_ns = dict.fromkeys(rif_port_map_ns.keys(), db_index)
+            port_namespace.update(port_namespace_ns)
 
-        return rif_port_map, port_rif_map
+        return rif_port_map, port_rif_map, port_namespace
 
     @staticmethod
     def init_namespace_sync_d_vlan_tables(dbs):
         vlan_name_map = {}
         oid_sai_map = {}
         oid_name_map = {}
+        vlan_oid_namespace = {}
 
-        for db_conn in Namespace.get_non_host_dbs(dbs):
+        for db_index in Namespace.get_non_host_db_indexes(dbs):
             vlan_name_map_ns, \
             oid_sai_map_ns, \
-            oid_name_map_ns = init_sync_d_vlan_tables(db_conn)
+            oid_name_map_ns = init_sync_d_vlan_tables(dbs[db_index])
             vlan_name_map.update(vlan_name_map_ns)
             oid_sai_map.update(oid_sai_map_ns)
             oid_name_map.update(oid_name_map_ns)
+            vlan_oid_namespace_ns =  dict.fromkeys(oid_name_map.keys(), db_index)
+            vlan_oid_namespace.update(vlan_oid_namespace_ns)
 
-        return vlan_name_map, oid_sai_map, oid_name_map
+        return vlan_name_map, oid_sai_map, oid_name_map, vlan_oid_namespace
 
     @staticmethod
     def init_namespace_sync_d_queue_tables(dbs):

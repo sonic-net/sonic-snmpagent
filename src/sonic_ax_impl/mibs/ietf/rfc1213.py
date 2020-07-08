@@ -182,6 +182,8 @@ class InterfacesUpdater(MIBUpdater):
         # map of if_idx/oid and db instance
         self.if_oid_namespace = {}
         self.oid_lag_namespace = {}
+        self.vlan_oid_namespace = {}
+        self.port_namespace = {}
 
     def reinit_data(self):
         """
@@ -207,10 +209,12 @@ class InterfacesUpdater(MIBUpdater):
 
         self.vlan_name_map, \
         self.vlan_oid_sai_map, \
-        self.vlan_oid_name_map = Namespace.init_namespace_sync_d_vlan_tables(self.db_conn)
+        self.vlan_oid_name_map, \
+        self.vlan_oid_namespace = Namespace.init_namespace_sync_d_vlan_tables(self.db_conn)
 
         self.rif_port_map, \
-        self.port_rif_map = Namespace.init_namespace_sync_d_rif_tables(self.db_conn)
+        self.port_rif_map, \
+        self.port_namespace = Namespace.init_namespace_sync_d_rif_tables(self.db_conn)
 
     def update_data(self):
         """
@@ -223,11 +227,16 @@ class InterfacesUpdater(MIBUpdater):
 
         rif_sai_ids = list(self.rif_port_map) + list(self.vlan_name_map)
 
-        self.rif_counters = \
-            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
-             for sai_id in rif_sai_ids}
+        for sai_id in self.rif_port_map:
+            db_index = self.port_namespace[sai_id]
+            self.rif_counters[sai_id] = self.db_conn[db_index].get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
 
-        if self.rif_counters: 
+        for vlan_oid in self.vlan_oid_namespace:
+            db_index = self.vlan_oid_namespace[vlan_oid]
+            sai_id = self.vlan_oid_sai_map[vlan_oid]
+            self.rif_counters[sai_id] = self.db_conn[db_index].get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
+
+        if self.rif_counters:
             self.aggregate_counters()
 
         self.lag_name_if_name_map, \
