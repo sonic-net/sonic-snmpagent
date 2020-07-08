@@ -225,8 +225,6 @@ class InterfacesUpdater(MIBUpdater):
             {self.oid_sai_map[if_idx]: self.db_conn[self.if_oid_namespace[if_idx]].get_all(mibs.COUNTERS_DB, mibs.counter_table(self.oid_sai_map[if_idx]), blocking=True)
             for if_idx in self.oid_sai_map}
 
-        rif_sai_ids = list(self.rif_port_map) + list(self.vlan_name_map)
-
         for sai_id in self.rif_port_map:
             db_index = self.port_namespace[sai_id]
             self.rif_counters[sai_id] = self.db_conn[db_index].get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
