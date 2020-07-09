@@ -167,7 +167,7 @@ class LocPortUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map,_ = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map, _ = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
         self.mgmt_oid_name_map, \
         self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn[0])
@@ -200,7 +200,7 @@ class LocPortUpdater(MIBUpdater):
         else:
             return None
 
-        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=True)
+        return Namespace.dbs_get_all(self.db_conn, db, if_table)
 
     def update_interface_data(self, if_name):
         """

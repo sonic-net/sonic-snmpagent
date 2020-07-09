@@ -548,13 +548,13 @@ class Namespace:
         return result_keys
 
     @staticmethod
-    def dbs_get_all(dbs, db_name, _hash, *args, **kwargs):
+    def dbs_get_all(dbs, db_name, _hash):
         """
         db get_all function executed on global and all namespace DBs.
         """
         result = {}
         for db_conn in dbs:
-            ns_result = db_conn.get_all(db_name, _hash, fail_on_exception=False, *args, **kwargs)
+            ns_result = db_conn.get_all(db_name, _hash, blocking=False)
             if ns_result is not None:
                 result.update(ns_result)
         return result
@@ -612,7 +612,7 @@ class Namespace:
             oid_name_map_ns = init_sync_d_interface_tables(dbs[db_index])
             if_name_map.update(if_name_map_ns)
             if_alias_map.update(if_alias_map_ns)
-            if_id_map.update(if_id_map_ns)
+            if_id_map[db_index] = if_id_map_ns
             oid_sai_map.update(oid_sai_map_ns)
             oid_name_map.update(oid_name_map_ns)
             if_oid_namespace_ns = dict.fromkeys(oid_name_map_ns.keys(), db_index)
@@ -703,8 +703,8 @@ class Namespace:
         get_bridge_port_map from all namespace DBs
         """
         if_br_oid_map = {}
-        for inst in Namespace.get_non_host_db_indexes(dbs):
-            if_br_oid_map_ns = port_util.get_bridge_port_map(dbs[inst])
-            if_br_oid_map[inst] = if_br_oid_map_ns
+        for db_index in Namespace.get_non_host_db_indexes(dbs):
+            if_br_oid_map_ns = port_util.get_bridge_port_map(dbs[db_index])
+            if_br_oid_map[db_index] = if_br_oid_map_ns
         return if_br_oid_map
 

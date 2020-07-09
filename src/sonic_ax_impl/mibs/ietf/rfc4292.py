@@ -59,7 +59,7 @@ class RouteUpdater(MIBUpdater):
             if ipnstr == "0.0.0.0/0":
                 ipn = ipaddress.ip_network(ipnstr)
                 Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
-                ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, routestr, blocking=True)
+                ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, routestr)
                 nexthops = ent[b"nexthop"].decode()
                 ifnames = ent[b"ifname"].decode()
                 for nh, ifn in zip(nexthops.split(','), ifnames.split(',')):

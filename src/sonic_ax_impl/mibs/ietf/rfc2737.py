@@ -152,7 +152,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_model_name_map = {}
 
         # update interface maps
-        _, self.if_alias_map, _, _, _, _ = \
+        _, self.if_alias_map, _, _, _, _, _ = \
             Namespace.init_namespace_sync_d_interface_tables(Namespace.init_namespace_dbs())
 
         device_metadata = mibs.get_device_metadata(self.statedb[0])

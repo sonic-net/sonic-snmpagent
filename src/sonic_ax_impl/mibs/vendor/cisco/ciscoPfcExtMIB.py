@@ -27,6 +27,8 @@ class PfcUpdater(MIBUpdater):
         # cache of interface counters
         self.if_counters = {}
         self.if_range = []
+        
+        self.if_oid_namespace = {}
 
     def reinit_data(self):
         """
@@ -36,7 +38,8 @@ class PfcUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map, _ = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map, \
+        self.if_oid_namespace = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
         self.update_data()
 
@@ -47,7 +50,7 @@ class PfcUpdater(MIBUpdater):
         """
         Namespace.connect_all_dbs(self.db_conn, mibs.COUNTERS_DB)
         self.if_counters = \
-            {if_idx: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(self.oid_sai_map[if_idx]), blocking=True)
+            {if_idx: self.db_conn[self.if_oid_namespace[if_idx]].get_all(mibs.COUNTERS_DB, mibs.counter_table(self.oid_sai_map[if_idx]))
             for if_idx in self.oid_sai_map}
 
         self.lag_name_if_name_map, \
