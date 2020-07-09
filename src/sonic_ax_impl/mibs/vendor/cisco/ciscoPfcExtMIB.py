@@ -39,7 +39,7 @@ class PfcUpdater(MIBUpdater):
         self.if_id_map, \
         self.oid_sai_map, \
         self.oid_name_map, \
-        self.if_oid_namespace = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.if_oid_namespace, _ = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
         self.update_data()
 
@@ -55,7 +55,7 @@ class PfcUpdater(MIBUpdater):
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
-        self.oid_lag_name_map, _ = Namespace.init_namespace_sync_d_lag_tables(self.db_conn)
+        self.oid_lag_name_map, _, _ = Namespace.init_namespace_sync_d_lag_tables(self.db_conn)
 
         self.if_range = sorted(list(self.oid_sai_map.keys()) + list(self.oid_lag_name_map.keys()))
         self.if_range = [(i,) for i in self.if_range]

@@ -77,7 +77,7 @@ class QueueStatUpdater(MIBUpdater):
         self.if_id_map, \
         self.oid_sai_map, \
         self.oid_name_map, \
-        self.if_oid_namespace = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.if_oid_namespace, _ = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
         self.port_queues_map, self.queue_stat_map, self.port_queue_list_map = \
             Namespace.init_namespace_sync_d_queue_tables(self.db_conn)

@@ -324,6 +324,8 @@ def init_sync_d_lag_tables(db_conn):
     oid_lag_name_map = {}
     # { lag_name (SONiC) -> lag_oid (SAI) }
     lag_sai_map = {}
+    # { SAI id -> oid}
+    lag_sai_oid_map = {}
 
     db_conn.connect(APPL_DB)
     lag_entries = db_conn.keys(APPL_DB, b"LAG_TABLE:*")
@@ -334,6 +336,7 @@ def init_sync_d_lag_tables(db_conn):
     db_conn.connect(COUNTERS_DB)
     lag_sai_map = db_conn.get_all(COUNTERS_DB, b"COUNTERS_LAG_NAME_MAP")
     lag_sai_map = {name: sai_id.lstrip(b"oid:0x") for name, sai_id in lag_sai_map.items()}
+    lag_sai_oid_map = {sai_id : get_index(name) for name, sai_id in lag_sai_map.items()}
 
     for lag_entry in lag_entries:
         lag_name = lag_entry[len(b"LAG_TABLE:"):]
@@ -355,7 +358,7 @@ def init_sync_d_lag_tables(db_conn):
         if idx:
             oid_lag_name_map[idx] = if_name
 
-    return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map
+    return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map, lag_sai_oid_map
 
 def init_sync_d_queue_tables(db_conn):
     """
@@ -597,6 +600,7 @@ class Namespace:
         oid_sai_map = {}
         oid_name_map = {}
         if_oid_namespace = {}
+        sai_oid_map = {}
 
         """
         all_ns_db - will have db_conn to all namespace DBs and
@@ -610,6 +614,8 @@ class Namespace:
             if_id_map_ns, \
             oid_sai_map_ns, \
             oid_name_map_ns = init_sync_d_interface_tables(dbs[db_index])
+            sai_oid_map_ns = {sai_id : oid  for oid, sai_id in oid_sai_map_ns.items()} 
+            sai_oid_map[db_index] = sai_oid_map_ns
             if_name_map.update(if_name_map_ns)
             if_alias_map.update(if_alias_map_ns)
             if_id_map[db_index] = if_id_map_ns
@@ -618,7 +624,7 @@ class Namespace:
             if_oid_namespace_ns = dict.fromkeys(oid_name_map_ns.keys(), db_index)
             if_oid_namespace.update(if_oid_namespace_ns)
 
-        return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map, if_oid_namespace
+        return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map, if_oid_namespace, sai_oid_map
 
     @staticmethod
     def init_namespace_sync_d_lag_tables(dbs):
@@ -627,6 +633,7 @@ class Namespace:
         if_name_lag_name_map = {}
         oid_lag_name_map = {}
         lag_sai_map = {}
+        lag_sai_oid_map = {}
 
         """
         all_ns_db - will have db_conn to all namespace DBs and
@@ -634,17 +641,19 @@ class Namespace:
         Ignore first global db to get lag tables if
         there are multiple namespaces.
         """
-        for db_conn in Namespace.get_non_host_dbs(dbs):
+        for db_index in Namespace.get_non_host_db_indexes(dbs):
             lag_name_if_name_map_ns, \
             if_name_lag_name_map_ns, \
             oid_lag_name_map_ns, \
-            lag_sai_map_ns = init_sync_d_lag_tables(db_conn)
+            lag_sai_map_ns, \
+            lag_sai_oid_map_ns = init_sync_d_lag_tables(dbs[db_index])
             lag_name_if_name_map.update(lag_name_if_name_map_ns)
             if_name_lag_name_map.update(if_name_lag_name_map_ns)
             oid_lag_name_map.update(oid_lag_name_map_ns)
             lag_sai_map.update(lag_sai_map_ns)
+            lag_sai_oid_map[db_index] = lag_sai_oid_map_ns 
 
-        return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map
+        return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map, lag_sai_oid_map
 
     @staticmethod
     def init_namespace_sync_d_rif_tables(dbs):
@@ -664,16 +673,19 @@ class Namespace:
         vlan_name_map = {}
         oid_sai_map = {}
         oid_name_map = {}
+        vlan_oid_namespace = {}
 
-        for db_conn in Namespace.get_non_host_dbs(dbs):
+        for db_index in Namespace.get_non_host_db_indexes(dbs):
             vlan_name_map_ns, \
             oid_sai_map_ns, \
-            oid_name_map_ns = init_sync_d_vlan_tables(db_conn)
-            vlan_name_map.update(vlan_name_map_ns)
+            oid_name_map_ns = init_sync_d_vlan_tables(dbs[db_index])
+            vlan_name_map[db_index] = vlan_name_map_ns
             oid_sai_map.update(oid_sai_map_ns)
             oid_name_map.update(oid_name_map_ns)
+            vlan_oid_namespace_ns = dict.fromkeys(oid_name_map_ns.keys(), db_index) 
+            vlan_oid_namespace.update(vlan_oid_namespace_ns)
 
-        return vlan_name_map, oid_sai_map, oid_name_map
+        return vlan_name_map, oid_sai_map, oid_name_map, vlan_oid_namespace
 
     @staticmethod
     def init_namespace_sync_d_queue_tables(dbs):

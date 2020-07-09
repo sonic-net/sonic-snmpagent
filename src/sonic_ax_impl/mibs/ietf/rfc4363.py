@@ -41,7 +41,7 @@ class FdbUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map, _ = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map, _, _ = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
         self.if_bpid_map = Namespace.dbs_get_bridge_port_map(self.db_conn)
         self.bvid_vlan_map.clear()

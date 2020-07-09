@@ -21,7 +21,8 @@ class TestGetNextPDU(TestCase):
         lag_name_if_name_map, \
         if_name_lag_name_map, \
         oid_lag_name_map, \
-        lag_sai_map = mibs.init_sync_d_lag_tables(db_conn)
+        lag_sai_map, \
+        lag_sai_oid_map = mibs.init_sync_d_lag_tables(db_conn)
 
         self.assertTrue(b"PortChannel04" in lag_name_if_name_map)
         self.assertTrue(lag_name_if_name_map[b"PortChannel04"] == [b"Ethernet124"])

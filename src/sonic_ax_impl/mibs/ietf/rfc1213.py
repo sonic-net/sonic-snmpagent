@@ -176,7 +176,12 @@ class InterfacesUpdater(MIBUpdater):
         self.oid_sai_map = {}
         self.oid_name_map = {}
         self.rif_counters = {}
+
         self.if_oid_namespace = {}
+        self.vlan_oid_sai_map = {}
+        self.vlan_oid_namespace = {}
+        self.lag_sai_oid_map = {}
+        self.sai_oid_map = {}
 
     def reinit_data(self):
         """
@@ -187,7 +192,8 @@ class InterfacesUpdater(MIBUpdater):
         self.if_id_map, \
         self.oid_sai_map, \
         self.oid_name_map, \
-        self.if_oid_namespace = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.if_oid_namespace, \
+        self.sai_oid_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
         """
         db_conn - will have db_conn to all namespace DBs and
         global db. First db in the list is global db.
@@ -198,26 +204,36 @@ class InterfacesUpdater(MIBUpdater):
 
         self.vlan_name_map, \
         self.vlan_oid_sai_map, \
-        self.vlan_oid_name_map = Namespace.init_namespace_sync_d_vlan_tables(self.db_conn)
-
-        self.rif_port_map, \
-        self.port_rif_map = Namespace.init_namespace_sync_d_rif_tables(self.db_conn)
+        self.vlan_oid_name_map, \
+        self.vlan_oid_namespace = Namespace.init_namespace_sync_d_vlan_tables(self.db_conn)
+        
+        for db_index in Namespace.get_non_host_db_indexes(self.db_conn):
+            self.rif_port_map[db_index], \
+            self.port_rif_map[db_index] = mibs.init_sync_d_rif_tables(self.db_conn[db_index])
 
     def update_data(self):
         """
         Update redis (caches config)
         Pulls the table references for each interface.
         """
-        Namespace.connect_all_dbs(self.db_conn, mibs.COUNTERS_DB)
         self.if_counters = \
             {if_idx: self.db_conn[self.if_oid_namespace[if_idx]].get_all(mibs.COUNTERS_DB, mibs.counter_table(self.oid_sai_map[if_idx]))
             for if_idx in self.oid_sai_map}
 
-        rif_sai_ids = list(self.rif_port_map) + list(self.vlan_name_map)
+        for oid in self.vlan_oid_sai_map:
+            db_index = self.vlan_oid_namespace[oid]
+            self.rif_counters[oid] = self.db_conn[db_index].get_all(mibs.COUNTERS_DB, mibs.counter_table(self.vlan_oid_sai_map[oid]), blocking=True)
+            
 
-        self.rif_counters = \
-            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
-             for sai_id in rif_sai_ids}
+        for db_index in self.rif_port_map:
+            for rif_sai_id in self.rif_port_map[db_index]:
+                if rif_sai_id in self.lag_sai_oid_map[db_index]:
+                    if_idx = self.lag_sai_oid_map[db_index][rif_sai_id]
+                elif rif_sai_id in self.sai_oid_map[db_index]:
+                    if_idx = self.sai_oid_map[db_index][rif_sai_id]
+                else:
+                    continue
+                self.rif_counters[if_idx] = self.db_conn[db_index].get_all(mibs.COUNTERS_DB, mibs.counter_table(rif_sai_id), blocking=True)
 
         if self.rif_counters: 
             self.aggregate_counters()
@@ -225,7 +241,8 @@ class InterfacesUpdater(MIBUpdater):
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
         self.oid_lag_name_map, \
-        self.lag_sai_map = Namespace.init_namespace_sync_d_lag_tables(self.db_conn)
+        self.lag_sai_map, \
+        self.lag_sai_oid_map = Namespace.init_namespace_sync_d_lag_tables(self.db_conn)
 
         self.if_range = sorted(list(self.oid_sai_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
@@ -309,22 +326,20 @@ class InterfacesUpdater(MIBUpdater):
         """
         For ports with l3 router interfaces l3 drops may be counted separately (RIF counters)
         add l3 drops to l2 drop counters cache according to mapping
-
         For l3vlan map l3 counters to l2 counters
         """
-        for rif_sai_id, port_sai_id in self.rif_port_map.items():
-            if port_sai_id in self.if_id_map:
-                for port_counter_name, rif_counter_name in mibs.RIF_DROPS_AGGR_MAP.items():
-                    self.if_counters[port_sai_id][port_counter_name] = \
-                    int(self.if_counters[port_sai_id][port_counter_name]) + \
-                    int(self.rif_counters[rif_sai_id][rif_counter_name])
+        for oid in self.if_counters:
+            for port_counter_name, rif_counter_name in mibs.RIF_DROPS_AGGR_MAP.items():
+                if oid in self.rif_counters:
+                    self.if_counters[oid] = int(self.if_counters[oid][port_counter_name]) + \
+                    int(self.rif_counters[oid][rif_counter_name])
 
-        for vlan_sai_id in self.vlan_name_map:
+        for oid in self.vlan_oid_sai_map:
             for port_counter_name, rif_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
                 try:
-                    self.if_counters.setdefault(vlan_sai_id, {})
-                    self.if_counters[vlan_sai_id][port_counter_name] = \
-                    int(self.rif_counters[vlan_sai_id][rif_counter_name])
+                    self.if_counters.setdefault(oid, {})
+                    self.if_counters[oid][port_counter_name] = \
+                    int(self.rif_counters[oid][rif_counter_name])
                 except KeyError as e:
                     logger.warning("Not able to aggregate counters for {}: {}\n {}".format(vlan_sai_id, rif_counter_name, e))
 
@@ -347,13 +362,11 @@ class InterfacesUpdater(MIBUpdater):
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
                 counter_value += self._get_counter(mibs.get_index(lag_member), table_name)
-            sai_lag_id = self.lag_sai_map[self.oid_lag_name_map[oid]]
-            sai_lag_rif_id = self.port_rif_map[sai_lag_id]
-            if sai_lag_rif_id in self.rif_port_map:
+            if oid in self.rif_counters:
                 table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
                 if table_name in mibs.RIF_DROPS_AGGR_MAP:
                     rif_table_name = mibs.RIF_DROPS_AGGR_MAP[table_name]
-                    counter_value += int(self.rif_counters[sai_lag_rif_id][rif_table_name])
+                    counter_value += int(self.rif_counters[oid][if_table_name])
             # truncate to 32-bit counter
             return counter_value & 0x00000000ffffffff
         else:

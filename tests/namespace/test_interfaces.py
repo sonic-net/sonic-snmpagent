@@ -18,6 +18,7 @@ from ax_interface.pdu import PDU, PDUHeader
 from ax_interface.mib import MIBTable
 from sonic_ax_impl.mibs.ietf import rfc1213
 from sonic_ax_impl import mibs
+from sonic_ax_impl.mibs import Namespace
 
 class TestGetNextPDU(TestCase):
     @classmethod
@@ -26,12 +27,21 @@ class TestGetNextPDU(TestCase):
         importlib.reload(rfc1213)
         cls.lut = MIBTable(rfc1213.InterfacesMIB)
         for updater in cls.lut.updater_instances:
-           updater.update_data()
            updater.reinit_data()
            updater.update_data()
 
     def test_getnextpdu_noneifindex(self):
         # oid.include = 1
+        print(rfc1213.InterfacesMIB.if_updater.oid_sai_map)
+        print("hello2")
+        a,_,_,b,_,_,_=Namespace.init_namespace_sync_d_interface_tables(rfc1213.InterfacesMIB.if_updater.db_conn)
+        print(b)
+        print(rfc1213.InterfacesMIB.if_updater.vlan_oid_name_map)
+        print(rfc1213.InterfacesMIB.if_updater.oid_sai_map)
+        print(rfc1213.InterfacesMIB.if_updater.oid_lag_name_map)
+        print(rfc1213.InterfacesMIB.if_updater.mgmt_oid_name_map)
+        a,_,_,b,_= mibs.init_sync_d_interface_tables(rfc1213.InterfacesMIB.if_updater.db_conn[1])
+        print(a)
         oid = ObjectIdentifier(10, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 1))
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
