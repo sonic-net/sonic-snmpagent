@@ -31,8 +31,6 @@ class TestGetNextPDU(TestCase):
 
     def test_getnextpdu_noneifindex(self):
         # oid.include = 1
-        print("hello")
-        print(rfc1213.InterfacesMIB.if_updater.if_range)
         oid = ObjectIdentifier(10, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 1))
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
