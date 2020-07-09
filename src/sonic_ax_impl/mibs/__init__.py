@@ -331,7 +331,7 @@ def init_sync_d_lag_tables(db_conn):
     lag_entries = db_conn.keys(APPL_DB, b"LAG_TABLE:*")
 
     if not lag_entries:
-        return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map
+        return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map, lag_sai_oid_map
 
     db_conn.connect(COUNTERS_DB)
     lag_sai_map = db_conn.get_all(COUNTERS_DB, b"COUNTERS_LAG_NAME_MAP")
@@ -376,6 +376,9 @@ def init_sync_d_queue_tables(db_conn):
 
     # Parse the queue_name_map and create the following maps:
     # port_queues_map -> {"if_index : queue_index" : sai_oid}
+    # for multi-asic platforms, queue stat name which is a sai oid, will be unique only
+    # within a namespace or per asic. Include interface index in the key to make sure
+    # the keys are unique in the dict.
     # queue_stat_map -> {"if_index : queue stat table name" : {counter name : value}} 
     # port_queue_list_map -> {if_index: [sorted queue list]}
     port_queues_map = {}
