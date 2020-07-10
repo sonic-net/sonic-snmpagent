@@ -160,6 +160,17 @@ def mgmt_if_entry_table_state_db(if_name):
 
     return b'MGMT_PORT_TABLE|' + if_name
 
+def get_sai_id_key(namespace, sai_id):
+    if namespace != "":
+        return str(namespace) + ':' + sai_id
+    else:
+        return sai_id
+
+def split_sai_id_key(sai_id_key):
+    if ':' in sai_id_key:
+        return sai_id_key.split(':')[0], sai_id_key.split(':')[1]
+    else:
+        return "", sai_id_key
 
 def config(**kwargs):
     global redis_kwargs
@@ -221,7 +232,8 @@ def init_sync_d_interface_tables(db_conn):
     if_name_map = {if_name: sai_id for if_name, sai_id in if_name_map.items() if \
                    (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode()) or \
                     re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name.decode()))}
-    if_id_map = {sai_id: if_name for sai_id, if_name in if_id_map.items() if \
+    # sai_id_key = namespace : sai_id
+    if_id_map = {get_sai_id_key(db_conn.namespace, sai_id): if_name for sai_id, if_name in if_id_map.items() if \
                  (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode()) or \
                   re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name.decode()))}
     logger.debug("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
