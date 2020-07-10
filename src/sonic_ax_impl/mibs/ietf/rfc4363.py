@@ -54,31 +54,28 @@ class FdbUpdater(MIBUpdater):
         self.vlanmac_ifindex_map = {}
         self.vlanmac_ifindex_list = []
 
-        for db in self.db_conn:
-            db.connect(mibs.ASIC_DB)
-            fdb_strings = db.keys(mibs.ASIC_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:*")
-            if not fdb_strings:
-                return
+        fdb_strings = Namespace.dbs_keys(self.db_conn, mibs.ASIC_DB, "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY:*")
+        if not fdb_strings:
+            return
 
-            for s in fdb_strings:
-                fdb_str = s.decode()
-                try:
-                    fdb = json.loads(fdb_str.split(":", maxsplit=2)[-1])
-                except ValueError as e:  # includes simplejson.decoder.JSONDecodeError
-                    mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': {}.".format(fdb_str, e))
-                    break
+        for s in fdb_strings:
+            fdb_str = s.decode()
+            try:
+                fdb = json.loads(fdb_str.split(":", maxsplit=2)[-1])
+            except ValueError as e:  # includes simplejson.decoder.JSONDecodeError
+                mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': {}.".format(fdb_str, e))
+                break
 
-                ent = db.get_all(mibs.ASIC_DB, s, blocking=True)
-                # Example output: oid:0x3a000000000608
-                bridge_port_id = ent[b"SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"][6:]
-                if bridge_port_id not in self.if_bpid_map:
-                    continue
-                port_id = self.if_bpid_map[bridge_port_id]
+            ent = Namespace.dbs_get_all(self.db_conn, mibs.ASIC_DB, s, blocking=True)
+            # Example output: oid:0x3a000000000608
+            bridge_port_id = ent[b"SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"][6:]
+            if bridge_port_id not in self.if_bpid_map:
+                continue
+            port_id = self.if_bpid_map[bridge_port_id]
 
-                vlanmac = self.fdb_vlanmac(fdb)
-                sai_id_key = mibs.get_sai_id_key(db.namespace, port_id)
-                self.vlanmac_ifindex_map[vlanmac] = mibs.get_index(self.if_id_map[sai_id_key])
-                self.vlanmac_ifindex_list.append(vlanmac)
+            vlanmac = self.fdb_vlanmac(fdb)
+            self.vlanmac_ifindex_map[vlanmac] = mibs.get_index(self.if_id_map[port_id])
+            self.vlanmac_ifindex_list.append(vlanmac)
         self.vlanmac_ifindex_list.sort()
 
     def fdb_ifindex(self, sub_id):

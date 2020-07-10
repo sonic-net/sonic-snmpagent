@@ -22,6 +22,7 @@ from sonic_ax_impl import mibs
 class TestGetNextPDU(TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.skipTest(cls, "Namespace not implemented")
         tests.mock_tables.dbconnector.load_namespace_config()
         importlib.reload(rfc1213)
         cls.lut = MIBTable(rfc1213.InterfacesMIB)

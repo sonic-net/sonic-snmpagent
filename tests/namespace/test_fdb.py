@@ -23,6 +23,7 @@ import sonic_ax_impl
 class TestSonicMIB(TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.skipTest(cls, "Namespace not implemented")
         tests.mock_tables.dbconnector.load_namespace_config()
         importlib.reload(rfc4363)
 

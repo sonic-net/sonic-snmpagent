@@ -99,12 +99,12 @@ class InterfaceMIBUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
-        for sai_id_key in self.if_id_map:
+        for sai_id_key in self.if_id_map.keys():
             namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
             if_idx = get_index_from_str(str(self.if_id_map[sai_id_key]))
             for db in self.db_conn:
                 if db.namespace == namespace:
-                    self.if_counters[if_idx] = db.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id))
+                    self.if_counters[if_idx] = db.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
 
     def get_next(self, sub_id):
         """
