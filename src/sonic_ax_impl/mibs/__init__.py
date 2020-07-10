@@ -564,12 +564,16 @@ class Namespace:
         db get_all function executed on global and all namespace DBs.
         """
         result = {}
+        Namespace.connect_all_dbs(dbs, db_name)
+        if len(dbs) == 1:
+            return dbs[0].get_all(db_name, _hash, *args, **kwargs)
         for db_conn in dbs:
-            db_conn.connect(db_name)
-            if(db_conn.exists(db_name, _hash)):
-                ns_result = db_conn.get_all(db_name, _hash, *args, **kwargs)
-                if ns_result is not None:
-                    result.update(ns_result)
+            # If there are multiple namespaces, _hash might not be 
+            # present in all namespace, ignore if not present in a
+            # specfic namespace.
+            ns_result = db_conn.get_all(db_name, _hash, blocking=False)
+            if ns_result is not None:
+                result.update(ns_result)
         return result
 
     @staticmethod
