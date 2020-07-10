@@ -229,8 +229,6 @@ class TestGetNextPDU(TestCase):
         """
         For a port with no speed in the db the result should be 0
         """
-        print("hello")
-        print(rfc2863.InterfaceMIBObjects.if_updater.if_counters[1])
         oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 6, 1))
         get_pdu = GetPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
