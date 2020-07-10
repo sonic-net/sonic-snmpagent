@@ -161,16 +161,21 @@ def mgmt_if_entry_table_state_db(if_name):
     return b'MGMT_PORT_TABLE|' + if_name
 
 def get_sai_id_key(namespace, sai_id):
-    if namespace != "":
-        return namespace.encode() + b':' + sai_id
+    sai_id = sai_id.decode()
+    if namespace != '':
+        key = namespace + ':' + sai_id
     else:
-        return sai_id
+        key = sai_id
+    return key.encode()
 
 def split_sai_id_key(sai_id_key):
-    if ':' in str(sai_id_key):
-        return sai_id_key.split(b':')[0].decode(), sai_id_key.split(b':')[1]
+    sai_id_key = sai_id_key.decode()
+    if ':' in sai_id_key:
+        namespace, sai_id = sai_id_key.split(':')
     else:
-        return "", sai_id_key
+        namespace = ''
+        sai_id = sai_id_key
+    return namespace, sai_id.encode()
 
 def config(**kwargs):
     global redis_kwargs
