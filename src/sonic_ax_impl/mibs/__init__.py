@@ -552,12 +552,12 @@ class Namespace:
         db get_all function executed on global and all namespace DBs.
         """
         result = {}
+        # If there are multiple namespaces, _hash might not be 
+        # present in all namespace, ignore if not present in a
+        # specfic namespace.
         if (len(dbs) > 1) : kwargs['blocking'] = False
         for db_conn in dbs:
             db_conn.connect(db_name)
-            # If there are multiple namespaces, _hash might not be 
-            # present in all namespace, ignore if not present in a
-            # specfic namespace.
             ns_result = db_conn.get_all(db_name, _hash, *args, **kwargs)
             if ns_result is not None:
                 result.update(ns_result)
