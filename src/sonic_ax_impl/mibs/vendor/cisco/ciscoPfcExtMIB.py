@@ -46,7 +46,7 @@ class PfcUpdater(MIBUpdater):
         Pulls the table references for each interface.
         """
         self.if_counters = \
-            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
+            {mibs.split_sai_id_key(sai_id)[1] : Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(mibs.split_sai_id_key(sai_id)[1]), blocking=True)
              for sai_id in self.if_id_map}
 
         self.lag_name_if_name_map, \

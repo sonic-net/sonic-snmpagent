@@ -162,13 +162,13 @@ def mgmt_if_entry_table_state_db(if_name):
 
 def get_sai_id_key(namespace, sai_id):
     if namespace != "":
-        return str(namespace) + ':' + sai_id
+        return namespace.encode() + b':' + sai_id
     else:
         return sai_id
 
 def split_sai_id_key(sai_id_key):
-    if ':' in sai_id_key:
-        return sai_id_key.split(':')[0], sai_id_key.split(':')[1]
+    if ':' in str(sai_id_key):
+        return sai_id_key.split(b':')[0].decode(), sai_id_key.split(b':')[1]
     else:
         return "", sai_id_key
 
@@ -564,16 +564,12 @@ class Namespace:
         db get_all function executed on global and all namespace DBs.
         """
         result = {}
-        Namespace.connect_all_dbs(dbs, db_name)
-        if len(dbs) == 1:
-            return dbs[0].get_all(db_name, _hash, *args, **kwargs)
         for db_conn in dbs:
-            # If there are multiple namespaces, _hash might not be 
-            # present in all namespace, ignore if not present in a
-            # specfic namespace.
-            ns_result = db_conn.get_all(db_name, _hash, blocking=False)
-            if ns_result is not None:
-                result.update(ns_result)
+            db_conn.connect(db_name)
+            if(db_conn.exists(db_name, _hash)):
+                ns_result = db_conn.get_all(db_name, _hash, *args, **kwargs)
+                if ns_result is not None:
+                    result.update(ns_result)
         return result
 
     @staticmethod
