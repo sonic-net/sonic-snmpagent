@@ -553,9 +553,12 @@ class Namespace:
         # present in all namespace, ignore if not present in a
         # specfic namespace.
         if len(dbs) > 1:
-            kwargs['blocking'] = False
+            tmp_kwargs = kwargs.copy()
+            tmp_kwargs['blocking'] = False
+        else:
+            tmp_kwargs = kwargs
         for db_conn in dbs:
-            ns_result = db_conn.get_all(db_name, _hash, *args, **kwargs)
+            ns_result = db_conn.get_all(db_name, _hash, *args, **tmp_kwargs)
             if ns_result is not None:
                 result.update(ns_result)
         return result
