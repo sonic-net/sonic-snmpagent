@@ -552,7 +552,8 @@ class Namespace:
         # If there are multiple namespaces, _hash might not be 
         # present in all namespace, ignore if not present in a
         # specfic namespace.
-        if len(dbs) > 1 : kwargs['blocking'] = False
+        if len(dbs) > 1: 
+            kwargs['blocking'] = False
         for db_conn in dbs:
             ns_result = db_conn.get_all(db_name, _hash, *args, **kwargs)
             if ns_result is not None:
