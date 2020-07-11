@@ -21,7 +21,8 @@ from sonic_ax_impl.mibs.vendor.cisco import ciscoPfcExtMIB
 class TestPfcPortCounters(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.skipTest(cls, "Namespace not implemented")
+        cls.skipTest(cls, "TODO: Need to update corresponding MIB implementation \
+                in the Snmp Agent for multiple namespaces/multi-asic")
         tests.mock_tables.dbconnector.load_namespace_config()
         importlib.reload(ciscoPfcExtMIB)
 
