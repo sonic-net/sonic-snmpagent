@@ -179,11 +179,11 @@ def split_sai_id_key(sai_id_key):
     Input - bytes
     Return namespace string and sai id in byte string.
     """
-    if b':' in sai_id_key:
-        namespace, sai_id = sai_id_key.split(b':')
-        return namespace.decode(), sai_id
-    else:
+    result = sai_id_key.split(b':')
+    if len(result) == 1:
         return '', sai_id_key
+    else:
+        return result[0].decode(), result[1]
 
 def config(**kwargs):
     global redis_kwargs
