@@ -7,7 +7,7 @@ import tests.mock_tables.dbconnector
 modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
-from sonic_ax_impl import mibs
+from sonic_ax_impl.mibs import Namespace
 
 class TestGetNextPDU(TestCase):
     @classmethod
@@ -16,12 +16,12 @@ class TestGetNextPDU(TestCase):
         tests.mock_tables.dbconnector.load_database_config() 
 
     def test_init_sync_d_lag_tables(self):
-        db_conn = mibs.init_db()
+        db_conn = Namespace.init_namespace_dbs()
 
         lag_name_if_name_map, \
         if_name_lag_name_map, \
         oid_lag_name_map, \
-        lag_sai_map = mibs.init_sync_d_lag_tables(db_conn)
+        lag_sai_map = Namespace.init_namespace_sync_d_lag_tables(db_conn)
 
         self.assertTrue(b"PortChannel04" in lag_name_if_name_map)
         self.assertTrue(lag_name_if_name_map[b"PortChannel04"] == [b"Ethernet124"])
