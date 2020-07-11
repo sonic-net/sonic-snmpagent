@@ -161,21 +161,30 @@ def mgmt_if_entry_table_state_db(if_name):
     return b'MGMT_PORT_TABLE|' + if_name
 
 def get_sai_id_key(namespace, sai_id):
-    sai_id = sai_id.decode()
+    """
+    inputs:
+    namespace - string
+    sai id - bytes
+    Return type:
+    bytes
+    Return value: namespace:sai id or sai id
+    """
     if namespace != '':
-        key = namespace + ':' + sai_id
+        sai_id_key =  namespace + ':' + sai_id.decode()
+        return sai_id_key.encode()
     else:
-        key = sai_id
-    return key.encode()
+        return sai_id
 
 def split_sai_id_key(sai_id_key):
-    sai_id_key = sai_id_key.decode()
-    if ':' in sai_id_key:
-        namespace, sai_id = sai_id_key.split(':')
+    """
+    Input - bytes
+    Return namespace string and sai id in byte string.
+    """
+    if b':' in sai_id_key:
+        namespace, sai_id = sai_id_key.split(b':')
+        return namespace.decode(), sai_id
     else:
-        namespace = ''
-        sai_id = sai_id_key
-    return namespace, sai_id.encode()
+        return '', sai_id
 
 def config(**kwargs):
     global redis_kwargs
@@ -237,6 +246,9 @@ def init_sync_d_interface_tables(db_conn):
     if_name_map = {if_name: sai_id for if_name, sai_id in if_name_map.items() if \
                    (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode()) or \
                     re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name.decode()))}
+    # As sai_id is not unique in multi-asic platform, concatenate it with
+    # namespace to get a unique key. Assuming that ':' is not present in namespace
+    # string or in sai id.
     # sai_id_key = namespace : sai_id
     if_id_map = {get_sai_id_key(db_conn.namespace, sai_id): if_name for sai_id, if_name in if_id_map.items() if \
                  (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode()) or \
