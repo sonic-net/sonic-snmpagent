@@ -160,6 +160,30 @@ def mgmt_if_entry_table_state_db(if_name):
 
     return b'MGMT_PORT_TABLE|' + if_name
 
+def get_sai_id_key(namespace, sai_id):
+    """
+    inputs:
+    namespace - string
+    sai id - bytes
+    Return type:
+    bytes
+    Return value: namespace:sai id or sai id
+    """
+    if namespace != '':
+        return  namespace.encode() + b':' + sai_id
+    else:
+        return sai_id
+
+def split_sai_id_key(sai_id_key):
+    """
+    Input - bytes
+    Return namespace string and sai id in byte string.
+    """
+    result = sai_id_key.split(b':')
+    if len(result) == 1:
+        return '', sai_id_key
+    else:
+        return result[0].decode(), result[1]
 
 def config(**kwargs):
     global redis_kwargs
@@ -218,7 +242,11 @@ def init_sync_d_interface_tables(db_conn):
     if_name_map = {if_name: sai_id for if_name, sai_id in if_name_map.items() if \
                    (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode()) or \
                     re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name.decode()))}
-    if_id_map = {sai_id: if_name for sai_id, if_name in if_id_map.items() if \
+    # As sai_id is not unique in multi-asic platform, concatenate it with
+    # namespace to get a unique key. Assuming that ':' is not present in namespace
+    # string or in sai id.
+    # sai_id_key = namespace : sai_id
+    if_id_map = {get_sai_id_key(db_conn.namespace, sai_id): if_name for sai_id, if_name in if_id_map.items() if \
                  (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode()) or \
                   re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name.decode()))}
     logger.debug("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
@@ -511,7 +539,7 @@ class RedisOidTreeUpdater(MIBUpdater):
 class Namespace:
     @staticmethod
     def init_namespace_dbs():
-        db_conn= []
+        db_conn = []
         SonicDBConfig.load_sonic_global_db_config()
         for namespace in SonicDBConfig.get_ns_list():
             db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
@@ -521,10 +549,20 @@ class Namespace:
         return db_conn
 
     @staticmethod
+    def get_namespace_db_map(dbs):
+        """
+        Return a map of namespace:db_conn
+        """
+        db_map = {}
+        for db_conn in dbs:
+            db_map[db_conn.namespace] = db_conn
+        return db_map
+
     def connect_namespace_dbs(dbs):
         list_of_dbs = [APPL_DB, COUNTERS_DB, CONFIG_DB, STATE_DB, ASIC_DB, SNMP_OVERLAY_DB]
         for db_name in list_of_dbs:
             Namespace.connect_all_dbs(dbs, db_name)
+
 
     @staticmethod
     def connect_all_dbs(dbs, db_name):
