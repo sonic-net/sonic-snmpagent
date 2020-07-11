@@ -170,8 +170,7 @@ def get_sai_id_key(namespace, sai_id):
     Return value: namespace:sai id or sai id
     """
     if namespace != '':
-        sai_id_key =  namespace + ':' + sai_id.decode()
-        return sai_id_key.encode()
+        return  namespace.encode() + b':' + sai_id
     else:
         return sai_id
 
@@ -184,7 +183,7 @@ def split_sai_id_key(sai_id_key):
         namespace, sai_id = sai_id_key.split(b':')
         return namespace.decode(), sai_id
     else:
-        return '', sai_id
+        return '', sai_id_key
 
 def config(**kwargs):
     global redis_kwargs
@@ -549,13 +548,23 @@ class RedisOidTreeUpdater(MIBUpdater):
 class Namespace:
     @staticmethod
     def init_namespace_dbs():
-        db_conn= []
+        db_conn = []
         SonicDBConfig.load_sonic_global_db_config()
         for namespace in SonicDBConfig.get_ns_list():
             db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
             db_conn.append(db)
 
         return db_conn
+
+    @staticmethod
+    def get_namespace_db_map(dbs):
+        """
+        Return a map of namespace:db_conn
+        """
+        db_map = {}
+        for db_conn in dbs:
+            db_map[db_conn.namespace] = db_conn
+        return db_map
 
     @staticmethod
     def connect_all_dbs(dbs, db_name):

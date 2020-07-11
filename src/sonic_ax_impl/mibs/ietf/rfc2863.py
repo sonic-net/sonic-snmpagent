@@ -68,6 +68,8 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.if_name_lag_name_map = {}
         self.oid_lag_name_map = {}
 
+        self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
+
     def reinit_data(self):
         """
         Subclass update interface information
@@ -102,9 +104,8 @@ class InterfaceMIBUpdater(MIBUpdater):
         for sai_id_key in self.if_id_map:
             namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
             if_idx = get_index_from_str(self.if_id_map[sai_id_key].decode())
-            for db in self.db_conn:
-                if db.namespace == namespace:
-                    self.if_counters[if_idx] = db.get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
+            self.if_counters[if_idx] = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB, \
+                    mibs.counter_table(sai_id), blocking=True)
 
     def get_next(self, sub_id):
         """
