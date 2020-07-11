@@ -558,11 +558,11 @@ class Namespace:
             db_map[db_conn.namespace] = db_conn
         return db_map
 
+    @staticmethod
     def connect_namespace_dbs(dbs):
         list_of_dbs = [APPL_DB, COUNTERS_DB, CONFIG_DB, STATE_DB, ASIC_DB, SNMP_OVERLAY_DB]
         for db_name in list_of_dbs:
             Namespace.connect_all_dbs(dbs, db_name)
-
 
     @staticmethod
     def connect_all_dbs(dbs, db_name):
