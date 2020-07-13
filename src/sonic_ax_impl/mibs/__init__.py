@@ -300,11 +300,17 @@ def init_sync_d_rif_tables(db_conn):
 
     if not rif_port_map:
         return {}, {}
-    port_rif_map = {port: rif for rif, port in rif_port_map.items()}
+    rif_port_map_updated = {}
+    port_rif_map = {}
+    for rif, port in rif_port_map.items():
+        rif_key = get_sai_id_key(db_conn.namespace, rif)
+        port_key = get_sai_id_key(db_conn.namespace, port)
+        rif_port_map_updated[rif_key] = port_key
+        port_rif_map[port_key] = rif_key
+
     logger.debug("Rif port map:\n" + pprint.pformat(rif_port_map, indent=2))
 
-    return rif_port_map, port_rif_map
-
+    return rif_port_map_updated, port_rif_map
 
 def init_sync_d_vlan_tables(db_conn):
     """
@@ -314,22 +320,28 @@ def init_sync_d_vlan_tables(db_conn):
 
     vlan_name_map = port_util.get_vlan_interface_oid_map(db_conn)
 
+    vlan_name_map_updated = {}
+
+    for sai_id in vlan_name_map:
+        sai_id_key = get_sai_id_key(db_conn.namespace, sai_id)
+        vlan_name_map_updated[sai_id_key] = vlan_name_map[sai_id]
+
     logger.debug("Vlan oid map:\n" + pprint.pformat(vlan_name_map, indent=2))
 
     # { OID -> sai_id }
-    oid_sai_map = {get_index(if_name): sai_id for sai_id, if_name in vlan_name_map.items()
+    oid_sai_map = {get_index(if_name): sai_id for sai_id, if_name in vlan_name_map_updated.items()
                    # only map the interface if it's a style understood to be a SONiC interface.
                    if get_index(if_name) is not None}
     logger.debug("OID sai map:\n" + pprint.pformat(oid_sai_map, indent=2))
 
     # { OID -> if_name (SONiC) }
-    oid_name_map = {get_index(if_name): if_name for sai_id, if_name in vlan_name_map.items()
+    oid_name_map = {get_index(if_name): if_name for sai_id, if_name in vlan_name_map_updated.items()
                    # only map the interface if it's a style understood to be a SONiC interface.
                    if get_index(if_name) is not None}
 
     logger.debug("OID name map:\n" + pprint.pformat(oid_name_map, indent=2))
 
-    return vlan_name_map, oid_sai_map, oid_name_map
+    return vlan_name_map_updated, oid_sai_map, oid_name_map
 
 
 def init_sync_d_lag_tables(db_conn):
@@ -346,7 +358,7 @@ def init_sync_d_lag_tables(db_conn):
     if_name_lag_name_map = {}
     # { OID -> lag_name (SONiC) }
     oid_lag_name_map = {}
-    # { lag_name (SONiC) -> lag_oid (SAI) }
+    # { lag_name (SONiC) -> namespace: lag_oid (SAI) }
     lag_sai_map = {}
 
     lag_entries = db_conn.keys(APPL_DB, b"LAG_TABLE:*")
@@ -355,7 +367,7 @@ def init_sync_d_lag_tables(db_conn):
         return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map
 
     lag_sai_map = db_conn.get_all(COUNTERS_DB, b"COUNTERS_LAG_NAME_MAP")
-    lag_sai_map = {name: sai_id.lstrip(b"oid:0x") for name, sai_id in lag_sai_map.items()}
+    lag_sai_map = {name: get_sai_id_key(db_conn.namespace, sai_id.lstrip(b"oid:0x")) for name, sai_id in lag_sai_map.items()}
 
     for lag_entry in lag_entries:
         lag_name = lag_entry[len(b"LAG_TABLE:"):]

@@ -9,6 +9,7 @@ from sonic_ax_impl.mibs import Namespace
 from ax_interface.mib import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
 from ax_interface.encodings import ObjectIdentifier
 from ax_interface.util import mac_decimals, ip2tuple_v4
+from swsssdk.port_util import get_index_from_str
 
 @unique
 class DbTables(int, Enum):
@@ -154,7 +155,7 @@ class InterfacesUpdater(MIBUpdater):
 
     def __init__(self):
         super().__init__()
-        self.db_conn = Namespace.init_namespace_dbs() 
+        self.db_conn = Namespace.init_namespace_dbs()
 
         self.lag_name_if_name_map = {}
         self.if_name_lag_name_map = {}
@@ -176,6 +177,7 @@ class InterfacesUpdater(MIBUpdater):
         self.oid_sai_map = {}
         self.oid_name_map = {}
         self.rif_counters = {}
+        self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
 
     def reinit_data(self):
         """
@@ -206,17 +208,19 @@ class InterfacesUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
-        self.if_counters = \
-            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
-            for sai_id in self.if_id_map}
+        for sai_id_key in self.if_id_map:
+            namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
+            if_idx = get_index_from_str(self.if_id_map[sai_id_key].decode())
+            self.if_counters[if_idx] = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB, \
+                    mibs.counter_table(sai_id), blocking=True)
 
         rif_sai_ids = list(self.rif_port_map) + list(self.vlan_name_map)
 
-        self.rif_counters = \
-            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
-             for sai_id in rif_sai_ids}
+        for sai_id_key in rif_sai_ids:
+            namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
+            self.rif_counters[sai_id_key] = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
 
-        if self.rif_counters: 
+        if self.rif_counters:
             self.aggregate_counters()
 
         self.lag_name_if_name_map, \
@@ -282,18 +286,11 @@ class InterfacesUpdater(MIBUpdater):
         :param table_name: the redis table (either IntEnum or string literal) to query.
         :return: the counter for the respective sub_id/table.
         """
-        sai_id = ''
-        if oid in self.oid_sai_map:
-            sai_id = self.oid_sai_map[oid]
-        elif oid in self.vlan_oid_sai_map:
-            sai_id = self.vlan_oid_sai_map[oid]
-        else:
-            logger.warning("Unexpected oid {}".format(oid))
         # Enum.name or table_name = 'name_of_the_table'
         _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
 
         try:
-            counter_value = self.if_counters[sai_id][_table_name]
+            counter_value = self.if_counters[oid][_table_name]
             # truncate to 32-bit counter (database implements 64-bit counters)
             counter_value = int(counter_value) & 0x00000000ffffffff
             # done!
@@ -311,16 +308,18 @@ class InterfacesUpdater(MIBUpdater):
         """
         for rif_sai_id, port_sai_id in self.rif_port_map.items():
             if port_sai_id in self.if_id_map:
+                if_idx = get_index_from_str(self.if_id_map[port_sai_id].decode())
                 for port_counter_name, rif_counter_name in mibs.RIF_DROPS_AGGR_MAP.items():
-                    self.if_counters[port_sai_id][port_counter_name] = \
-                    int(self.if_counters[port_sai_id][port_counter_name]) + \
+                    self.if_counters[if_idx][port_counter_name] = \
+                    int(self.if_counters[if_idx][port_counter_name]) + \
                     int(self.rif_counters[rif_sai_id][rif_counter_name])
 
         for vlan_sai_id in self.vlan_name_map:
             for port_counter_name, rif_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
                 try:
-                    self.if_counters.setdefault(vlan_sai_id, {})
-                    self.if_counters[vlan_sai_id][port_counter_name] = \
+                    if_idx = get_index_from_str(self.vlan_name_map[vlan_sai_id].decode())
+                    self.if_counters.setdefault(if_idx, {})
+                    self.if_counters[if_idx][port_counter_name] = \
                     int(self.rif_counters[vlan_sai_id][rif_counter_name])
                 except KeyError as e:
                     logger.warning("Not able to aggregate counters for {}: {}\n {}".format(vlan_sai_id, rif_counter_name, e))
