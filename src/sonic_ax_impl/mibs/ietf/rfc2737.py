@@ -37,10 +37,10 @@ class XcvrInfoDB(bytes, Enum):
     """
 
     TYPE              = b"type"
-    HARDWARE_REVISION = b"hardwarerev"
-    SERIAL_NUMBER     = b"serialnum"
-    MANUFACTURE_NAME  = b"manufacturename"
-    MODEL_NAME        = b"modelname"
+    HARDWARE_REVISION = b"hardware_rev"
+    SERIAL_NUMBER     = b"serial"
+    MANUFACTURE_NAME  = b"manufacturer"
+    MODEL_NAME        = b"model"
 
 
 # Map used to generate sensor description
