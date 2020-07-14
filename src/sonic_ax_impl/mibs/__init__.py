@@ -170,7 +170,7 @@ def get_sai_id_key(namespace, sai_id):
     Return value: namespace:sai id or sai id
     """
     if namespace != '':
-        return  namespace.encode() + b':' + sai_id
+        return namespace.encode() + b':' + sai_id
     else:
         return sai_id
 
