@@ -169,6 +169,7 @@ class InterfacesUpdater(MIBUpdater):
         self.if_id_map = {}
         self.oid_sai_map = {}
         self.oid_name_map = {}
+        # namespace : db connector
         self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
 
     def reinit_data(self):
