@@ -367,7 +367,8 @@ def init_sync_d_lag_tables(db_conn):
         return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map
 
     lag_sai_map = db_conn.get_all(COUNTERS_DB, b"COUNTERS_LAG_NAME_MAP")
-    lag_sai_map = {name: get_sai_id_key(db_conn.namespace, sai_id.lstrip(b"oid:0x")) for name, sai_id in lag_sai_map.items()}
+    for name, sai_id in lag_sai_map.items():
+        lag_sai_map[name] = get_sai_id_key(db_conn.namespace, sai_id.lstrip(b"oid:0x"))
 
     for lag_entry in lag_entries:
         lag_name = lag_entry[len(b"LAG_TABLE:"):]
