@@ -4,7 +4,6 @@ from bisect import bisect_right
 from sonic_ax_impl import mibs
 from ax_interface.mib import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
 from sonic_ax_impl.mibs import Namespace
-from swsssdk.port_util import get_index_from_str
 
 @unique
 class DbTables32(int, Enum):
@@ -103,7 +102,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         """
         for sai_id_key in self.if_id_map:
             namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
-            if_idx = get_index_from_str(self.if_id_map[sai_id_key].decode())
+            if_idx = mibs.get_index_from_str(self.if_id_map[sai_id_key])
             self.if_counters[if_idx] = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB, \
                     mibs.counter_table(sai_id), blocking=True)
 

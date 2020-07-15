@@ -74,7 +74,7 @@ class FdbUpdater(MIBUpdater):
             port_id = self.if_bpid_map[bridge_port_id]
 
             vlanmac = self.fdb_vlanmac(fdb)
-            self.vlanmac_ifindex_map[vlanmac] = mibs.get_index(self.if_id_map[port_id])
+            self.vlanmac_ifindex_map[vlanmac] = mibs.get_index_from_str(self.if_id_map[port_id])
             self.vlanmac_ifindex_list.append(vlanmac)
         self.vlanmac_ifindex_list.sort()
 

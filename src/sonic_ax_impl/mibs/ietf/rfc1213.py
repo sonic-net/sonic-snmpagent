@@ -9,7 +9,6 @@ from sonic_ax_impl.mibs import Namespace
 from ax_interface.mib import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
 from ax_interface.encodings import ObjectIdentifier
 from ax_interface.util import mac_decimals, ip2tuple_v4
-from swsssdk.port_util import get_index_from_str
 
 @unique
 class DbTables(int, Enum):
@@ -210,7 +209,7 @@ class InterfacesUpdater(MIBUpdater):
         """
         for sai_id_key in self.if_id_map:
             namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
-            if_idx = get_index_from_str(self.if_id_map[sai_id_key].decode())
+            if_idx = mibs.get_index_from_str(self.if_id_map[sai_id_key])
             self.if_counters[if_idx] = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB, \
                     mibs.counter_table(sai_id), blocking=True)
 
@@ -308,7 +307,7 @@ class InterfacesUpdater(MIBUpdater):
         """
         for rif_sai_id, port_sai_id in self.rif_port_map.items():
             if port_sai_id in self.if_id_map:
-                if_idx = get_index_from_str(self.if_id_map[port_sai_id].decode())
+                if_idx = mibs.get_index_from_str(self.if_id_map[port_sai_id])
                 for port_counter_name, rif_counter_name in mibs.RIF_DROPS_AGGR_MAP.items():
                     self.if_counters[if_idx][port_counter_name] = \
                     int(self.if_counters[if_idx][port_counter_name]) + \
@@ -317,7 +316,7 @@ class InterfacesUpdater(MIBUpdater):
         for vlan_sai_id in self.vlan_name_map:
             for port_counter_name, rif_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
                 try:
-                    if_idx = get_index_from_str(self.vlan_name_map[vlan_sai_id].decode())
+                    if_idx = mibs.get_index_from_str(self.vlan_name_map[vlan_sai_id].decode())
                     self.if_counters.setdefault(if_idx, {})
                     self.if_counters[if_idx][port_counter_name] = \
                     int(self.rif_counters[vlan_sai_id][rif_counter_name])

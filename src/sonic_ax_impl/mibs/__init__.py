@@ -246,7 +246,7 @@ def init_sync_d_interface_tables(db_conn):
     # namespace to get a unique key. Assuming that ':' is not present in namespace
     # string or in sai id.
     # sai_id_key = namespace : sai_id
-    if_id_map = {get_sai_id_key(db_conn.namespace, sai_id): if_name for sai_id, if_name in if_id_map.items() if \
+    if_id_map = {get_sai_id_key(db_conn.namespace, sai_id): if_name.decode() for sai_id, if_name in if_id_map.items() if \
                  (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode()) or \
                   re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name.decode()))}
     logger.debug("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
