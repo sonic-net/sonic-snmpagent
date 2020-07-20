@@ -1,10 +1,10 @@
 {
   "TRANSCEIVER_INFO|Ethernet8": {
     "type": "QSFP+",
-    "hardwarerev" : "A1",
-    "serialnum": "SERIAL_NUM",
-    "manufacturename": "VENDOR_NAME",
-    "modelname": "MODEL_NAME"
+    "hardware_rev": "A1",
+    "serial": "SERIAL_NUM",
+    "manufacturer": "VENDOR_NAME",
+    "model": "MODEL_NAME"
   },
   "TRANSCEIVER_DOM_SENSOR|Ethernet8": {
     "temperature": 30.39,
