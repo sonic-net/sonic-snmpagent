@@ -79,4 +79,8 @@
     "scope": "global",
     "family": "IPv4"
   }
+  "NEIGH_TABLE:eth0:240.127.1.1": {
+    "neigh": "00:a0:a5:7a:39:ea",
+    "family": "IPv4"
+  }
 }
