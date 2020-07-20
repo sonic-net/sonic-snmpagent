@@ -27,16 +27,9 @@ class TestSonicMIB(TestCase):
         importlib.reload(rfc1213)
         cls.lut = MIBTable(rfc1213.IpMib)
         for updater in cls.lut.updater_instances:
-            #updater.update_data()
+            updater.update_data()
             updater.reinit_data()
             updater.update_data()
-
-    # TODO: this test fails, possible reason maybe mock arptable
-    # def test_update(self):
-        # for updater in self.lut.updater_instances:
-            # updater.update_data()
-            # updater.reinit_data()
-            # updater.update_data()
 
     def test_getpdu(self):
         oid = ObjectIdentifier(20, 0, 0, 0, (1, 3, 6, 1, 2, 1, 4, 22, 1, 2, 10000, 10, 3, 146, 1))
@@ -145,6 +138,21 @@ class TestSonicMIB(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.NO_SUCH_INSTANCE)
 
+    def test_getpdu_noinstance_eth0_docker0(self):
+        oid = ObjectIdentifier(20, 0, 1, 0, (1, 3, 6, 1, 2, 1, 4, 22, 1, 2, 9, 240, 127, 1, 1))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        n = len(response.values)
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.NO_SUCH_INSTANCE)
+
     def test_getnextpdu_empty(self):
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
@@ -163,5 +171,4 @@ class TestSonicMIB(TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        tests.mock_tables.python_arptable.arp_filename = '/arp.txt'
         tests.mock_tables.dbconnector.clean_up_config()

@@ -10,8 +10,11 @@ import python_arptable
 
 # Backup original function
 _get_arp_table = getattr(python_arptable, 'get_arp_table')
-
-arp_filename = '/arp.txt'
+# Mock arp table for host arp information on mulit-asic plaform.
+# In multi-asic platform, the namespace ARP inforamtion is retrieved
+# from NEIGH_TABLE from namespace APP_DBs. Host arp information is
+# retrieved from kernel.
+arp_filename = '/host_arp.txt'
 
 # Monkey patch
 def get_arp_table():
