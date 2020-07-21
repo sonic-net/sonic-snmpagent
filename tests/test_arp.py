@@ -22,7 +22,6 @@ from sonic_ax_impl.main import SonicMIB
 class TestSonicMIB(TestCase):
     @classmethod
     def setUpClass(cls):
-        tests.mock_tables.python_arptable.arp_filename = '/arp.txt'
         cls.lut = MIBTable(SonicMIB)
         for updater in cls.lut.updater_instances:
             updater.update_data()
