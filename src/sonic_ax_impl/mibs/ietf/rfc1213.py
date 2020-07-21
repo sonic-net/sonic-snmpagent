@@ -76,7 +76,7 @@ class ArpUpdater(MIBUpdater):
         for neigh_key in self.neigh_key_list:
             neigh_str = neigh_key.decode()
             db_index = self.neigh_key_list[neigh_key]
-            neigh_info = self.db_conn[db_index].get_all(mibs.APPL_DB, neigh_key, blocking=True)
+            neigh_info = self.db_conn[db_index].get_all(mibs.APPL_DB, neigh_key, blocking=False)
             ip_family = neigh_info[b'family'].decode()
             if ip_family == "IPv4":
                 dev, ip = mibs.get_neigh_info(neigh_str)
