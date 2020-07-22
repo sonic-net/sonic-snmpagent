@@ -152,7 +152,7 @@ class InterfacesUpdater(MIBUpdater):
 
     def __init__(self):
         super().__init__()
-        self.db_conn = Namespace.init_namespace_dbs() 
+        self.db_conn = Namespace.init_namespace_dbs()
 
         self.lag_name_if_name_map = {}
         self.if_name_lag_name_map = {}
@@ -168,6 +168,7 @@ class InterfacesUpdater(MIBUpdater):
         self.if_id_map = {}
         self.oid_sai_map = {}
         self.oid_name_map = {}
+        self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
 
     def reinit_data(self):
         """
@@ -191,9 +192,11 @@ class InterfacesUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
-        self.if_counters = \
-            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
-            for sai_id in self.if_id_map}
+        for sai_id_key in self.if_id_map:
+            namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
+            if_idx = mibs.get_index_from_str(self.if_id_map[sai_id_key])
+            self.if_counters[if_idx] = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB, \
+                    mibs.counter_table(sai_id), blocking=True)
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
@@ -254,12 +257,11 @@ class InterfacesUpdater(MIBUpdater):
         :param table_name: the redis table (either IntEnum or string literal) to query.
         :return: the counter for the respective sub_id/table.
         """
-        sai_id = self.oid_sai_map[oid]
         # Enum.name or table_name = 'name_of_the_table'
         _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
 
         try:
-            counter_value = self.if_counters[sai_id][_table_name]
+            counter_value = self.if_counters[oid][_table_name]
             # truncate to 32-bit counter (database implements 64-bit counters)
             counter_value = int(counter_value) & 0x00000000ffffffff
             # done!

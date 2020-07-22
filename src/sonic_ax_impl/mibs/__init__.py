@@ -148,7 +148,7 @@ def get_sai_id_key(namespace, sai_id):
     Return value: namespace:sai id or sai id
     """
     if namespace != '':
-        return  namespace.encode() + b':' + sai_id
+        return namespace.encode() + b':' + sai_id
     else:
         return sai_id
 
@@ -213,20 +213,26 @@ def init_sync_d_interface_tables(db_conn):
     Initializes interface maps for SyncD-connected MIB(s).
     :return: tuple(if_name_map, if_id_map, oid_map, if_alias_map)
     """
+    if_id_map = {}
+    if_name_map = {}
 
     # { if_name (SONiC) -> sai_id }
     # ex: { "Ethernet76" : "1000000000023" }
-    if_name_map, if_id_map = port_util.get_interface_oid_map(db_conn)
-    if_name_map = {if_name: sai_id for if_name, sai_id in if_name_map.items() if \
-                   (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode()) or \
-                    re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name.decode()))}
+    if_name_map_util, if_id_map_util = port_util.get_interface_oid_map(db_conn)
+    for if_name, sai_id in if_name_map_util.items():
+        if_name_str = if_name.decode()
+        if (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name_str) or \
+                re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name_str)):
+            if_name_map[if_name] = sai_id
     # As sai_id is not unique in multi-asic platform, concatenate it with
     # namespace to get a unique key. Assuming that ':' is not present in namespace
     # string or in sai id.
     # sai_id_key = namespace : sai_id
-    if_id_map = {get_sai_id_key(db_conn.namespace, sai_id): if_name for sai_id, if_name in if_id_map.items() if \
-                 (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode()) or \
-                  re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name.decode()))}
+    for sai_id, if_name in if_id_map_util.items():
+        if_name = if_name.decode()
+        if (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name) or \
+                re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name)):
+            if_id_map[get_sai_id_key(db_conn.namespace, sai_id)] = if_name
     logger.debug("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
     logger.debug("Interface name map:\n" + pprint.pformat(if_id_map, indent=2))
 
