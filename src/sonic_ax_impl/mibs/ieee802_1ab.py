@@ -430,7 +430,7 @@ class LLDPRemTableUpdater(MIBUpdater):
             if not lldp_kvs:
                 continue
             try:
-                time_mark = int(lldp_kvs[b'lldp_rem_time_mark'])
+                time_mark = 0
                 remote_index = int(lldp_kvs[b'lldp_rem_index'])
                 self.if_range.append((time_mark,
                                       if_oid,
