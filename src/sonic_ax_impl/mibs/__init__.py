@@ -138,6 +138,30 @@ def mgmt_if_entry_table_state_db(if_name):
 
     return b'MGMT_PORT_TABLE|' + if_name
 
+def get_sai_id_key(namespace, sai_id):
+    """
+    inputs:
+    namespace - string
+    sai id - bytes
+    Return type:
+    bytes
+    Return value: namespace:sai id or sai id
+    """
+    if namespace != '':
+        return namespace.encode() + b':' + sai_id
+    else:
+        return sai_id
+
+def split_sai_id_key(sai_id_key):
+    """
+    Input - bytes
+    Return namespace string and sai id in byte string.
+    """
+    result = sai_id_key.split(b':')
+    if len(result) == 1:
+        return '', sai_id_key
+    else:
+        return result[0].decode(), result[1]
 
 def config(**kwargs):
     global redis_kwargs
@@ -189,19 +213,26 @@ def init_sync_d_interface_tables(db_conn):
     Initializes interface maps for SyncD-connected MIB(s).
     :return: tuple(if_name_map, if_id_map, oid_map, if_alias_map)
     """
-
-    # Make sure we're connected to COUNTERS_DB
-    db_conn.connect(COUNTERS_DB)
+    if_id_map = {}
+    if_name_map = {}
 
     # { if_name (SONiC) -> sai_id }
     # ex: { "Ethernet76" : "1000000000023" }
-    if_name_map, if_id_map = port_util.get_interface_oid_map(db_conn)
-    if_name_map = {if_name: sai_id for if_name, sai_id in if_name_map.items() if \
-                   (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode()) or \
-                    re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name.decode()))}
-    if_id_map = {sai_id: if_name for sai_id, if_name in if_id_map.items() if \
-                 (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name.decode()) or \
-                  re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name.decode()))}
+    if_name_map_util, if_id_map_util = port_util.get_interface_oid_map(db_conn)
+    for if_name, sai_id in if_name_map_util.items():
+        if_name_str = if_name.decode()
+        if (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name_str) or \
+                re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name_str)):
+            if_name_map[if_name] = sai_id
+    # As sai_id is not unique in multi-asic platform, concatenate it with
+    # namespace to get a unique key. Assuming that ':' is not present in namespace
+    # string or in sai id.
+    # sai_id_key = namespace : sai_id
+    for sai_id, if_name in if_id_map_util.items():
+        if_name = if_name.decode()
+        if (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name) or \
+                re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name)):
+            if_id_map[get_sai_id_key(db_conn.namespace, sai_id)] = if_name
     logger.debug("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
     logger.debug("Interface name map:\n" + pprint.pformat(if_id_map, indent=2))
 
@@ -232,7 +263,6 @@ def init_sync_d_interface_tables(db_conn):
                        .format(port_util.SONIC_ETHERNET_RE_PATTERN))
         logger.warning("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
 
-    db_conn.connect(APPL_DB)
 
     if_alias_map = dict()
 
@@ -293,9 +323,6 @@ def init_sync_d_queue_tables(db_conn):
     Initializes queue maps for SyncD-connected MIB(s).
     :return: tuple(port_queues_map, queue_stat_map)
     """
-
-    # Make sure we're connected to COUNTERS_DB
-    db_conn.connect(COUNTERS_DB)
 
     # { Port index : Queue index (SONiC) -> sai_id }
     # ex: { "1:2" : "1000000000023" }
@@ -452,13 +479,30 @@ class RedisOidTreeUpdater(MIBUpdater):
 class Namespace:
     @staticmethod
     def init_namespace_dbs():
-        db_conn= []
+        db_conn = []
         SonicDBConfig.load_sonic_global_db_config()
         for namespace in SonicDBConfig.get_ns_list():
             db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
             db_conn.append(db)
 
+        Namespace.connect_namespace_dbs(db_conn)
         return db_conn
+
+    @staticmethod
+    def get_namespace_db_map(dbs):
+        """
+        Return a map of namespace:db_conn
+        """
+        db_map = {}
+        for db_conn in dbs:
+            db_map[db_conn.namespace] = db_conn
+        return db_map
+
+    @staticmethod
+    def connect_namespace_dbs(dbs):
+        list_of_dbs = [APPL_DB, COUNTERS_DB, CONFIG_DB, STATE_DB, ASIC_DB, SNMP_OVERLAY_DB]
+        for db_name in list_of_dbs:
+            Namespace.connect_all_dbs(dbs, db_name)
 
     @staticmethod
     def connect_all_dbs(dbs, db_name):
@@ -472,7 +516,6 @@ class Namespace:
         """
         result_keys=[]
         for db_conn in dbs:
-            db_conn.connect(db_name)
             keys = db_conn.keys(db_name, pattern)
             if keys is not None:
                 result_keys.extend(keys)
@@ -484,12 +527,18 @@ class Namespace:
         db get_all function executed on global and all namespace DBs.
         """
         result = {}
+        # If there are multiple namespaces, _hash might not be 
+        # present in all namespace, ignore if not present in a
+        # specfic namespace.
+        if len(dbs) > 1:
+            tmp_kwargs = kwargs.copy()
+            tmp_kwargs['blocking'] = False
+        else:
+            tmp_kwargs = kwargs
         for db_conn in dbs:
-            db_conn.connect(db_name)
-            if(db_conn.exists(db_name, _hash)):
-                ns_result = db_conn.get_all(db_name, _hash, *args, **kwargs)
-                if ns_result is not None:
-                    result.update(ns_result)
+            ns_result = db_conn.get_all(db_name, _hash, *args, **tmp_kwargs)
+            if ns_result is not None:
+                result.update(ns_result)
         return result
 
     @staticmethod
@@ -522,6 +571,7 @@ class Namespace:
         are multiple namespaces.
         if_id_map = {db_index: {sai_oid : if_name}}
         """
+        Namespace.connect_namespace_dbs(dbs)
         for db_conn in Namespace.get_non_host_dbs(dbs):
             if_name_map_ns, \
             if_alias_map_ns, \
@@ -549,6 +599,7 @@ class Namespace:
         Ignore first global db to get lag tables if
         there are multiple namespaces.
         """
+        Namespace.connect_namespace_dbs(dbs)
         for db_conn in Namespace.get_non_host_dbs(dbs):
             lag_name_if_name_map_ns, \
             if_name_lag_name_map_ns, \
@@ -571,6 +622,7 @@ class Namespace:
         Ignore first global db to get queue tables if there
         are multiple namespaces.
         """
+        Namespace.connect_namespace_dbs(dbs)
         for db_conn in Namespace.get_non_host_dbs(dbs):
             port_queues_map_ns, \
             queue_stat_map_ns, \

@@ -67,6 +67,8 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.if_name_lag_name_map = {}
         self.oid_lag_name_map = {}
 
+        self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
+
     def reinit_data(self):
         """
         Subclass update interface information
@@ -98,9 +100,11 @@ class InterfaceMIBUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
-        self.if_counters = \
-            {if_idx: self.db_conn[self.if_oid_namespace[if_idx]].get_all(
-                mibs.COUNTERS_DB, mibs.counter_table(self.oid_sai_map[if_idx]), blocking=True)
+        for sai_id_key in self.if_id_map:
+            namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
+            if_idx = mibs.get_index_from_str(self.if_id_map[sai_id_key])
+            self.if_counters[if_idx] = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB, \
+                    mibs.counter_table(sai_id), blocking=True)
 
     def get_next(self, sub_id):
         """
