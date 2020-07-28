@@ -65,6 +65,7 @@ class QueueStatUpdater(MIBUpdater):
         self.mib_oid_list = []
 
         self.queue_type_map = {}
+        self.if_id_namespace = {}
 
     def reinit_data(self):
         """
@@ -76,15 +77,15 @@ class QueueStatUpdater(MIBUpdater):
         self.oid_sai_map, \
         self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
 
+        for sai_id_key, if_name in self.if_id_map.items():
+            namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
+            self.if_id_namespace[mibs.get_index_from_str(if_name)] = namespace
+
         self.port_queues_map, self.queue_stat_map, self.port_queue_list_map = \
             Namespace.init_namespace_sync_d_queue_tables(self.db_conn)
 
-        """
-        COUNTERS_QUEUE_TYPE_MAP OID will be the same for all namespaces.
-        Get OID list from first namespace.
-        """
-        db_start_idx = Namespace.get_start_idx_of_non_host(self.db_conn)
-        self.queue_type_map = self.db_conn[db_start_idx].get_all(mibs.COUNTERS_DB, "COUNTERS_QUEUE_TYPE_MAP", blocking=False)
+        for db_conn in Namespace.get_non_host_dbs(self.db_conn):
+            self.queue_type_map[db_conn.namespace] = db_conn.get_all(mibs.COUNTERS_DB, "COUNTERS_QUEUE_TYPE_MAP", blocking=False)
  
         self.update_data()
 
@@ -95,7 +96,8 @@ class QueueStatUpdater(MIBUpdater):
         """
         for queue_key, sai_id in self.port_queues_map.items():
             queue_stat_name = mibs.queue_table(sai_id)
-            queue_stat_idx = mibs.queue_key(if_index, queue_stat_table_name)
+            if_index, _ = queue_key.split(':')
+            queue_stat_idx = mibs.queue_key(if_index, queue_stat_name)
             queue_stat = self.queue_stat_map.get(queue_stat_idx, {})
             if queue_stat is not None:
                 self.queue_stat_map[queue_stat_name] = queue_stat
@@ -122,6 +124,7 @@ class QueueStatUpdater(MIBUpdater):
                 # Port does not has a queues, continue..
                 continue
             if_queues = self.port_queue_list_map[if_index]
+            namespace = self.if_id_namespace[if_index]
 
             # The first half of queue id is for ucast, and second half is for mcast
             # To simulate vendor OID, we wrap queues by half distance
@@ -131,8 +134,9 @@ class QueueStatUpdater(MIBUpdater):
                 # Get queue type and statistics
                 queue_sai_oid = self.port_queues_map[mibs.queue_key(if_index, queue)]
                 queue_stat_table_name = mibs.queue_table(queue_sai_oid)
-                queue_type = self.queue_type_map.get(queue_sai_oid)
-                queue_stat = self.queue_stat_map.get(queue_stat_table_name, {})
+                queue_stat_key = mibs.queue_key(if_index, queue_stat_table_name)
+                queue_type = self.queue_type_map[namespace].get(queue_sai_oid)
+                queue_stat = self.queue_stat_map.get(queue_stat_key, {})
 
                 # Add supported counters to MIBs list and store counters values
                 for (counter, counter_type), counter_mib_id in CounterMap.items():
