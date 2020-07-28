@@ -48,6 +48,15 @@ IFINDEX_SUB_ID_MULTIPLIER = 1000
 
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
 
+
+def get_neigh_info(neigh_key):
+    """
+    split neigh_key string of the format:
+    NEIGH_TABLE:device:ipv4_address
+    """
+    _, device, ip = neigh_key.split(':')
+    return device, ip
+
 def chassis_info_table(chassis_name):
     """
     :param: chassis_name: chassis name
@@ -518,6 +527,21 @@ class Namespace:
             keys = db_conn.keys(db_name, pattern)
             if keys is not None:
                 result_keys.extend(keys)
+        return result_keys
+
+    @staticmethod
+    def dbs_keys_namespace(dbs, db_name, pattern='*'):
+        """
+        dbs_keys_namespace function execute on global
+        and all namespace DBs. Provides a map of keys
+        and namespace(db index).
+        """
+        result_keys = {}
+        for db_index in range(len(dbs)):
+            keys = dbs[db_index].keys(db_name, pattern)
+            if keys is not None:
+                keys_ns = dict.fromkeys(keys, db_index)
+                result_keys.update(keys_ns)
         return result_keys
 
     @staticmethod

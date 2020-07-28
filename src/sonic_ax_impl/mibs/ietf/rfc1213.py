@@ -54,32 +54,66 @@ class IfTypes(int, Enum):
 class ArpUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
+        self.db_conn = Namespace.init_namespace_dbs()
         self.arp_dest_map = {}
         self.arp_dest_list = []
         self.arp_dest_map = {}
         self.arp_dest_list = []
+        self.neigh_key_list = {}
 
-    def update_data(self):
-        self.arp_dest_map = {}
-        self.arp_dest_list = []
+    def reinit_data(self):
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
+        self.neigh_key_list = Namespace.dbs_keys_namespace(self.db_conn, mibs.APPL_DB, "NEIGH_TABLE:*")
+
+    def _update_from_arptable(self):
         for entry in python_arptable.get_arp_table():
             dev = entry['Device']
             mac = entry['HW address']
             ip = entry['IP address']
+            self._update_arp_info(dev, mac, ip)
 
-            if_index = mibs.get_index_from_str(dev)
-            if if_index is None: continue
+    def _update_from_db(self):
+        for neigh_key in self.neigh_key_list:
+            neigh_str = neigh_key.decode()
+            db_index = self.neigh_key_list[neigh_key]
+            neigh_info = self.db_conn[db_index].get_all(mibs.APPL_DB, neigh_key, blocking=False)
+            if neigh_info is None:
+                continue
+            ip_family = neigh_info[b'family'].decode()
+            if ip_family == "IPv4":
+                dev, ip = mibs.get_neigh_info(neigh_str)
+                mac = neigh_info[b'neigh'].decode()
+                # eth0 interface in a namespace is not management interface
+                # but is a part of docker0 bridge. Ignore this interface.
+                if len(self.db_conn) > 1 and dev == "eth0":
+                    continue
+                self._update_arp_info(dev, mac, ip)
 
-            mactuple = mac_decimals(mac)
-            machex = ''.join(chr(b) for b in mactuple)
-            # if MAC is all zero
-            #if not any(mac): continue
+    def _update_arp_info(self, dev, mac, ip):
+        if_index = mibs.get_index_from_str(dev)
+        if if_index is None: return
 
-            iptuple = ip2tuple_v4(ip)
+        mactuple = mac_decimals(mac)
+        machex = ''.join(chr(b) for b in mactuple)
+        # if MAC is all zero
+        #if not any(mac): continue
 
-            subid = (if_index,) + iptuple
-            self.arp_dest_map[subid] = machex
-            self.arp_dest_list.append(subid)
+        iptuple = ip2tuple_v4(ip)
+
+        subid = (if_index,) + iptuple
+        self.arp_dest_map[subid] = machex
+        self.arp_dest_list.append(subid)
+
+    def update_data(self):
+        self.arp_dest_map = {}
+        self.arp_dest_list = []
+        # Update arp table of host.
+        # In case of multi-asic platform, get host arp table
+        # from kernel and namespace arp table from NEIGH_TABLE in APP_DB
+        # in each namespace.
+        self._update_from_db()
+        if len(self.db_conn) > 1:
+            self._update_from_arptable()
         self.arp_dest_list.sort()
 
     def arp_dest(self, sub_id):
