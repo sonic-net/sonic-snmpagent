@@ -556,8 +556,8 @@ class Namespace:
         
     @staticmethod
     def get_sync_d_from_all_namespace(per_namespace_func, dbs):
-        # return list of dictionaries retrieved from per namespace functions
-        # map of index:dict
+        # return merged tuple of dictionaries retrieved from per
+        # namespace functions.
         result_map = {}
         # list of return values
         result_list = []
@@ -570,7 +570,7 @@ class Namespace:
                     result_map[idx].update(ns_tuple[idx])
         for idx, ns_tuple_dict in result_map.items():
             result_list.append(ns_tuple_dict)
-        return(result_list)
+        return result_list
 
     @staticmethod
     def dbs_get_bridge_port_map(dbs, db_name):
