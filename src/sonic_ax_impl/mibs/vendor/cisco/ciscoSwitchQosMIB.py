@@ -74,10 +74,10 @@ class QueueStatUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
 
         self.port_queues_map, self.queue_stat_map, self.port_queue_list_map = \
-            Namespace.init_namespace_sync_d_queue_tables(self.db_conn)
+            Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_queue_tables, self.db_conn)
 
         self.queue_type_map = Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, "COUNTERS_QUEUE_TYPE_MAP", blocking=False)
 

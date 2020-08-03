@@ -8,6 +8,7 @@ modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from sonic_ax_impl.mibs import Namespace
+from sonic_ax_impl import mibs
 
 class TestGetNextPDU(TestCase):
     @classmethod
@@ -20,7 +21,7 @@ class TestGetNextPDU(TestCase):
 
         lag_name_if_name_map, \
         if_name_lag_name_map, \
-        oid_lag_name_map = Namespace.init_namespace_sync_d_lag_tables(db_conn)
+        oid_lag_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, db_conn)
 
         self.assertTrue(b"PortChannel04" in lag_name_if_name_map)
         self.assertTrue(lag_name_if_name_map[b"PortChannel04"] == [b"Ethernet124"])

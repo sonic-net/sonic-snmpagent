@@ -212,7 +212,7 @@ class InterfacesUpdater(MIBUpdater):
         self.if_alias_map, \
         self.if_id_map, \
         self.oid_sai_map, \
-        self.oid_name_map = Namespace.init_namespace_sync_d_interface_tables(self.db_conn)
+        self.oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
         """
         db_conn - will have db_conn to all namespace DBs and
         global db. First db in the list is global db.
@@ -234,7 +234,7 @@ class InterfacesUpdater(MIBUpdater):
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
-        self.oid_lag_name_map = Namespace.init_namespace_sync_d_lag_tables(self.db_conn)
+        self.oid_lag_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
 
         self.if_range = sorted(list(self.oid_sai_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
