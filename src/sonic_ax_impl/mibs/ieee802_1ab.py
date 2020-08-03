@@ -430,7 +430,12 @@ class LLDPRemTableUpdater(MIBUpdater):
             if not lldp_kvs:
                 continue
             try:
-                time_mark = int(lldp_kvs[b'lldp_rem_time_mark'])
+                # OID index for this MIB consists of remote time mark, if_oid, remote_index.
+                # For multi-asic platform, it can happen that same interface index result 
+                # is seen in SNMP walk, with a different remote time mark.
+                # To avoid repeating the data of same interface index with different remote 
+                # time mark, remote time mark is made as 0 in the OID indexing.
+                time_mark = 0
                 remote_index = int(lldp_kvs[b'lldp_rem_index'])
                 self.if_range.append((time_mark,
                                       if_oid,
