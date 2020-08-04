@@ -684,5 +684,125 @@
   "INTF_TABLE:lo:fc00:1::32/128": {
     "scope": "global",
     "family": "IPv6"
+  },
+  "NEIGH_TABLE:eth0:10.3.146.86":  {
+    "neigh": "00:a0:a5:75:35:8d",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet68:10.0.0.35":  {
+    "neigh": "52:54:00:a5:70:47",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet36:10.0.0.19":  {
+    "neigh": "52:54:00:04:52:5d",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet112:10.0.0.57":  {
+    "neigh": "52:54:00:b4:59:59",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:eth0:10.3.146.1":  {
+    "neigh": "00:00:5e:00:01:64",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:eth0:10.3.146.244":  {
+    "neigh": "e4:d3:f1:51:3c:80",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:eth0:10.3.147.97":  {
+    "neigh": "3c:94:d5:69:b5:02",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet48:10.0.0.25":  {
+    "neigh": "52:54:00:55:2d:fe",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:eth0:10.3.146.75":  {
+    "neigh": "00:a0:a5:76:17:70",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:eth0:10.3.146.131":  {
+    "neigh": "00:15:c7:21:f7:40",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet40:10.0.0.21":  {
+    "neigh": "52:54:00:d0:a0:8c",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet64:10.0.0.33":  {
+    "neigh": "7c:fe:90:5e:6b:a6",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet88:10.0.0.45":  {
+    "neigh": "52:54:00:d0:23:2b",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet116:10.0.0.59":  {
+    "neigh": "52:54:00:ae:c8:01",
+    "family": "IPv4"
+  },
+   "NEIGH_TABLE:Ethernet8:10.0.0.5":  {
+    "neigh": "52:54:00:fc:50:3c",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet108:10.0.0.55":  {
+    "neigh": "52:54:00:1b:d6:95",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet20:10.0.0.11":  {
+    "neigh": "00:00:00:00:00:00",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet120:10.0.0.61":  {
+    "neigh": "00:00:00:00:00:00",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet4:10.0.0.3":  {
+    "neigh": "00:00:00:00:00:00",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet56:10.0.0.29":  {
+    "neigh": "00:00:00:00:00:00",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet60:10.0.0.31":  {
+    "neigh": "00:00:00:00:00:00",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet104:10.0.0.53":  {
+    "neigh": "52:54:00:c3:a1:2d",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet80:10.0.0.41":  {
+    "neigh": "52:54:00:08:de:c3",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet28:10.0.0.15":  {
+    "neigh": "52:54:00:c6:31:42",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet84:10.0.0.43":  {
+    "neigh": "52:54:00:44:73:a4",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet96:10.0.0.49":  {
+    "neigh": "52:54:00:74:c5:38",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet124:10.0.0.63":  {
+    "neigh": "00:00:00:00:00:00",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet52:10.0.0.27":  {
+    "neigh": "52:54:00:1c:90:c4",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet16:10.0.0.9":  {
+    "neigh": "52:54:00:71:ae:0e",
+    "family": "IPv4"
+  },
+  "NEIGH_TABLE:Ethernet12:fec0::ffff:afa:10":  {
+    "neigh": "52:54:00:d0:72:b7",
+    "family": "IPv6"
   }
 }

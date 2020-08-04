@@ -48,6 +48,15 @@ IFINDEX_SUB_ID_MULTIPLIER = 1000
 
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
 
+
+def get_neigh_info(neigh_key):
+    """
+    split neigh_key string of the format:
+    NEIGH_TABLE:device:ipv4_address
+    """
+    _, device, ip = neigh_key.split(':')
+    return device, ip
+
 def chassis_info_table(chassis_name):
     """
     :param: chassis_name: chassis name
@@ -522,6 +531,21 @@ class Namespace:
         return result_keys
 
     @staticmethod
+    def dbs_keys_namespace(dbs, db_name, pattern='*'):
+        """
+        dbs_keys_namespace function execute on global
+        and all namespace DBs. Provides a map of keys
+        and namespace(db index).
+        """
+        result_keys = {}
+        for db_index in range(len(dbs)):
+            keys = dbs[db_index].keys(db_name, pattern)
+            if keys is not None:
+                keys_ns = dict.fromkeys(keys, db_index)
+                result_keys.update(keys_ns)
+        return result_keys
+
+    @staticmethod
     def dbs_get_all(dbs, db_name, _hash, *args, **kwargs):
         """
         db get_all function executed on global and all namespace DBs.
@@ -555,83 +579,22 @@ class Namespace:
         else:
             return dbs[1:]
         
-
-    @staticmethod
-    def init_namespace_sync_d_interface_tables(dbs):
-        if_name_map = {}
-        if_alias_map = {}
-        if_id_map = {}
-        oid_sai_map = {}
-        oid_name_map = {}
-
-        """
-        all_ns_db - will have db_conn to all namespace DBs and
-        global db. First db in the list is global db.
-        Ignore first global db to get interface tables if there
-        are multiple namespaces.
-        if_id_map = {db_index: {sai_oid : if_name}}
-        """
-        Namespace.connect_namespace_dbs(dbs)
+    def get_sync_d_from_all_namespace(per_namespace_func, dbs):
+        # return merged tuple of dictionaries retrieved from per
+        # namespace functions.
+        result_map = {}
+        # list of return values
+        result_list = []
         for db_conn in Namespace.get_non_host_dbs(dbs):
-            if_name_map_ns, \
-            if_alias_map_ns, \
-            if_id_map_ns, \
-            oid_sai_map_ns, \
-            oid_name_map_ns = init_sync_d_interface_tables(db_conn)
-            if_name_map.update(if_name_map_ns)
-            if_alias_map.update(if_alias_map_ns)
-            if_id_map.update(if_id_map_ns)
-            oid_sai_map.update(oid_sai_map_ns)
-            oid_name_map.update(oid_name_map_ns)
-
-        return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map
-
-    @staticmethod
-    def init_namespace_sync_d_lag_tables(dbs):
-
-        lag_name_if_name_map = {}
-        if_name_lag_name_map = {}
-        oid_lag_name_map = {}
-
-        """
-        all_ns_db - will have db_conn to all namespace DBs and
-        global db. First db in the list is global db.
-        Ignore first global db to get lag tables if
-        there are multiple namespaces.
-        """
-        Namespace.connect_namespace_dbs(dbs)
-        for db_conn in Namespace.get_non_host_dbs(dbs):
-            lag_name_if_name_map_ns, \
-            if_name_lag_name_map_ns, \
-            oid_lag_name_map_ns = init_sync_d_lag_tables(db_conn)
-            lag_name_if_name_map.update(lag_name_if_name_map_ns)
-            if_name_lag_name_map.update(if_name_lag_name_map_ns)
-            oid_lag_name_map.update(oid_lag_name_map_ns)
-
-        return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map
-
-    @staticmethod
-    def init_namespace_sync_d_queue_tables(dbs):
-        port_queues_map = {}
-        queue_stat_map = {}
-        port_queue_list_map = {}
-
-        """
-        all_ns_db - will have db_conn to all namespace DBs and
-        global db. First db in the list is global db.
-        Ignore first global db to get queue tables if there
-        are multiple namespaces.
-        """
-        Namespace.connect_namespace_dbs(dbs)
-        for db_conn in Namespace.get_non_host_dbs(dbs):
-            port_queues_map_ns, \
-            queue_stat_map_ns, \
-            port_queue_list_map_ns = init_sync_d_queue_tables(db_conn)
-            port_queues_map.update(port_queues_map_ns)
-            queue_stat_map.update(queue_stat_map_ns)
-            port_queue_list_map.update(port_queue_list_map_ns)
-
-        return port_queues_map, queue_stat_map, port_queue_list_map
+            ns_tuple = per_namespace_func(db_conn)
+            for idx in range(len(ns_tuple)):
+                if idx not in result_map:
+                    result_map[idx] = ns_tuple[idx]
+                else:
+                    result_map[idx].update(ns_tuple[idx])
+        for idx, ns_tuple_dict in result_map.items():
+            result_list.append(ns_tuple_dict)
+        return result_list
 
     @staticmethod
     def dbs_get_bridge_port_map(dbs, db_name):
