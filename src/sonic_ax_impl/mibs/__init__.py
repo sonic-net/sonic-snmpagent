@@ -578,7 +578,8 @@ class Namespace:
             return dbs
         else:
             return dbs[1:]
-        
+
+    @staticmethod
     def get_sync_d_from_all_namespace(per_namespace_func, dbs):
         # return merged tuple of dictionaries retrieved from per
         # namespace functions.
