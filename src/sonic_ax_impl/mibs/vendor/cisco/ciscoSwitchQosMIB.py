@@ -65,7 +65,7 @@ class QueueStatUpdater(MIBUpdater):
         self.mib_oid_list = []
 
         self.queue_type_map = {}
-        self.if_id_namespace = {}
+        self.port_index_namespace = {}
 
     def reinit_data(self):
         """
@@ -79,7 +79,7 @@ class QueueStatUpdater(MIBUpdater):
 
         for sai_id_key, if_name in self.if_id_map.items():
             namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
-            self.if_id_namespace[mibs.get_index_from_str(if_name)] = namespace
+            self.port_index_namespace[mibs.get_index_from_str(if_name)] = namespace
 
         self.port_queues_map, self.queue_stat_map, self.port_queue_list_map = \
             Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_queue_tables, self.db_conn)
@@ -124,7 +124,7 @@ class QueueStatUpdater(MIBUpdater):
                 # Port does not has a queues, continue..
                 continue
             if_queues = self.port_queue_list_map[if_index]
-            namespace = self.if_id_namespace[if_index]
+            namespace = self.port_index_namespace[if_index]
 
             # The first half of queue id is for ucast, and second half is for mcast
             # To simulate vendor OID, we wrap queues by half distance
