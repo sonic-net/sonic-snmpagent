@@ -339,7 +339,7 @@ def init_sync_d_queue_tables(db_conn):
     logger.debug("Queue name map:\n" + pprint.pformat(queue_name_map, indent=2))
 
     # Parse the queue_name_map and create the following maps:
-    # port_queues_map -> {"if_index : queue_index" : sai_oid}
+    # port_queues_map -> {"if_name : queue_index" : sai_oid}
     # queue_stat_map -> {"if_index : queue stat table name" : {counter name : value}} 
     # port_queue_list_map -> {if_index: [sorted queue list]}
     port_queues_map = {}
