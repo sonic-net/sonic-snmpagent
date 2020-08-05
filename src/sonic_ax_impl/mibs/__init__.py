@@ -333,8 +333,8 @@ def init_sync_d_queue_tables(db_conn):
     :return: tuple(port_queues_map, queue_stat_map)
     """
 
-    # { Port index : Queue index (SONiC) -> sai_id }
-    # ex: { "1:2" : "1000000000023" }
+    # { Port name : Queue index (SONiC) -> sai_id }
+    # ex: { "Ethernet0:2" : "1000000000023" }
     queue_name_map = db_conn.get_all(COUNTERS_DB, COUNTERS_QUEUE_NAME_MAP, blocking=True)
     logger.debug("Queue name map:\n" + pprint.pformat(queue_name_map, indent=2))
 
