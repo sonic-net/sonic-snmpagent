@@ -66,6 +66,7 @@ class QueueStatUpdater(MIBUpdater):
 
         self.queue_type_map = {}
         self.port_index_namespace = {}
+        self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
 
     def reinit_data(self):
         """
@@ -77,9 +78,10 @@ class QueueStatUpdater(MIBUpdater):
         self.oid_sai_map, \
         self.oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
 
-        for sai_id_key, if_name in self.if_id_map.items():
+        for sai_id_key in self.if_id_map:
             namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
-            self.port_index_namespace[mibs.get_index_from_str(if_name)] = namespace
+            if_idx = mibs.get_index_from_str(self.if_id_map[sai_id_key])
+            self.port_index_namespace[if_idx] = namespace
 
         self.port_queues_map, self.queue_stat_map, self.port_queue_list_map = \
             Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_queue_tables, self.db_conn)
@@ -96,11 +98,13 @@ class QueueStatUpdater(MIBUpdater):
         """
         for queue_key, sai_id in self.port_queues_map.items():
             queue_stat_name = mibs.queue_table(sai_id)
-            if_index, _ = queue_key.split(':')
-            queue_stat_idx = mibs.queue_key(if_index, queue_stat_name)
-            queue_stat = self.queue_stat_map.get(queue_stat_idx, {})
+            port_index, _ = queue_key.split(':')
+            queue_stat_idx = mibs.queue_key(port_index, queue_stat_name)
+            namespace = self.port_index_namespace[int(port_index)]
+            queue_stat = self.namespace_db_map[namespace].get_all( \
+                    mibs.COUNTERS_DB, queue_stat_name, blocking=False)
             if queue_stat is not None:
-                self.queue_stat_map[queue_stat_name] = queue_stat
+                self.queue_stat_map[queue_stat_idx] = queue_stat
 
         self.update_stats()
 
