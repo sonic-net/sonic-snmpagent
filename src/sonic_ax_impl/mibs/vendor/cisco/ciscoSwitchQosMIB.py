@@ -105,6 +105,8 @@ class QueueStatUpdater(MIBUpdater):
                     mibs.COUNTERS_DB, queue_stat_name, blocking=False)
             if queue_stat is not None:
                 self.queue_stat_map[queue_stat_idx] = queue_stat
+            else:
+                del self.queue_stat_map[queue_stat_idx]
 
         self.update_stats()
 
