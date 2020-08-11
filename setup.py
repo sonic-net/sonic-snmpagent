@@ -8,7 +8,8 @@ dependencies = [
 
 test_deps = [
     'mockredispy>=2.9.3',
-    'pytest>=3.0.5',
+    'pytest',
+    'pytest-cov',
 ]
 
 high_performance_deps = [
