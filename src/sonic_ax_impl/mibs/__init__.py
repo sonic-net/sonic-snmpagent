@@ -245,12 +245,6 @@ def init_sync_d_interface_tables(db_conn):
     logger.debug("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
     logger.debug("Interface name map:\n" + pprint.pformat(if_id_map, indent=2))
 
-    # { OID -> sai_id }
-    oid_sai_map = {get_index(if_name): sai_id for if_name, sai_id in if_name_map.items()
-                   # only map the interface if it's a style understood to be a SONiC interface.
-                   if get_index(if_name) is not None}
-    logger.debug("OID sai map:\n" + pprint.pformat(oid_sai_map, indent=2))
-
     # { OID -> if_name (SONiC) }
     oid_name_map = {get_index(if_name): if_name for if_name in if_name_map
                     # only map the interface if it's a style understood to be a SONiC interface.
@@ -259,14 +253,14 @@ def init_sync_d_interface_tables(db_conn):
     logger.debug("OID name map:\n" + pprint.pformat(oid_name_map, indent=2))
 
     # SyncD consistency checks.
-    if not oid_sai_map:
+    if not oid_name_map:
         # In the event no interface exists that follows the SONiC pattern, no OIDs are able to be registered.
         # A RuntimeError here will prevent the 'main' module from loading. (This is desirable.)
         message = "No interfaces found matching pattern '{}'. SyncD database is incoherent." \
             .format(port_util.SONIC_ETHERNET_RE_PATTERN)
         logger.error(message)
         raise RuntimeError(message)
-    elif len(if_id_map) < len(if_name_map) or len(oid_sai_map) < len(if_name_map):
+    elif len(if_id_map) < len(if_name_map) or len(oid_name_map) < len(if_name_map):
         # a length mismatch indicates a bad interface name
         logger.warning("SyncD database contains incoherent interface names. Interfaces must match pattern '{}'"
                        .format(port_util.SONIC_ETHERNET_RE_PATTERN))
@@ -281,7 +275,7 @@ def init_sync_d_interface_tables(db_conn):
 
     logger.debug("Chassis name map:\n" + pprint.pformat(if_alias_map, indent=2))
 
-    return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map
+    return if_name_map, if_alias_map, if_id_map, oid_name_map
 
 def init_sync_d_lag_tables(db_conn):
     """

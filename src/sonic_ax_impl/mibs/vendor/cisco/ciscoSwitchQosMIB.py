@@ -54,7 +54,6 @@ class QueueStatUpdater(MIBUpdater):
         self.if_name_map = {}
         self.if_alias_map = {}
         self.if_id_map = {}
-        self.oid_sai_map = {}
         self.oid_name_map = {}
 
         self.port_queues_map = {}
@@ -75,7 +74,6 @@ class QueueStatUpdater(MIBUpdater):
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \
-        self.oid_sai_map, \
         self.oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
 
         for sai_id_key in self.if_id_map:
@@ -123,7 +121,7 @@ class QueueStatUpdater(MIBUpdater):
         self.mib_oid_list = []
 
         # Sort the ports to keep the OID order in the MIB
-        if_range = list(self.oid_sai_map.keys())
+        if_range = list(self.oid_name_map.keys())
         # Update queue counters for port
         for if_index in if_range:
             if if_index not in self.port_queue_list_map:
