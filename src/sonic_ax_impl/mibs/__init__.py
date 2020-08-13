@@ -245,12 +245,6 @@ def init_sync_d_interface_tables(db_conn):
     logger.debug("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
     logger.debug("Interface name map:\n" + pprint.pformat(if_id_map, indent=2))
 
-    # { OID -> sai_id }
-    oid_sai_map = {get_index(if_name): sai_id for if_name, sai_id in if_name_map.items()
-                   # only map the interface if it's a style understood to be a SONiC interface.
-                   if get_index(if_name) is not None}
-    logger.debug("OID sai map:\n" + pprint.pformat(oid_sai_map, indent=2))
-
     # { OID -> if_name (SONiC) }
     oid_name_map = {get_index(if_name): if_name for if_name in if_name_map
                     # only map the interface if it's a style understood to be a SONiC interface.
@@ -259,14 +253,14 @@ def init_sync_d_interface_tables(db_conn):
     logger.debug("OID name map:\n" + pprint.pformat(oid_name_map, indent=2))
 
     # SyncD consistency checks.
-    if not oid_sai_map:
+    if not oid_name_map:
         # In the event no interface exists that follows the SONiC pattern, no OIDs are able to be registered.
         # A RuntimeError here will prevent the 'main' module from loading. (This is desirable.)
         message = "No interfaces found matching pattern '{}'. SyncD database is incoherent." \
             .format(port_util.SONIC_ETHERNET_RE_PATTERN)
         logger.error(message)
         raise RuntimeError(message)
-    elif len(if_id_map) < len(if_name_map) or len(oid_sai_map) < len(if_name_map):
+    elif len(if_id_map) < len(if_name_map) or len(oid_name_map) < len(if_name_map):
         # a length mismatch indicates a bad interface name
         logger.warning("SyncD database contains incoherent interface names. Interfaces must match pattern '{}'"
                        .format(port_util.SONIC_ETHERNET_RE_PATTERN))
@@ -281,7 +275,7 @@ def init_sync_d_interface_tables(db_conn):
 
     logger.debug("Chassis name map:\n" + pprint.pformat(if_alias_map, indent=2))
 
-    return if_name_map, if_alias_map, if_id_map, oid_sai_map, oid_name_map
+    return if_name_map, if_alias_map, if_id_map, oid_name_map
 
 def init_sync_d_lag_tables(db_conn):
     """
@@ -333,15 +327,15 @@ def init_sync_d_queue_tables(db_conn):
     :return: tuple(port_queues_map, queue_stat_map)
     """
 
-    # { Port index : Queue index (SONiC) -> sai_id }
-    # ex: { "1:2" : "1000000000023" }
+    # { Port name : Queue index (SONiC) -> sai_id }
+    # ex: { "Ethernet0:2" : "1000000000023" }
     queue_name_map = db_conn.get_all(COUNTERS_DB, COUNTERS_QUEUE_NAME_MAP, blocking=True)
     logger.debug("Queue name map:\n" + pprint.pformat(queue_name_map, indent=2))
 
     # Parse the queue_name_map and create the following maps:
-    # port_queues_map -> {"if_index : queue_index" : sai_oid}
-    # queue_stat_map -> {queue stat table name : {counter name : value}}
-    # port_queue_list_map -> {if_index: [sorted queue list]}
+    # port_queues_map -> {"port_index : queue_index" : sai_oid}
+    # queue_stat_map -> {"port_index : queue stat table name" : {counter name : value}} 
+    # port_queue_list_map -> {port_index: [sorted queue list]}
     port_queues_map = {}
     queue_stat_map = {}
     port_queue_list_map = {}
@@ -356,7 +350,8 @@ def init_sync_d_queue_tables(db_conn):
         queue_stat_name = queue_table(sai_id)
         queue_stat = db_conn.get_all(COUNTERS_DB, queue_stat_name, blocking=False)
         if queue_stat is not None:
-            queue_stat_map[queue_stat_name] = queue_stat
+            queue_stat_key = queue_key(port_index, queue_stat_name)
+            queue_stat_map[queue_stat_key] = queue_stat
 
         if not port_queue_list_map.get(int(port_index)):
             port_queue_list_map[int(port_index)] = [int(queue_index)]
@@ -577,7 +572,7 @@ class Namespace:
             return dbs
         else:
             return dbs[1:]
-        
+
     @staticmethod
     def get_sync_d_from_all_namespace(per_namespace_func, dbs):
         # return merged tuple of dictionaries retrieved from per

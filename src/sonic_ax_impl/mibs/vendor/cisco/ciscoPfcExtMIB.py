@@ -17,7 +17,6 @@ class PfcUpdater(MIBUpdater):
         self.if_name_map = {}
         self.if_alias_map = {}
         self.if_id_map = {}
-        self.oid_sai_map = {}
         self.oid_name_map = {}
 
         self.lag_name_if_name_map = {}
@@ -27,6 +26,7 @@ class PfcUpdater(MIBUpdater):
         # cache of interface counters
         self.if_counters = {}
         self.if_range = []
+        self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
 
     def reinit_data(self):
         """
@@ -35,7 +35,6 @@ class PfcUpdater(MIBUpdater):
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \
-        self.oid_sai_map, \
         self.oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
 
         self.update_data()
@@ -45,15 +44,17 @@ class PfcUpdater(MIBUpdater):
         Update redis (caches config)
         Pulls the table references for each interface.
         """
-        self.if_counters = \
-            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
-             for sai_id in self.if_id_map}
+        for sai_id_key in self.if_id_map:
+            namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
+            if_idx = mibs.get_index_from_str(self.if_id_map[sai_id_key])
+            self.if_counters[if_idx] = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB, \
+                    mibs.counter_table(sai_id), blocking=True)
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
         self.oid_lag_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
 
-        self.if_range = sorted(list(self.oid_sai_map.keys()) + list(self.oid_lag_name_map.keys()))
+        self.if_range = sorted(list(self.oid_name_map.keys()) + list(self.oid_lag_name_map.keys()))
         self.if_range = [(i,) for i in self.if_range]
 
     def get_next(self, sub_id):
@@ -88,13 +89,12 @@ class PfcUpdater(MIBUpdater):
         :param counter_name: the redis table (either IntEnum or string literal) to query.
         :return: the counter for the respective sub_id/table.
         """
-        sai_id = self.oid_sai_map[oid]
 
         # Enum.name or counter_name = 'name_of_the_table'
         _counter_name = bytes(getattr(counter_name, 'name', counter_name), 'utf-8')
 
         try:
-            counter_value = self.if_counters[sai_id][_counter_name]
+            counter_value = self.if_counters[oid][_counter_name] 
             counter_value = int(counter_value) & 0xffffffffffffffff
             # done!
             return counter_value

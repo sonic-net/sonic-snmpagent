@@ -54,7 +54,6 @@ class QueueStatUpdater(MIBUpdater):
         self.if_name_map = {}
         self.if_alias_map = {}
         self.if_id_map = {}
-        self.oid_sai_map = {}
         self.oid_name_map = {}
 
         self.port_queues_map = {}
@@ -65,6 +64,8 @@ class QueueStatUpdater(MIBUpdater):
         self.mib_oid_list = []
 
         self.queue_type_map = {}
+        self.port_index_namespace = {}
+        self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
 
     def reinit_data(self):
         """
@@ -73,14 +74,19 @@ class QueueStatUpdater(MIBUpdater):
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \
-        self.oid_sai_map, \
         self.oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
+
+        for sai_id_key in self.if_id_map:
+            namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
+            if_idx = mibs.get_index_from_str(self.if_id_map[sai_id_key])
+            self.port_index_namespace[if_idx] = namespace
 
         self.port_queues_map, self.queue_stat_map, self.port_queue_list_map = \
             Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_queue_tables, self.db_conn)
 
-        self.queue_type_map = Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, "COUNTERS_QUEUE_TYPE_MAP", blocking=False)
-
+        for db_conn in Namespace.get_non_host_dbs(self.db_conn):
+            self.queue_type_map[db_conn.namespace] = db_conn.get_all(mibs.COUNTERS_DB, "COUNTERS_QUEUE_TYPE_MAP", blocking=False)
+ 
         self.update_data()
 
     def update_data(self):
@@ -90,9 +96,15 @@ class QueueStatUpdater(MIBUpdater):
         """
         for queue_key, sai_id in self.port_queues_map.items():
             queue_stat_name = mibs.queue_table(sai_id)
-            queue_stat = Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, queue_stat_name, blocking=False)
+            port_index, _ = queue_key.split(':')
+            queue_stat_idx = mibs.queue_key(port_index, queue_stat_name)
+            namespace = self.port_index_namespace[int(port_index)]
+            queue_stat = self.namespace_db_map[namespace].get_all( \
+                    mibs.COUNTERS_DB, queue_stat_name, blocking=False)
             if queue_stat is not None:
-                self.queue_stat_map[queue_stat_name] = queue_stat
+                self.queue_stat_map[queue_stat_idx] = queue_stat
+            else:
+                del self.queue_stat_map[queue_stat_idx]
 
         self.update_stats()
 
@@ -109,13 +121,14 @@ class QueueStatUpdater(MIBUpdater):
         self.mib_oid_list = []
 
         # Sort the ports to keep the OID order in the MIB
-        if_range = list(self.oid_sai_map.keys())
+        if_range = list(self.oid_name_map.keys())
         # Update queue counters for port
         for if_index in if_range:
             if if_index not in self.port_queue_list_map:
                 # Port does not has a queues, continue..
                 continue
             if_queues = self.port_queue_list_map[if_index]
+            namespace = self.port_index_namespace[if_index]
 
             # The first half of queue id is for ucast, and second half is for mcast
             # To simulate vendor OID, we wrap queues by half distance
@@ -125,8 +138,9 @@ class QueueStatUpdater(MIBUpdater):
                 # Get queue type and statistics
                 queue_sai_oid = self.port_queues_map[mibs.queue_key(if_index, queue)]
                 queue_stat_table_name = mibs.queue_table(queue_sai_oid)
-                queue_type = self.queue_type_map.get(queue_sai_oid)
-                queue_stat = self.queue_stat_map.get(queue_stat_table_name, {})
+                queue_stat_key = mibs.queue_key(if_index, queue_stat_table_name)
+                queue_type = self.queue_type_map[namespace].get(queue_sai_oid)
+                queue_stat = self.queue_stat_map.get(queue_stat_key, {})
 
                 # Add supported counters to MIBs list and store counters values
                 for (counter, counter_type), counter_mib_id in CounterMap.items():

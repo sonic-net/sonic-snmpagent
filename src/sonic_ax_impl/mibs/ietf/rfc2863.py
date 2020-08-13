@@ -61,7 +61,6 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.if_name_map = {}
         self.if_alias_map = {}
         self.if_id_map = {}
-        self.oid_sai_map = {}
         self.oid_name_map = {}
         self.lag_name_if_name_map = {}
         self.if_name_lag_name_map = {}
@@ -76,7 +75,6 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \
-        self.oid_sai_map, \
         self.oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
 
         self.lag_name_if_name_map, \
@@ -90,7 +88,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.mgmt_oid_name_map, \
         self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn[0])
 
-        self.if_range = sorted(list(self.oid_sai_map.keys()) +
+        self.if_range = sorted(list(self.oid_name_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
                                list(self.mgmt_oid_name_map.keys()))
         self.if_range = [(i,) for i in self.if_range]
