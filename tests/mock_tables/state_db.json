@@ -45,5 +45,53 @@
   },
   "MGMT_PORT_TABLE|eth1": {
     "oper_status": "up"
-  }
+  },
+  "NEIGH_STATE_TABLE|10.0.0.57": {
+    "state" : "6402"
+  },
+  "NEIGH_STATE_TABLE|10.0.0.59": {
+    "state" : "6402"
+  },
+  "NEIGH_STATE_TABLE|10.0.0.61": {
+    "state" : "6402"
+  },
+  "NEIGH_STATE_TABLE|10.0.0.63": {
+    "state" : "6402"
+    },
+  "NEIGH_STATE_TABLE|10.0.0.65": {
+    "state" : "Idle"
+    },
+  "NEIGH_STATE_TABLE|10.0.0.67": {
+    "state" : "Idle (Admin)"
+    },
+  "NEIGH_STATE_TABLE|fc00::72": {
+    "state" : "0"
+    },
+  "NEIGH_STATE_TABLE|fc00::76": {
+    "state" : "0"
+    },
+  "NEIGH_STATE_TABLE|fc00::7a": {
+    "state" : "0"
+    },
+  "NEIGH_STATE_TABLE|fc00::7e": {
+    "state" : "0"
+    },
+  "NEIGH_STATE_TABLE|fc00::2": {
+    "state" : "Active"
+    },
+  "NEIGH_STATE_TABLE|fc00::4": {
+    "state" : "Connect"
+    },
+  "NEIGH_STATE_TABLE|fc00::6": {
+    "state" : "OpenSent"
+    },
+  "NEIGH_STATE_TABLE|fc00::8": {
+    "state" : "OpenConfirm"
+    },
+  "NEIGH_STATE_TABLE|fc00::10": {
+    "state" : "Clearing"
+    },
+  "NEIGH_STATE_TABLE|fc00::12": {
+    "state" : "Deleted"
+    }
 }

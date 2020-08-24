@@ -20,6 +20,7 @@ from sonic_ax_impl.mibs.ietf import rfc4363
 from sonic_ax_impl.main import SonicMIB
 from sonic_ax_impl.lib.quaggaclient import parse_bgp_summary
 from mock_tables.socket import MockGetHostname
+from sonic_ax_impl.mibs.vendor.cisco.bgp4 import CiscoBgp4MIB 
 
 class TestSonicMIB(TestCase):
     @classmethod
