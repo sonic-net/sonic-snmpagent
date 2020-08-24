@@ -26,7 +26,7 @@ TABLE_NAME_SEPARATOR_COLON = ':'
 TABLE_NAME_SEPARATOR_VBAR = '|'
 
 # This is used in both rfc2737 and rfc3433
-SENSOR_PART_ID_MAP = {
+XCVR_SENSOR_PART_ID_MAP = {
     "temperature":  1,
     "voltage":      2,
     "rx1power":     11,
@@ -41,6 +41,13 @@ SENSOR_PART_ID_MAP = {
     "tx2power":     23,
     "tx3power":     33,
     "tx4power":     43,
+}
+
+PSU_SENSOR_PART_ID_MAP = {
+    'temperature': 40011,
+    'power': 40030,
+    'current': 40040,
+    'voltage': 40050
 }
 
 # IfIndex to OID multiplier for transceiver
@@ -65,6 +72,14 @@ def chassis_info_table(chassis_name):
 
     return "CHASSIS_INFO" + TABLE_NAME_SEPARATOR_VBAR + chassis_name
 
+def fan_info_table(fan_name):
+    """
+    :param: fan_name: fan name
+    :return: fan info entry for this fan
+    """
+    return 'FAN_INFO' + TABLE_NAME_SEPARATOR_VBAR + fan_name
+
+
 def psu_info_table(psu_name):
     """
     :param: psu_name: psu name
@@ -72,6 +87,15 @@ def psu_info_table(psu_name):
     """
 
     return "PSU_INFO" + TABLE_NAME_SEPARATOR_VBAR + psu_name
+
+
+def physical_relation_info_table(name):
+    """
+    :param: name: object name
+    :return: relation info entry for this object
+    """
+    return 'PHYSICAL_RELATION_INFO' + TABLE_NAME_SEPARATOR_VBAR + name
+
 
 def counter_table(sai_id):
     """
@@ -105,6 +129,14 @@ def transceiver_dom_table(port_name):
     """
 
     return "TRANSCEIVER_DOM_SENSOR" + TABLE_NAME_SEPARATOR_VBAR + port_name
+
+def thermal_info_table(thermal_name):
+    """
+    :param: port_name: port name
+    :return: transceiver dom entry for this port
+    """
+
+    return "TEMPERATURE_INFO" + TABLE_NAME_SEPARATOR_VBAR + thermal_name
 
 def lldp_entry_table(if_name):
     """
@@ -385,6 +417,62 @@ def get_device_metadata(db_conn):
     device_metadata = db_conn.get_all(db_conn.STATE_DB, DEVICE_METADATA)
     return device_metadata
 
+def get_chassis_thermal_sub_id(position):
+    """
+    Returns sub OID for thermals that belong to chassis. Sub OID is calculated as follows:
+    sub OID = 200000000 + 100000 + entPhysicalParentRelPos
+    :param position: thermal position
+    :return: sub OID of the thermal
+    """
+    return (200000000 + 100000 + position, )
+
+def get_fan_sub_id(parent_id, position):
+    """
+    Returns sub OID for fan. Sub OID is calculated as follows:
+    sub OID = parent_id + position * 20020
+    :param parent_id: parent device sub OID
+    :param position: fan position
+    :return: sub OID of the fan
+    """
+    return (parent_id + position + 20020, )
+
+def get_fan_drawer_sub_id(position):
+    """
+    Returns sub OID for fan drawer. Sub OID is calculated as follows:
+    sub OID = 500000000 + position * 1000000
+    :param position: fan drawer position
+    :return: sub OID of the fan drawer
+    """
+    return (500000000 + position * 1000000, )
+
+def get_fan_tachometers_sub_id(parent_id):
+    """
+    Returns sub OID for fan tachometers. Sub OID is calculated as follows:
+    sub OID = parent_id + 10000
+    :param parent_id: parent device sub OID
+    :return: sub OID of the fan tachometers
+    """
+    return (parent_id + 10000, )
+
+def get_psu_sub_id(position):
+    """
+    Returns sub OID for PSU. Sub OID is calculated as follows:
+    sub OID = 600000000 + position * 1000000
+    :param position: PSU position
+    :return: sub OID of PSU
+    """
+    return (600000000 + position * 1000000, )
+
+def get_psu_sensor_sub_id(parent_id, sensor):
+    """
+    Returns sub OID for PSU sensor. Sub OID is calculated as follows:
+    sub OID = parent_id + PSU_SENSOR_PART_ID_MAP[sensor]
+    :param parent_id: PSU oid
+    :param sensor: PSU sensor name
+    :return: sub OID of PSU sensor
+    """
+    return (parent_id + PSU_SENSOR_PART_ID_MAP[sensor], )
+
 def get_transceiver_sub_id(ifindex):
     """
     Returns sub OID for transceiver. Sub OID is calculated as folows:
@@ -418,7 +506,8 @@ def get_transceiver_sensor_sub_id(ifindex, sensor):
     """
 
     transceiver_oid, = get_transceiver_sub_id(ifindex)
-    return (transceiver_oid + SENSOR_PART_ID_MAP[sensor], )
+    return (transceiver_oid + XCVR_SENSOR_PART_ID_MAP[sensor],)
+
 
 def get_redis_pubsub(db_conn, db_name, pattern):
     redis_client = db_conn.get_redis_client(db_name)
