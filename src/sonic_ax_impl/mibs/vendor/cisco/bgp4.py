@@ -1,8 +1,6 @@
 import socket
 from bisect import bisect_right
 from sonic_ax_impl import mibs
-from sonic_ax_impl.lib.perseverantsocket import PerseverantSocket
-from sonic_ax_impl.lib.quaggaclient import QuaggaClient, bgp_peer_tuple
 from ax_interface import MIBMeta, ValueType, MIBUpdater, SubtreeMIBEntry
 from ax_interface.mib import MIBEntry
 from sonic_ax_impl.mibs import Namespace
