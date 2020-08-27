@@ -33,6 +33,9 @@ class BgpSessionUpdater(MIBUpdater):
         self.neigh_state_map = Namespace.dbs_keys_namespace(self.db_conn, mibs.STATE_DB, "NEIGH_STATE_TABLE|*")
 
     def update_data(self):
+        self.session_status_map = {}
+        self.session_status_list = []
+
         for neigh_key, db_index in self.neigh_state_map.items():
             neigh_str = neigh_key.decode()
             neigh_str = neigh_str.split('|')[1]
@@ -57,6 +60,8 @@ class BgpSessionUpdater(MIBUpdater):
             oid = oid_head + oid_ip
             self.session_status_list.append(oid)
             self.session_status_map[oid] = status
+
+        self.session_status_list.sort()
 
     def sessionstatus(self, sub_id):
         return self.session_status_map.get(sub_id, None)
