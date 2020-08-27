@@ -218,7 +218,7 @@ class TestGetNextPDU(TestCase):
 
     def test_if_oper_status(self):
         """
-        For front panel port admin status
+        For front panel port oper status
         """
         oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 8, 0))
         get_pdu = GetNextPDU(
@@ -279,7 +279,7 @@ class TestGetNextPDU(TestCase):
 
     def test_if_description(self):
         """
-        Test mgmt port description (which is simply an alias)
+        Test front panel port description (which is simply an alias)
         """
         oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 2, 1))
         get_pdu = GetPDU(
