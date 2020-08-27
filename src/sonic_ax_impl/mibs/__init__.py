@@ -114,10 +114,17 @@ def lldp_entry_table(if_name):
     return b'LLDP_ENTRY_TABLE:' + if_name
 
 
-def if_entry_table(if_name):
+def if_entry_table_app_db(if_name):
     """
     :param if_name: given interface to cast.
     :return: PORT_TABLE key.
+    """
+    return b'PORT_TABLE:' + if_name
+
+def if_entry_table(if_name):
+    """
+    :param if_name: given interface to cast.
+    :return: PORT key.
     """
     return b'PORT|' + if_name
 

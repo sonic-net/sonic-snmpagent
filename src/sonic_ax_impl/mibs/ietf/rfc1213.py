@@ -378,6 +378,26 @@ class InterfacesUpdater(MIBUpdater):
 
         return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=False)
 
+    def _get_if_entry_app_db(self, sub_id):
+        """
+        :param oid: The 1-based sub-identifier query.
+        :return: the DB entry for the respective sub_id.
+        """
+        oid = self.get_oid(sub_id)
+        if not oid:
+            return
+
+        if_table = ""
+        db = mibs.APPL_DB
+        if oid in self.oid_name_map:
+            if_name = self.oid_name_map[oid]
+            if_table = mibs.if_entry_table_app_db(if_name)
+        else:
+            return None
+
+        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=False)
+
+
     def _get_status(self, sub_id, key):
         """
         :param sub_id: The 1-based sub-identifier query.
@@ -397,8 +417,11 @@ class InterfacesUpdater(MIBUpdater):
         # Once PORT_TABLE will be moved to CONFIG DB
         # we will get rid of this if-else
         # and read oper status from STATE_DB
-        if self.get_oid(sub_id) in self.mgmt_oid_name_map and key == b"oper_status":
+        oid = self.get_oid(sub_id)
+        if oid in self.mgmt_oid_name_map and key == b"oper_status":
             entry = self._get_if_entry_state_db(sub_id)
+        elif oid in self.oid_name_map and key == b"oper_status":
+            entry = self._get_if_entry_app_db(sub_id)
         else:
             entry = self._get_if_entry(sub_id)
 

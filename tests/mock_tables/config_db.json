@@ -2,12 +2,14 @@
   "PORT|Ethernet0": {
     "description": "snowflake",
     "alias": "etp1",
-    "speed": 100000
+    "speed": 100000,
+    "admin_status": "up"
   },
   "PORT|Ethernet4": {
     "description": "snowflake",
     "alias": "etp2",
-    "speed": 100000
+    "speed": 100000,
+    "admin_status": "up"
   },
   "PORT|Ethernet8": {
     "description": "snowflake",
