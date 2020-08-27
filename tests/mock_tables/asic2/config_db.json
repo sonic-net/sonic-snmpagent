@@ -1,2 +1,22 @@
 {
+  "PORT|Ethernet-BP16": {
+    "description": "backplane",
+    "alias": "etp9",
+    "speed": 100000
+  },
+  "PORT|Ethernet-BP20": {
+    "description": "backplane",
+    "alias": "etp10",
+    "speed": 100000
+  },
+  "PORT|Ethernet-BP24": {
+    "description": "backplane",
+    "alias": "etp11",
+    "speed": 100000
+  },
+  "PORT|Ethernet-BP28": {
+    "description": "backplane",
+    "alias": "etp12",
+    "speed": 100000
+  }
 }

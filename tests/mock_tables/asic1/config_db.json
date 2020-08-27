@@ -1,2 +1,19 @@
 {
+  "PORT|Ethernet8": {
+    "description": "snowflake",
+    "alias": "etp5",
+    "speed": 100000
+  },
+  "PORT|Ethernet12": {
+    "speed": 1000,
+    "alias": "etp6"
+  },
+  "PORT|Ethernet-BP8": {
+    "alias": "etp7"
+  },
+  "PORT|Ethernet-BP12": {
+    "description": "snowflake",
+    "alias": "etp8",
+    "speed": 1000
+  }
 }

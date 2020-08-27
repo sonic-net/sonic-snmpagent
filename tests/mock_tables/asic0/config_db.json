@@ -1,2 +1,22 @@
 {
+  "PORT|Ethernet0": {
+    "description": "snowflake",
+    "alias": "etp1",
+    "speed": 100000
+  },
+  "PORT|Ethernet4": {
+    "description": "snowflake",
+    "alias": "etp2",
+    "speed": 100000
+  },
+  "PORT|Ethernet-BP0": {
+    "description": "snowflake",
+    "alias": "etp3",
+    "speed": 100000
+  },
+  "PORT|Ethernet-BP4": {
+    "description": "snowflake",
+    "alias": "etp4",
+    "speed": 100000
+  }
 }

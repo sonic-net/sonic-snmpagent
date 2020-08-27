@@ -1,4 +1,162 @@
 {
+  "PORT|Ethernet0": {
+    "description": "snowflake",
+    "alias": "etp1",
+    "speed": 100000
+  },
+  "PORT|Ethernet4": {
+    "description": "snowflake",
+    "alias": "etp2",
+    "speed": 100000
+  },
+  "PORT|Ethernet8": {
+    "description": "snowflake",
+    "alias": "etp3",
+    "speed": 100000
+  },
+  "PORT|Ethernet12": {
+    "description": "snowflake",
+    "alias": "etp4",
+    "speed": 100000
+  },
+  "PORT|Ethernet16": {
+    "description": "snowflake",
+    "alias": "etp5",
+    "speed": 100000
+  },
+  "PORT|Ethernet20": {
+    "description": "snowflake",
+    "alias": "etp6",
+    "speed": 100000
+  },
+  "PORT|Ethernet24": {
+    "description": "snowflake",
+    "alias": "etp7",
+    "speed": 100000
+  },
+  "PORT|Ethernet28": {
+    "description": "snowflake",
+    "alias": "etp8",
+    "speed": 100000
+  },
+  "PORT|Ethernet32": {
+    "description": "snowflake",
+    "alias": "etp9",
+    "speed": 100000
+  },
+  "PORT|Ethernet36": {
+    "description": "snowflake",
+    "alias": "etp10",
+    "speed": 100000
+  },
+  "PORT|Ethernet40": {
+    "description": "snowflake",
+    "alias": "etp11",
+    "speed": 100000
+  },
+  "PORT|Ethernet44": {
+    "description": "snowflake",
+    "alias": "etp12",
+    "speed": 100000
+  },
+  "PORT|Ethernet48": {
+    "description": "snowflake",
+    "alias": "etp13",
+    "speed": 100000
+  },
+  "PORT|Ethernet52": {
+    "description": "snowflake",
+    "alias": "etp14",
+    "speed": 100000
+  },
+  "PORT|Ethernet56": {
+    "description": "snowflake",
+    "alias": "etp15",
+    "speed": 100000
+  },
+  "PORT|Ethernet60": {
+    "description": "snowflake",
+    "alias": "etp16",
+    "speed": 100000
+  },
+  "PORT|Ethernet64": {
+    "description": "snowflake",
+    "alias": "etp17",
+    "speed": 100000
+  },
+  "PORT|Ethernet68": {
+    "description": "snowflake",
+    "alias": "etp18",
+    "speed": 100000
+  },
+  "PORT|Ethernet72": {
+    "description": "snowflake",
+    "alias": "etp19",
+    "speed": 100000
+  },
+  "PORT|Ethernet76": {
+    "description": "snowflake",
+    "alias": "etp20",
+    "speed": 100000
+  },
+  "PORT|Ethernet80": {
+    "description": "snowflake",
+    "alias": "etp21",
+    "speed": 100000
+  },
+  "PORT|Ethernet84": {
+    "description": "snowflake",
+    "alias": "etp22",
+    "speed": 100000
+  },
+  "PORT|Ethernet88": {
+    "description": "snowflake",
+    "alias": "etp23",
+    "speed": 100000
+  },
+  "PORT|Ethernet92": {
+    "description": "snowflake",
+    "alias": "etp24",
+    "speed": 100000
+  },
+  "PORT|Ethernet96": {
+    "description": "snowflake",
+    "alias": "etp25",
+    "speed": 100000
+  },
+  "PORT|Ethernet100": {
+    "description": "snowflake",
+    "alias": "etp26",
+    "speed": 100000
+  },
+  "PORT|Ethernet104": {
+    "description": "snowflake",
+    "alias": "etp27",
+    "speed": 100000
+  },
+  "PORT|Ethernet108": {
+    "description": "snowflake",
+    "alias": "etp28",
+    "speed": 100000
+  },
+  "PORT|Ethernet112": {
+    "description": "snowflake",
+    "alias": "etp29",
+    "speed": 100000
+  },
+  "PORT|Ethernet116": {
+    "speed": 1000,
+    "alias": "etp30"
+  },
+  "PORT|Ethernet120": {
+    "description": "snowflake",
+    "alias": "et31"
+  },
+  "PORT|Ethernet124": {
+    "description": "snowflake",
+    "alias": "etp32",
+    "speed": 100000
+  },
   "MGMT_PORT|eth0": {
     "description": "snowflake",
     "speed": 1000
