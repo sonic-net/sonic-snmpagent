@@ -218,7 +218,7 @@ class InterfaceMIBUpdater(MIBUpdater):
             if_table = mibs.mgmt_if_entry_table(self.mgmt_oid_name_map[oid])
             db = mibs.CONFIG_DB
         elif oid in self.oid_name_map:
-            if_table = mibs.if_entry_table(self.oid_name_map[oid])
+            if_table = mibs.if_entry_table_config_db(self.oid_name_map[oid])
             db = mibs.CONFIG_DB
         else:
             return None
