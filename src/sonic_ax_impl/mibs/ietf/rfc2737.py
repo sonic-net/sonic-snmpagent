@@ -108,7 +108,7 @@ PSU_SENSOR_NAME_MAP = {
     'voltage': 'Voltage'
 }
 
-# Map used to generate xcvr sensor description
+# Map used to generate transceiver sensor description
 XCVR_SENSOR_NAME_MAP = {
     "temperature" : "Temperature",
     "voltage"     : "Voltage",
@@ -128,6 +128,16 @@ XCVR_SENSOR_NAME_MAP = {
 
 NOT_AVAILABLE = 'N/A'
 QSFP_LANES = (1, 2, 3, 4)
+
+def is_null_str(value):
+    """
+    Indicate if a string value is null
+    :param value: input string value
+    :return: True is string value is empty or equal to 'N/A' or 'None'
+    """
+    if not value or value == NOT_AVAILABLE or value == str(None):
+        return True
+    return False
 
 
 def get_db_data(info_dict, enum_type):
@@ -176,11 +186,20 @@ def get_transceiver_sensor_description(sensor, if_alias):
 
 
 class Callback(object):
+    """
+    Utility class to store a callable and its arguments for future invoke
+    """
     def __init__(self, function, args):
+        # A callable
         self.function = function
+
+        # Arguments for the given callable
         self.args = args
 
     def invoke(self):
+        """
+        Invoke the callable
+        """
         self.function(*self.args)
 
 
@@ -189,9 +208,17 @@ class PhysicalTableMIBUpdater(MIBUpdater):
     Updater class for physical table MIB
     """
 
+    # Chassis key name in CHASSIS_INFO table
     CHASSIS_NAME = 'chassis 1'
+
+    # Indicate that an entity is replaceable, according to RFC2737
     REPLACEABLE = 1
+
+    # Indicate that an entity is not replaceable, according to RFC2737
     NOT_REPLACEABLE = 2
+
+    # A list of physical entity updater, @decorator physical_entity_updater can register physical entity updater types
+    # to this list, and these types will be used for create instance for each type
     physical_entity_updater_types = []
 
     def __init__(self):
@@ -215,14 +242,16 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_parent_relative_pos_map = {}
         self.physical_fru_map = {}
 
-        # Map physical entity name and oid
+        # Map physical entity name and oid. According to RFC2737, entPhysicalContainedIn is indicates the value of
+        # entPhysicalIndex for the physical entity which 'contains' this physical entity. However, there is
+        # only parent entity name in database, so need a way to get physical entity oid by name.
         self.physical_name_to_oid_map = {}
 
         # Map physical entity name that need resolve. The key is the entity name, value is a list of Callback objects
         # that will be called when the entity name is added to self.physical_name_to_oid_map.
         # It's possible the parent name and parent oid are still not in self.physical_name_to_oid_map when child entity
-        # update cache. Have to store such entry to a dictionary. When parent name and parent oid add to
-        # self.physical_name_to_oid_map, set self.physical_contained_in_map accordingly
+        # update cache. In that case, the child entity might not be able to calculate its sub id and cannot update its
+        # cache or do future operation. So this dictionary provides a way to store such operations for future executes.
         self.pending_resolve_parent_name_map = {}
 
         # physical entity updaters
@@ -230,9 +259,17 @@ class PhysicalTableMIBUpdater(MIBUpdater):
 
     @classmethod
     def register_entity_updater_type(cls, object_type):
+        """
+        Register physical entity updater
+        :param object_type: entity updater type
+        """
         cls.physical_entity_updater_types.append(object_type)
 
     def create_physical_entity_updaters(self):
+        """
+        Create all physical entity updater instances
+        :return: a list of physical entity updater instance
+        """
         return [creator(self) for creator in PhysicalTableMIBUpdater.physical_entity_updater_types]
 
     def reinit_data(self):
@@ -270,6 +307,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_contained_in_map[chassis_sub_id] = 0
         self.physical_fru_map[chassis_sub_id] = self.NOT_REPLACEABLE
 
+        # Add a chassis mgmt node
         chassis_mgmt_sub_id = (mibs.CHASSIS_MGMT_SUB_ID,)
         self.add_sub_id(chassis_mgmt_sub_id)
         self.physical_classes_map[chassis_mgmt_sub_id] = PhysicalClass.OTHER
@@ -292,6 +330,10 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         insort_right(self.physical_entities, sub_id)
 
     def remove_sub_ids(self, remove_sub_ids):
+        """
+        Remove all data related to given sub id list
+        :param remove_sub_ids: a list of sub ids that will be removed
+        """
         for sub_id in remove_sub_ids:
             if not sub_id:
                 continue
@@ -322,6 +364,12 @@ class PhysicalTableMIBUpdater(MIBUpdater):
                 self.physical_fru_map.pop(sub_id)
 
     def add_pending_entity_name_callback(self, name, function, args):
+        """
+        Store a callback for those entity whose parent entity name has not been resolved yet
+        :param name: parent entity name
+        :param function: a callable
+        :param args: arguments for the callable
+        """
         if name in self.pending_resolve_parent_name_map:
             self.pending_resolve_parent_name_map[name].append(Callback(function, args))
         else:
@@ -342,6 +390,10 @@ class PhysicalTableMIBUpdater(MIBUpdater):
             self.pending_resolve_parent_name_map.pop(name)
 
     def set_phy_class(self, sub_id, phy_class):
+        """
+        :param sub_id: sub OID
+        :param phy_class: physical entity class
+        """
         self.physical_classes_map[sub_id] = phy_class
 
     def set_phy_parent_relative_pos(self, sub_id, pos):
@@ -352,9 +404,17 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_parent_relative_pos_map[sub_id] = pos
 
     def set_phy_descr(self, sub_id, phy_desc):
+        """
+        :param sub_id: sub OID
+        :param phy_desc: physical entity description
+        """
         self.physical_description_map[sub_id] = phy_desc
 
     def set_phy_name(self, sub_id, name):
+        """
+        :param sub_id: sub OID
+        :param name: physical entity name
+        """
         self.physical_name_map[sub_id] = name
 
     def set_phy_contained_in(self, sub_id, parent):
@@ -375,18 +435,38 @@ class PhysicalTableMIBUpdater(MIBUpdater):
                 self.physical_contained_in_map[sub_id] = parent[0]
 
     def set_phy_hw_ver(self, sub_id, phy_hw_ver):
+        """
+        :param sub_id: sub OID
+        :param phy_hw_ver: physical entity hardware version
+        """
         self.physical_hw_version_map[sub_id] = phy_hw_ver
 
     def set_phy_serial_num(self, sub_id, phy_serial_num):
+        """
+        :param sub_id: sub OID
+        :param phy_serial_num: physical entity serial number
+        """
         self.physical_serial_number_map[sub_id] = phy_serial_num
 
     def set_phy_mfg_name(self, sub_id, phy_mfg_name):
+        """
+        :param sub_id: sub OID
+        :param phy_mfg_name: physical entity manufacturer name
+        """
         self.physical_mfg_name_map[sub_id] = phy_mfg_name
 
     def set_phy_model_name(self, sub_id, phy_model_name):
+        """
+        :param sub_id: sub OID
+        :param phy_model_name: physical entity model name
+        """
         self.physical_model_name_map[sub_id] = phy_model_name
 
     def set_phy_fru(self, sub_id, replaceable):
+        """
+        :param sub_id: sub OID
+        :param replaceable: physical entity FRU
+        """
         if isinstance(replaceable, str):
             replaceable = True if replaceable.lower() == 'true' else False
         self.physical_fru_map[sub_id] = self.REPLACEABLE if replaceable else self.NOT_REPLACEABLE
@@ -542,6 +622,9 @@ class PhysicalTableMIBUpdater(MIBUpdater):
 
 
 def physical_entity_updater():
+    """
+    Decorator for auto registering physical entity types
+    """
     def wrapper(object_type):
         PhysicalTableMIBUpdater.register_entity_updater_type(object_type)
         return object_type
@@ -550,6 +633,9 @@ def physical_entity_updater():
 
 
 class PhysicalEntityCacheUpdater(object):
+    """
+    Base class for physical entity cache updater
+    """
     def __init__(self, mib_updater):
         self.mib_updater = mib_updater
         self.pub_sub_dict = {}
@@ -778,14 +864,14 @@ class FanCacheUpdater(PhysicalEntityCacheUpdater):
         self.mib_updater.set_phy_name(fan_sub_id, fan_name)
         self.mib_updater.set_phy_parent_relative_pos(fan_sub_id, fan_position)
         self.mib_updater.set_phy_contained_in(fan_sub_id, fan_parent_name)
-        if serial and serial != NOT_AVAILABLE:
+        if serial and not is_null_str(serial):
             self.mib_updater.set_phy_serial_num(fan_sub_id, serial)
-        if model and model != NOT_AVAILABLE:
+        if model and not is_null_str(model):
             self.mib_updater.set_phy_model_name(fan_sub_id, model)
         self.mib_updater.set_phy_fru(fan_sub_id, replaceable)
 
         # add fan tachometers as a physical entity
-        if speed and speed != NOT_AVAILABLE:
+        if speed and not is_null_str(speed):
             fan_tachometers_sub_id = mibs.get_fan_tachometers_sub_id(fan_sub_id)
             self._add_entity_related_oid(fan_name, fan_tachometers_sub_id)
             self.mib_updater.add_sub_id(fan_tachometers_sub_id)
@@ -835,9 +921,9 @@ class FanDrawerCacheUpdater(PhysicalEntityCacheUpdater):
             self.mib_updater.set_phy_name(drawer_sub_id, drawer_name)
             self.mib_updater.set_phy_parent_relative_pos(drawer_sub_id, drawer_position)
             self.mib_updater.set_phy_contained_in(drawer_sub_id, drawer_parent_name)
-            if model and model != NOT_AVAILABLE:
+            if model and not is_null_str(model):
                 self.mib_updater.set_phy_model_name(drawer_sub_id, model)
-            if serial and serial != NOT_AVAILABLE:
+            if serial and not is_null_str(serial):
                 self.mib_updater.set_phy_serial_num(drawer_sub_id, serial)
             self.mib_updater.set_phy_fru(drawer_sub_id, replaceable)
 
@@ -883,13 +969,13 @@ class PsuCacheUpdater(PhysicalEntityCacheUpdater):
         self.mib_updater.set_phy_fru(psu_sub_id, replaceable)
 
         # add psu current sensor as a physical entity
-        if current and current != NOT_AVAILABLE:
+        if current and not is_null_str(current):
             self._update_psu_sensor_cache(psu_name, psu_sub_id, 'current')
-        if power and power != NOT_AVAILABLE:
+        if power and not is_null_str(power):
             self._update_psu_sensor_cache(psu_name, psu_sub_id, 'power')
-        if temperature and temperature != NOT_AVAILABLE:
+        if temperature and not is_null_str(temperature):
             self._update_psu_sensor_cache(psu_name, psu_sub_id, 'temperature')
-        if voltage and voltage != NOT_AVAILABLE:
+        if voltage and not is_null_str(voltage):
             self._update_psu_sensor_cache(psu_name, psu_sub_id, 'voltage')
 
     def _update_psu_sensor_cache(self, psu_name, psu_sub_id, sensor_name):
@@ -922,7 +1008,7 @@ class ThermalCacheUpdater(PhysicalEntityCacheUpdater):
             return
 
         temperature, replaceable = get_db_data(thermal_info, ThermalInfoDB)
-        if temperature and temperature != NOT_AVAILABLE:
+        if temperature and not is_null_str(temperature):
             thermal_relation_info = self.get_physical_relation_info(thermal_name)
             thermal_position, thermal_parent_name = get_db_data(thermal_relation_info, PhysicalRelationInfoDB)
             thermal_position = int(thermal_position)
