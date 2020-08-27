@@ -35,11 +35,22 @@ class FanInfoDB(bytes, Enum):
     """
     FAN info keys
     """
-    DRAWER_NAME = b'drawer_name'
-    MODEL = b'model'
-    PRESENCE = b'presence'
-    SERIAL = b'serial'
-    SPEED = b'speed'
+    MODEL       = b'model'
+    PRESENCE    = b'presence'
+    SERIAL      = b'serial'
+    SPEED       = b'speed'
+    REPLACEABLE = b'is_replaceable'
+
+
+@unique
+class FanDrawerInfoDB(bytes, Enum):
+    """
+    FAN drawer info keys
+    """
+    MODEL       = b'model'
+    PRESENCE    = b'presence'
+    SERIAL      = b'serial'
+    REPLACEABLE = b'is_replaceable'
 
 
 @unique
@@ -56,11 +67,14 @@ class PsuInfoDB(bytes, Enum):
     """
     PSU info keys
     """
-    CURRENT = b'current'
-    POWER = b'power'
-    PRESENCE = b'presence'
-    VOLTAGE = b'voltage'
+    MODEL       = b'model'
+    SERIAL      = b'serial'
+    CURRENT     = b'current'
+    POWER       = b'power'
+    PRESENCE    = b'presence'
+    VOLTAGE     = b'voltage'
     TEMPERATURE = b'temp'
+    REPLACEABLE = b'is_replaceable'
 
 
 @unique
@@ -74,9 +88,27 @@ class XcvrInfoDB(bytes, Enum):
     SERIAL_NUMBER     = b"serial"
     MANUFACTURE_NAME  = b"manufacturer"
     MODEL_NAME        = b"model"
+    REPLACEABLE       = b'is_replaceable'
 
 
-# Map used to generate sensor description
+@unique
+class ThermalInfoDB(bytes, Enum):
+    """
+    FAN drawer info keys
+    """
+    TEMPERATURE = b'temperature'
+    REPLACEABLE = b'is_replaceable'
+
+
+# Map used to generate PSU sensor description
+PSU_SENSOR_NAME_MAP = {
+    'temperature': 'Temperature',
+    'power': 'Power',
+    'current': 'Current',
+    'voltage': 'Voltage'
+}
+
+# Map used to generate xcvr sensor description
 XCVR_SENSOR_NAME_MAP = {
     "temperature" : "Temperature",
     "voltage"     : "Voltage",
@@ -141,6 +173,372 @@ def get_transceiver_sensor_description(sensor, if_alias):
         port_name = if_alias
 
     return "DOM {} Sensor for {}".format(XCVR_SENSOR_NAME_MAP[sensor], port_name)
+
+
+class Callback(object):
+    def __init__(self, function, args):
+        self.function = function
+        self.args = args
+
+    def invoke(self):
+        self.function(*self.args)
+
+
+class PhysicalTableMIBUpdater(MIBUpdater):
+    """
+    Updater class for physical table MIB
+    """
+
+    CHASSIS_NAME = 'chassis 1'
+    REPLACEABLE = 1
+    NOT_REPLACEABLE = 2
+    physical_entity_updater_types = []
+
+    def __init__(self):
+        super().__init__()
+
+        self.statedb = Namespace.init_namespace_dbs()
+        Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
+
+        # List of available sub OIDs.
+        self.physical_entities = []
+
+        # Map sub ID to its data.
+        self.physical_classes_map = {}
+        self.physical_description_map = {}
+        self.physical_name_map = {}
+        self.physical_hw_version_map = {}
+        self.physical_serial_number_map = {}
+        self.physical_mfg_name_map = {}
+        self.physical_model_name_map = {}
+        self.physical_contained_in_map = {}
+        self.physical_parent_relative_pos_map = {}
+        self.physical_fru_map = {}
+
+        # Map physical entity name and oid
+        self.physical_name_to_oid_map = {}
+
+        # Map physical entity name that need resolve. The key is the entity name, value is a list of Callback objects
+        # that will be called when the entity name is added to self.physical_name_to_oid_map.
+        # It's possible the parent name and parent oid are still not in self.physical_name_to_oid_map when child entity
+        # update cache. Have to store such entry to a dictionary. When parent name and parent oid add to
+        # self.physical_name_to_oid_map, set self.physical_contained_in_map accordingly
+        self.pending_resolve_parent_name_map = {}
+
+        # physical entity updaters
+        self.physical_entity_updaters = self.create_physical_entity_updaters()
+
+    @classmethod
+    def register_entity_updater_type(cls, object_type):
+        cls.physical_entity_updater_types.append(object_type)
+
+    def create_physical_entity_updaters(self):
+        return [creator(self) for creator in PhysicalTableMIBUpdater.physical_entity_updater_types]
+
+    def reinit_data(self):
+        """
+        Re-initialize all data.
+        """
+
+        # reinit cache
+        self.physical_classes_map = {}
+        self.physical_description_map = {}
+        self.physical_name_map = {}
+        self.physical_hw_version_map = {}
+        self.physical_serial_number_map = {}
+        self.physical_mfg_name_map = {}
+        self.physical_model_name_map = {}
+        self.physical_contained_in_map = {}
+        self.physical_parent_relative_pos_map = {}
+        self.physical_fru_map = {}
+
+        self.physical_name_to_oid_map = {}
+        self.pending_resolve_parent_name_map = {}
+
+        device_metadata = mibs.get_device_metadata(self.statedb[0])
+        chassis_sub_id = (mibs.CHASSIS_SUB_ID, )
+        self.physical_entities = [chassis_sub_id]
+        self.physical_name_to_oid_map[self.CHASSIS_NAME] = chassis_sub_id
+
+        if not device_metadata or not device_metadata.get(b"chassis_serial_number"):
+            chassis_serial_number = ""
+        else:
+            chassis_serial_number = device_metadata[b"chassis_serial_number"]
+
+        self.physical_classes_map[chassis_sub_id] = PhysicalClass.CHASSIS
+        self.physical_serial_number_map[chassis_sub_id] = chassis_serial_number
+        self.physical_contained_in_map[chassis_sub_id] = 0
+        self.physical_fru_map[chassis_sub_id] = self.NOT_REPLACEABLE
+
+        chassis_mgmt_sub_id = (mibs.CHASSIS_MGMT_SUB_ID,)
+        self.add_sub_id(chassis_mgmt_sub_id)
+        self.physical_classes_map[chassis_mgmt_sub_id] = PhysicalClass.OTHER
+        self.physical_contained_in_map[chassis_mgmt_sub_id] = mibs.CHASSIS_SUB_ID
+        self.physical_parent_relative_pos_map[chassis_mgmt_sub_id] = 1
+        self.physical_description_map[chassis_mgmt_sub_id] = 'MGMT for {}'.format(self.CHASSIS_NAME)
+        self.physical_fru_map[chassis_mgmt_sub_id] = self.NOT_REPLACEABLE
+
+        for updater in self.physical_entity_updaters:
+            updater.reinit_data()
+
+    def update_data(self):
+        # This code is not executed in unit test, since mockredis
+        # does not support pubsub
+        for i in range(len(self.statedb)):
+            for updater in self.physical_entity_updaters:
+                updater.update_data(i, self.statedb[i])
+
+    def add_sub_id(self, sub_id):
+        insort_right(self.physical_entities, sub_id)
+
+    def remove_sub_ids(self, remove_sub_ids):
+        for sub_id in remove_sub_ids:
+            if not sub_id:
+                continue
+            if sub_id in self.physical_entities:
+                self.physical_entities.remove(sub_id)
+            if sub_id in self.physical_classes_map:
+                self.physical_classes_map.pop(sub_id)
+            if sub_id in self.physical_name_map:
+                name = self.physical_name_map[sub_id]
+                if name in self.physical_name_to_oid_map:
+                    self.physical_name_to_oid_map.pop(name)
+                if name in self.pending_resolve_parent_name_map:
+                    self.pending_resolve_parent_name_map.pop(name)
+                self.physical_name_map.pop(sub_id)
+            if sub_id in self.physical_hw_version_map:
+                self.physical_hw_version_map.pop(sub_id)
+            if sub_id in self.physical_serial_number_map:
+                self.physical_serial_number_map.pop(sub_id)
+            if sub_id in self.physical_mfg_name_map:
+                self.physical_mfg_name_map.pop(sub_id)
+            if sub_id in self.physical_model_name_map:
+                self.physical_model_name_map.pop(sub_id)
+            if sub_id in self.physical_contained_in_map:
+                self.physical_contained_in_map.pop(sub_id)
+            if sub_id in self.physical_parent_relative_pos_map:
+                self.physical_parent_relative_pos_map.pop(sub_id)
+            if sub_id in self.physical_fru_map:
+                self.physical_fru_map.pop(sub_id)
+
+    def add_pending_entity_name_callback(self, name, function, args):
+        if name in self.pending_resolve_parent_name_map:
+            self.pending_resolve_parent_name_map[name].append(Callback(function, args))
+        else:
+            self.pending_resolve_parent_name_map[name] = [Callback(function, args)]
+
+    def update_name_to_oid_map(self, name, oid):
+        """
+        Update entity name to oid map. If the given name is in self.pending_resolve_parent_name_map, update physical
+        contained in information accordingly.
+        :param name: entity name
+        :param oid: entity oid
+        """
+        self.physical_name_to_oid_map[name] = oid
+
+        if name in self.pending_resolve_parent_name_map:
+            for callback in self.pending_resolve_parent_name_map[name]:
+                callback.invoke()
+            self.pending_resolve_parent_name_map.pop(name)
+
+    def set_phy_class(self, sub_id, phy_class):
+        self.physical_classes_map[sub_id] = phy_class
+
+    def set_phy_parent_relative_pos(self, sub_id, pos):
+        """
+        :param sub_id: sub OID
+        :param pos: 1-based relative position
+        """
+        self.physical_parent_relative_pos_map[sub_id] = pos
+
+    def set_phy_descr(self, sub_id, phy_desc):
+        self.physical_description_map[sub_id] = phy_desc
+
+    def set_phy_name(self, sub_id, name):
+        self.physical_name_map[sub_id] = name
+
+    def set_phy_contained_in(self, sub_id, parent):
+        """
+        :param sub_id: sub OID
+        :param parent: parent entity name or parent oid
+        """
+
+        if sub_id in self.physical_entities:
+            if isinstance(parent, str):
+                if parent in self.physical_name_to_oid_map:
+                    self.physical_contained_in_map[sub_id] = self.physical_name_to_oid_map[parent][0]
+                else:
+                    self._add_pending_entity_name_callback(parent, self.set_phy_contained_in, [sub_id, parent])
+            elif isinstance(parent, int):
+                self.physical_contained_in_map[sub_id] = parent
+            elif isinstance(parent, tuple):
+                self.physical_contained_in_map[sub_id] = parent[0]
+
+    def set_phy_hw_ver(self, sub_id, phy_hw_ver):
+        self.physical_hw_version_map[sub_id] = phy_hw_ver
+
+    def set_phy_serial_num(self, sub_id, phy_serial_num):
+        self.physical_serial_number_map[sub_id] = phy_serial_num
+
+    def set_phy_mfg_name(self, sub_id, phy_mfg_name):
+        self.physical_mfg_name_map[sub_id] = phy_mfg_name
+
+    def set_phy_model_name(self, sub_id, phy_model_name):
+        self.physical_model_name_map[sub_id] = phy_model_name
+
+    def set_phy_fru(self, sub_id, replaceable):
+        if isinstance(replaceable, str):
+            replaceable = True if replaceable.lower() == 'true' else False
+        self.physical_fru_map[sub_id] = self.REPLACEABLE if replaceable else self.NOT_REPLACEABLE
+
+    def get_next(self, sub_id):
+        """
+        :param sub_id: The 1-based sub-identifier query.
+        :return: the next sub id.
+        """
+
+        right = bisect_right(self.physical_entities, sub_id)
+        if right == len(self.physical_entities):
+            return None
+        return self.physical_entities[right]
+
+    def get_phy_class(self, sub_id):
+        """
+        :param sub_id: sub OID
+        :return: physical class for this OID
+        """
+
+        if sub_id in self.physical_entities:
+            return self.physical_classes_map.get(sub_id, PhysicalClass.UNKNOWN)
+        return None
+
+    def get_phy_parent_relative_pos(self, sub_id):
+        """
+        :param sub_id: sub OID
+        :return: relative position in parent device for this OID
+        """
+        if sub_id in self.physical_entities:
+            return self.physical_parent_relative_pos_map.get(sub_id, PhysicalClass.UNKNOWN)
+        return None
+
+    def get_phy_descr(self, sub_id):
+        """
+        :param sub_id: sub OID
+        :return: description string for this OID
+        """
+
+        if sub_id in self.physical_entities:
+            return self.physical_description_map.get(sub_id, "")
+        return None
+
+    def get_phy_vendor_type(self, sub_id):
+        """
+        :param sub_id: sub OID
+        :return: vendor type for this OID
+        """
+
+        return "" if sub_id in self.physical_entities else None
+
+    def get_phy_contained_in(self, sub_id):
+        """
+        :param sub_id: sub OID
+        :return: physical contained in device OID for this OID
+        """
+
+        if sub_id in self.physical_entities:
+            return self.physical_contained_in_map.get(sub_id, -1)
+            #return sub_id_tuple[0] if isinstance(sub_id_tuple, tuple) else None
+        return None
+
+    def get_phy_name(self, sub_id):
+        """
+        :param sub_id: sub OID
+        :return: name string for this OID
+        """
+        if sub_id in self.physical_entities:
+            return self.physical_name_map.get(sub_id, "")
+        return None
+
+    def get_phy_hw_ver(self, sub_id):
+        """
+        :param sub_id: sub OID
+        :return: hardware version for this OID
+        """
+
+        if sub_id in self.physical_entities:
+            return self.physical_hw_version_map.get(sub_id, "")
+        return None
+
+    def get_phy_fw_ver(self, sub_id):
+        """
+        :param sub_id: sub OID
+        :return: firmware version for this OID
+        """
+
+        return "" if sub_id in self.physical_entities else None
+
+    def get_phy_sw_rev(self, sub_id):
+        """
+        :param sub_id: sub OID
+        :return: software version for this OID
+        """
+
+        return "" if sub_id in self.physical_entities else None
+
+    def get_phy_serial_num(self, sub_id):
+        """
+        :param sub_id: sub OID
+        :return: serial number for this OID
+        """
+
+        if sub_id in self.physical_entities:
+            return self.physical_serial_number_map.get(sub_id, "")
+        return None
+
+    def get_phy_mfg_name(self, sub_id):
+        """
+        :param sub_id: sub OID
+        :return: manufacture name for this OID
+        """
+
+        if sub_id in self.physical_entities:
+            return self.physical_mfg_name_map.get(sub_id, "")
+        return None
+
+    def get_phy_model_name(self, sub_id):
+        """
+        :param sub_id: sub OID
+        :return: model name for this OID
+        """
+
+        if sub_id in self.physical_entities:
+            return self.physical_model_name_map.get(sub_id, "")
+        return None
+
+    def get_phy_alias(self, sub_id):
+        """
+        :param sub_id: sub OID
+        :return: alias for this OID
+        """
+
+        return "" if sub_id in self.physical_entities else None
+
+    def get_phy_assert_id(self, sub_id):
+        """
+        :param sub_id: sub OID
+        :return: assert ID for this OID
+        """
+
+        return "" if sub_id in self.physical_entities else None
+
+    def is_fru(self, sub_id):
+        """
+        :param sub_id: sub OID
+        :return: if it is FRU for this OID
+        """
+        if sub_id in self.physical_entities:
+            return self.physical_fru_map.get(sub_id, self.NOT_REPLACEABLE)
+        return None
 
 
 def physical_entity_updater():
@@ -226,7 +624,7 @@ class PhysicalEntityCacheUpdater(object):
             self.entity_to_oid_map.pop(entity_name)
 
 
-@physical_entity_updater
+@physical_entity_updater()
 class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
     KEY_PATTERN = mibs.transceiver_info_table("*")
 
@@ -279,20 +677,25 @@ class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
         self.mib_updater.set_phy_class(sub_id, PhysicalClass.PORT)
 
         # save values into cache
-        sfp_type, hw_version, serial_number, mfg_name, model_name = get_db_data(transceiver_info, XcvrInfoDB)
+        sfp_type, hw_version, serial_number, mfg_name, model_name, replaceable = get_db_data(transceiver_info, XcvrInfoDB)
         self.mib_updater.set_phy_hw_ver(sub_id, hw_version)
         self.mib_updater.set_phy_serial_num(sub_id, serial_number)
         self.mib_updater.set_phy_mfg_name(sub_id, mfg_name)
         self.mib_updater.set_phy_model_name(sub_id, model_name)
-        self.mib_updater.set_phy_contained_in(sub_id, PhysicalTableMIBUpdater.CHASSIS_ID)
-        relation_info = self.get_physical_relation_info(interface)
-        position, _ = get_db_data(relation_info, PhysicalRelationInfoDB)
-        self.mib_updater.set_phy_parent_relative_pos(sub_id, position)
+        self.mib_updater.set_phy_contained_in(sub_id, mibs.CHASSIS_SUB_ID)
+        self.mib_updater.set_phy_fru(sub_id, replaceable)
+        # Relative position of SFP can be changed at run time. For example, plug out a normal cable SFP3 and plug in
+        # a 1 split 4 SFP, the relative position of SFPs after SPF3 will change. In this case, it is hard to determine
+        # the relative position for other SFP. According to RFC 2737, 'If the agent cannot determine the parent-relative position
+        # for some reason, or if the associated value of entPhysicalContainedIn is '0', then the value '-1' is returned'.
+        # See https://tools.ietf.org/html/rfc2737.
+        self.mib_updater.set_phy_parent_relative_pos(sub_id, -1)
 
         ifalias = self.if_alias_map.get(interface.encode(), b"").decode()
 
         # generate a description for this transceiver
         self.mib_updater.set_phy_descr(sub_id, get_transceiver_description(sfp_type, ifalias))
+        self.mib_updater.set_phy_name(sub_id, interface)
 
         # update transceiver sensor cache
         self._update_transceiver_sensor_cache(interface)
@@ -323,14 +726,15 @@ class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
 
             self.mib_updater.set_phy_class(sensor_sub_id, PhysicalClass.SENSOR)
             self.mib_updater.set_phy_descr(sensor_sub_id, sensor_description)
+            self.mib_updater.set_phy_name(sensor_sub_id, sensor_description)
             # TODO: should all sensor index be 1?
             self.mib_updater.set_phy_parent_relative_pos(sensor_sub_id, 1)
-
+            self.mib_updater.set_phy_fru(sensor_sub_id, False)
             # add to available OIDs list
             self.mib_updater.add_sub_id(sensor_sub_id)
 
 
-@physical_entity_updater
+@physical_entity_updater()
 class FanCacheUpdater(PhysicalEntityCacheUpdater):
     KEY_PATTERN = mibs.fan_info_table("*")
 
@@ -347,34 +751,21 @@ class FanCacheUpdater(PhysicalEntityCacheUpdater):
         if not fan_info:
             return
 
-        drawer_name, model, presence, serial, speed = get_db_data(fan_info, FanInfoDB)
+        model, presence, serial, speed, replaceable = get_db_data(fan_info, FanInfoDB)
         if presence.lower() != 'true':
             self._remove_entity_cache(fan_name)
             return
-        if drawer_name and drawer_name != NOT_AVAILABLE:
-            drawer_relation_info = self.get_physical_relation_info(drawer_name)
-            if drawer_relation_info:
-                drawer_position, drawer_parent_name = get_db_data(drawer_relation_info, PhysicalRelationInfoDB)
-                drawer_sub_id = mibs.get_fan_drawer_sub_id(drawer_position)
-                self._add_entity_related_oid(fan_name, drawer_sub_id)
-                self.mib_updater.update_name_to_oid_map(drawer_name, drawer_sub_id)
-
-                # add fan drawer to available OID list
-                self.mib_updater.add_sub_id(drawer_sub_id)
-                self.mib_updater.set_phy_class(drawer_sub_id, PhysicalClass.CONTAINER)
-                self.mib_updater.set_phy_descr(drawer_sub_id, drawer_name)
-                self.mib_updater.set_phy_parent_relative_pos(drawer_sub_id, drawer_position)
-                self.mib_updater.set_phy_contained_in(drawer_sub_id, drawer_parent_name)
 
         fan_relation_info = self.get_physical_relation_info(fan_name)
         fan_position, fan_parent_name = get_db_data(fan_relation_info, PhysicalRelationInfoDB)
+        fan_position = int(fan_position)
         if fan_parent_name in self.mib_updater.physical_name_to_oid_map:
-            self._update_fan_mib_info(fan_parent_name, fan_position, fan_name, serial, model, speed)
+            self._update_fan_mib_info(fan_parent_name, fan_position, fan_name, serial, model, speed, replaceable)
         else:
-            args = [fan_parent_name, fan_position, fan_name, serial, model, speed]
+            args = [fan_parent_name, fan_position, fan_name, serial, model, speed, replaceable]
             self.mib_updater.add_pending_entity_name_callback(fan_parent_name, self._update_fan_mib_info, args)
 
-    def _update_fan_mib_info(self, fan_parent_name, fan_position, fan_name, serial, model, speed):
+    def _update_fan_mib_info(self, fan_parent_name, fan_position, fan_name, serial, model, speed, replaceable):
         fan_parent_sub_id = self.mib_updater.physical_name_to_oid_map[fan_parent_name]
         fan_sub_id = mibs.get_fan_sub_id(fan_parent_sub_id, fan_position)
         self._add_entity_related_oid(fan_name, fan_sub_id)
@@ -384,12 +775,14 @@ class FanCacheUpdater(PhysicalEntityCacheUpdater):
         self.mib_updater.add_sub_id(fan_sub_id)
         self.mib_updater.set_phy_class(fan_sub_id, PhysicalClass.FAN)
         self.mib_updater.set_phy_descr(fan_sub_id, fan_name)
+        self.mib_updater.set_phy_name(fan_sub_id, fan_name)
         self.mib_updater.set_phy_parent_relative_pos(fan_sub_id, fan_position)
         self.mib_updater.set_phy_contained_in(fan_sub_id, fan_parent_name)
         if serial and serial != NOT_AVAILABLE:
             self.mib_updater.set_phy_serial_num(fan_sub_id, serial)
         if model and model != NOT_AVAILABLE:
             self.mib_updater.set_phy_model_name(fan_sub_id, model)
+        self.mib_updater.set_phy_fru(fan_sub_id, replaceable)
 
         # add fan tachometers as a physical entity
         if speed and speed != NOT_AVAILABLE:
@@ -397,12 +790,59 @@ class FanCacheUpdater(PhysicalEntityCacheUpdater):
             self._add_entity_related_oid(fan_name, fan_tachometers_sub_id)
             self.mib_updater.add_sub_id(fan_tachometers_sub_id)
             self.mib_updater.set_phy_class(fan_tachometers_sub_id, PhysicalClass.SENSOR)
-            self.mib_updater.set_phy_descr(fan_tachometers_sub_id, 'tachometers for {}'.format(fan_name))
+            desc = 'tachometers for {}'.format(fan_name)
+            self.mib_updater.set_phy_descr(fan_tachometers_sub_id, desc)
+            self.mib_updater.set_phy_name(fan_tachometers_sub_id, desc)
             self.mib_updater.set_phy_parent_relative_pos(fan_tachometers_sub_id, 1)
             self.mib_updater.set_phy_contained_in(fan_tachometers_sub_id, fan_sub_id)
+            self.mib_updater.set_phy_fru(fan_tachometers_sub_id, False)
 
 
-@physical_entity_updater
+@physical_entity_updater()
+class FanDrawerCacheUpdater(PhysicalEntityCacheUpdater):
+    KEY_PATTERN = mibs.fan_drawer_info_table("*")
+
+    def __init__(self, mib_updater):
+        super(FanDrawerCacheUpdater, self).__init__(mib_updater)
+
+    def get_key_pattern(self):
+        return FanDrawerCacheUpdater.KEY_PATTERN
+
+    def _update_entity_cache(self, drawer_name):
+        drawer_info = Namespace.dbs_get_all(self.mib_updater.statedb, mibs.STATE_DB,
+                                            mibs.fan_drawer_info_table(drawer_name))
+
+        if not drawer_info:
+            return
+
+        model, presence, serial, replaceable = get_db_data(drawer_info, FanDrawerInfoDB)
+        if presence.lower() != 'true':
+            self._remove_entity_cache(drawer_name)
+            return
+
+        drawer_relation_info = self.get_physical_relation_info(drawer_name)
+        if drawer_relation_info:
+            drawer_position, drawer_parent_name = get_db_data(drawer_relation_info, PhysicalRelationInfoDB)
+            drawer_position = int(drawer_position)
+            drawer_sub_id = mibs.get_fan_drawer_sub_id(drawer_position)
+            self._add_entity_related_oid(drawer_name, drawer_sub_id)
+            self.mib_updater.update_name_to_oid_map(drawer_name, drawer_sub_id)
+
+            # add fan drawer to available OID list
+            self.mib_updater.add_sub_id(drawer_sub_id)
+            self.mib_updater.set_phy_class(drawer_sub_id, PhysicalClass.CONTAINER)
+            self.mib_updater.set_phy_descr(drawer_sub_id, drawer_name)
+            self.mib_updater.set_phy_name(drawer_sub_id, drawer_name)
+            self.mib_updater.set_phy_parent_relative_pos(drawer_sub_id, drawer_position)
+            self.mib_updater.set_phy_contained_in(drawer_sub_id, drawer_parent_name)
+            if model and model != NOT_AVAILABLE:
+                self.mib_updater.set_phy_model_name(drawer_sub_id, model)
+            if serial and serial != NOT_AVAILABLE:
+                self.mib_updater.set_phy_serial_num(drawer_sub_id, serial)
+            self.mib_updater.set_phy_fru(drawer_sub_id, replaceable)
+
+
+@physical_entity_updater()
 class PsuCacheUpdater(PhysicalEntityCacheUpdater):
     KEY_PATTERN = mibs.psu_info_table("*")
 
@@ -419,13 +859,14 @@ class PsuCacheUpdater(PhysicalEntityCacheUpdater):
         if not psu_info:
             return
 
-        current, power, presence, voltage, temperature = get_db_data(psu_info, PsuInfoDB)
+        model, serial, current, power, presence, voltage, temperature, replaceable = get_db_data(psu_info, PsuInfoDB)
         if presence.lower() != 'true':
             self._remove_entity_cache(psu_name)
             return
 
         psu_relation_info = self.get_physical_relation_info(psu_name)
         psu_position, psu_parent_name = get_db_data(psu_relation_info, PhysicalRelationInfoDB)
+        psu_position = int(psu_position)
         psu_sub_id = mibs.get_psu_sub_id(psu_position)
         self._add_entity_related_oid(psu_name, psu_sub_id)
         #self.mib_updater.update_name_to_oid_map(psu_name, psu_sub_id)
@@ -434,8 +875,12 @@ class PsuCacheUpdater(PhysicalEntityCacheUpdater):
         self.mib_updater.add_sub_id(psu_sub_id)
         self.mib_updater.set_phy_class(psu_sub_id, PhysicalClass.POWERSUPPLY)
         self.mib_updater.set_phy_descr(psu_sub_id, psu_name)
+        self.mib_updater.set_phy_name(psu_sub_id, psu_name)
+        self.mib_updater.set_phy_model_name(psu_sub_id, model)
+        self.mib_updater.set_phy_serial_num(psu_sub_id, serial)
         self.mib_updater.set_phy_parent_relative_pos(psu_sub_id, psu_position)
         self.mib_updater.set_phy_contained_in(psu_sub_id, psu_parent_name)
+        self.mib_updater.set_phy_fru(psu_sub_id, replaceable)
 
         # add psu current sensor as a physical entity
         if current and current != NOT_AVAILABLE:
@@ -452,12 +897,15 @@ class PsuCacheUpdater(PhysicalEntityCacheUpdater):
         self._add_entity_related_oid(psu_name, psu_current_sub_id)
         self.mib_updater.add_sub_id(psu_current_sub_id)
         self.mib_updater.set_phy_class(psu_current_sub_id, PhysicalClass.SENSOR)
-        self.mib_updater.set_phy_descr(psu_current_sub_id, '{} for {}'.format(sensor_name, psu_name))
-        self.mib_updater.set_phy_parent_relative_pos(psu_current_sub_id, 1)
+        desc = '{} for {}'.format(PSU_SENSOR_NAME_MAP[sensor_name], psu_name)
+        self.mib_updater.set_phy_descr(psu_current_sub_id, desc)
+        self.mib_updater.set_phy_name(psu_current_sub_id, desc)
+        self.mib_updater.set_phy_parent_relative_pos(psu_current_sub_id, mibs.PSU_SENSOR_PART_ID_MAP[sensor_name])
         self.mib_updater.set_phy_contained_in(psu_current_sub_id, psu_sub_id)
+        self.mib_updater.set_phy_fru(psu_current_sub_id, False)
 
 
-@physical_entity_updater
+@physical_entity_updater()
 class ThermalCacheUpdater(PhysicalEntityCacheUpdater):
     KEY_PATTERN = mibs.thermal_info_table("*")
 
@@ -469,20 +917,21 @@ class ThermalCacheUpdater(PhysicalEntityCacheUpdater):
 
     def _update_entity_cache(self, thermal_name):
         thermal_info = Namespace.dbs_get_all(self.mib_updater.statedb, mibs.STATE_DB,
-                                             mibs.psu_info_table(thermal_name))
+                                             mibs.thermal_info_table(thermal_name))
         if not thermal_info:
             return
 
-        temperature = thermal_info.get('temperature', b'').decode()
+        temperature, replaceable = get_db_data(thermal_info, ThermalInfoDB)
         if temperature and temperature != NOT_AVAILABLE:
             thermal_relation_info = self.get_physical_relation_info(thermal_name)
             thermal_position, thermal_parent_name = get_db_data(thermal_relation_info, PhysicalRelationInfoDB)
+            thermal_position = int(thermal_position)
 
             # only process thermals belong to chassis here, thermals belong to other
             # physical entity will be processed in other entity updater, for example
             # PSU thermal will be processed by PsuCacheUpdater
             if thermal_parent_name in self.mib_updater.physical_name_to_oid_map and \
-                self.mib_updater.physical_name_to_oid_map[thermal_parent_name] == PhysicalTableMIBUpdater.CHASSIS_ID:
+                self.mib_updater.physical_name_to_oid_map[thermal_parent_name] == (mibs.CHASSIS_SUB_ID,):
                 thermal_sub_id = mibs.get_chassis_thermal_sub_id(thermal_position)
                 self._add_entity_related_oid(thermal_name, thermal_sub_id)
 
@@ -490,325 +939,12 @@ class ThermalCacheUpdater(PhysicalEntityCacheUpdater):
                 self.mib_updater.add_sub_id(thermal_sub_id)
                 self.mib_updater.set_phy_class(thermal_sub_id, PhysicalClass.SENSOR)
                 self.mib_updater.set_phy_descr(thermal_sub_id, thermal_name)
+                self.mib_updater.set_phy_name(thermal_sub_id, thermal_name)
                 self.mib_updater.set_phy_parent_relative_pos(thermal_sub_id, thermal_position)
-                self.mib_updater.set_phy_contained_in(thermal_sub_id, PhysicalTableMIBUpdater.CHASSIS_MGMT_ID)
+                self.mib_updater.set_phy_contained_in(thermal_sub_id, mibs.CHASSIS_MGMT_SUB_ID)
+                self.mib_updater.set_phy_fru(thermal_sub_id, replaceable)
         else:
             self._remove_entity_cache(thermal_name)
-
-
-class Callback(object):
-    def __init__(self, function, args):
-        self.function = function
-        self.args = args
-
-    def invoke(self):
-        self.function(*self.args)
-
-
-class PhysicalTableMIBUpdater(MIBUpdater):
-    """
-    Updater class for physical table MIB
-    """
-
-    CHASSIS_ID = 1
-    CHASSIS_NAME = 'chassis 1'
-    CHASSIS_MGMT_ID = 200000000 # todo, move to init file
-    physical_entity_updater_types = []
-
-    def __init__(self):
-        super().__init__()
-
-        self.statedb = Namespace.init_namespace_dbs()
-        Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
-
-        # List of available sub OIDs.
-        self.physical_entities = []
-
-        # Map sub ID to its data.
-        self.physical_classes_map = {}
-        self.physical_description_map = {}
-        self.physical_hw_version_map = {}
-        self.physical_serial_number_map = {}
-        self.physical_mfg_name_map = {}
-        self.physical_model_name_map = {}
-        self.physical_contained_in_map = {}
-        self.physical_parent_relative_pos_map = {}
-
-        # Map physical entity name and oid
-        self.physical_name_to_oid_map = {}
-
-        # Map physical entity name that need resolve. The key is the entity name, value is a list of Callback objects
-        # that will be called when the entity name is added to self.physical_name_to_oid_map.
-        # It's possible the parent name and parent oid are still not in self.physical_name_to_oid_map when child entity
-        # update cache. Have to store such entry to a dictionary. When parent name and parent oid add to
-        # self.physical_name_to_oid_map, set self.physical_contained_in_map accordingly
-        self.pending_resolve_parent_name_map = {}
-
-        # physical entity updaters
-        self.physical_entity_updaters = self.create_physical_entity_updaters()
-
-    @classmethod
-    def register_entity_updater_type(cls, object_type):
-        cls.physical_entity_updater_types.append(object_type)
-
-    def create_physical_entity_updaters(self):
-        return [creator(self) for creator in PhysicalTableMIBUpdater.physical_entity_updater_types]
-
-    def reinit_data(self):
-        """
-        Re-initialize all data.
-        """
-
-        # reinit cache
-        self.physical_classes_map = {}
-        self.physical_description_map = {}
-        self.physical_hw_version_map = {}
-        self.physical_serial_number_map = {}
-        self.physical_mfg_name_map = {}
-        self.physical_model_name_map = {}
-        self.physical_contained_in_map = {}
-        self.physical_parent_relative_pos_map = {}
-
-        self.physical_name_to_oid_map = {}
-        self.pending_resolve_parent_name_map = {}
-
-        device_metadata = mibs.get_device_metadata(self.statedb[0])
-        chassis_sub_id = (self.CHASSIS_ID, )
-        self.physical_entities = [chassis_sub_id]
-        self.physical_name_to_oid_map[self.CHASSIS_NAME] = self.CHASSIS_ID
-        self.add_sub_id(self.CHASSIS_MGMT_ID)
-
-        if not device_metadata or not device_metadata.get(b"chassis_serial_number"):
-            chassis_serial_number = ""
-        else:
-            chassis_serial_number = device_metadata[b"chassis_serial_number"]
-
-        self.physical_classes_map[chassis_sub_id] = PhysicalClass.CHASSIS
-        self.physical_serial_number_map[chassis_sub_id] = chassis_serial_number
-
-        for updater in self.physical_entity_updaters:
-            updater.reinit_data()
-
-    def update_data(self):
-        # This code is not executed in unit test, since mockredis
-        # does not support pubsub
-        for i in range(len(self.statedb)):
-            for updater in self.physical_entity_updaters:
-                updater.update_data(i, self.statedb[i])
-
-    def add_sub_id(self, sub_id):
-        insort_right(self.physical_entities, sub_id)
-
-    def remove_sub_ids(self, remove_sub_ids):
-        for sub_id in remove_sub_ids:
-            if sub_id and sub_id in self.physical_entities:
-                self.physical_entities.remove(sub_id)
-
-    def add_pending_entity_name_callback(self, name, function, args):
-        if name in self.pending_resolve_parent_name_map:
-            self.pending_resolve_parent_name_map[name].append(Callback(function, args))
-        else:
-            self.pending_resolve_parent_name_map[name] = [Callback(function, args)]
-
-    def update_name_to_oid_map(self, name, oid):
-        """
-        Update entity name to oid map. If the given name is in self.pending_resolve_parent_name_map, update physical
-        contained in information accordingly.
-        :param name: entity name
-        :param oid: entity oid
-        """
-        self.physical_name_to_oid_map[name] = oid
-
-        if name in self.pending_resolve_parent_name_map:
-            for callback in self.pending_resolve_parent_name_map[name]:
-                callback.invoke()
-            self.pending_resolve_parent_name_map.pop(name)
-
-    def set_phy_class(self, sub_id, phy_class):
-        self.physical_classes_map[sub_id] = phy_class
-
-    def set_phy_parent_relative_pos(self, sub_id, pos):
-        """
-        :param sub_id: sub OID
-        :param pos: 1-based relative position
-        """
-        self.physical_parent_relative_pos_map[sub_id] = pos
-
-    def set_phy_descr(self, sub_id, phy_desc):
-        self.physical_description_map[sub_id] = phy_desc
-
-    def set_phy_contained_in(self, sub_id, parent):
-        """
-        :param sub_id: sub OID
-        :param parent: parent entity name or parent oid
-        """
-
-        if sub_id in self.physical_entities:
-            if isinstance(parent, str):
-                if parent in self.physical_name_to_oid_map:
-                    self.physical_contained_in_map[sub_id] = self.physical_name_to_oid_map[parent]
-                else:
-                    self._add_pending_entity_name_callback(parent, self.set_phy_contained_in, [sub_id, parent])
-            elif isinstance(parent, int):
-                self.physical_contained_in_map[sub_id] = parent
-
-    def set_phy_hw_ver(self, sub_id, phy_hw_ver):
-        self.physical_hw_version_map[sub_id] = phy_hw_ver
-
-    def set_phy_serial_num(self, sub_id, phy_serial_num):
-        self.physical_serial_number_map[sub_id] = phy_serial_num
-
-    def set_phy_mfg_name(self, sub_id, phy_mfg_name):
-        self.physical_mfg_name_map[sub_id] = phy_mfg_name
-
-    def set_phy_model_name(self, sub_id, phy_model_name):
-        self.physical_model_name_map[sub_id] = phy_model_name
-
-    def get_next(self, sub_id):
-        """
-        :param sub_id: The 1-based sub-identifier query.
-        :return: the next sub id.
-        """
-
-        right = bisect_right(self.physical_entities, sub_id)
-        if right == len(self.physical_entities):
-            return None
-        return self.physical_entities[right]
-
-    def get_phy_class(self, sub_id):
-        """
-        :param sub_id: sub OID
-        :return: physical class for this OID
-        """
-
-        if sub_id in self.physical_entities:
-            return self.physical_classes_map.get(sub_id, PhysicalClass.UNKNOWN)
-        return None
-
-    def get_phy_parent_relative_pos(self, sub_id):
-        """
-        :param sub_id: sub OID
-        :return: relative position in parent device for this OID
-        """
-        if sub_id in self.physical_entities:
-            return self.physical_parent_relative_pos_map.get(sub_id, PhysicalClass.UNKNOWN)
-        return None
-
-    def get_phy_descr(self, sub_id):
-        """
-        :param sub_id: sub OID
-        :return: description string for this OID
-        """
-
-        if sub_id in self.physical_entities:
-            return self.physical_description_map.get(sub_id, "")
-        return None
-
-    def get_phy_vendor_type(self, sub_id):
-        """
-        :param sub_id: sub OID
-        :return: vendor type for this OID
-        """
-
-        return "" if sub_id in self.physical_entities else None
-
-    def get_phy_contained_in(self, sub_id):
-        """
-        :param sub_id: sub OID
-        :return: physical contained in device OID for this OID
-        """
-
-        if sub_id in self.physical_entities:
-            return self.physical_contained_in_map.get(sub_id, None)
-        return None
-
-    def get_phy_name(self, sub_id):
-        """
-        :param sub_id: sub OID
-        :return: name string for this OID
-        """
-
-        return "" if sub_id in self.physical_entities else None
-
-    def get_phy_hw_ver(self, sub_id):
-        """
-        :param sub_id: sub OID
-        :return: hardware version for this OID
-        """
-
-        if sub_id in self.physical_entities:
-            return self.physical_hw_version_map.get(sub_id, "")
-        return None
-
-    def get_phy_fw_ver(self, sub_id):
-        """
-        :param sub_id: sub OID
-        :return: firmware version for this OID
-        """
-
-        return "" if sub_id in self.physical_entities else None
-
-    def get_phy_sw_rev(self, sub_id):
-        """
-        :param sub_id: sub OID
-        :return: software version for this OID
-        """
-
-        return "" if sub_id in self.physical_entities else None
-
-    def get_phy_serial_num(self, sub_id):
-        """
-        :param sub_id: sub OID
-        :return: serial number for this OID
-        """
-
-        if sub_id in self.physical_entities:
-            return self.physical_serial_number_map.get(sub_id, "")
-        return None
-
-    def get_phy_mfg_name(self, sub_id):
-        """
-        :param sub_id: sub OID
-        :return: manufacture name for this OID
-        """
-
-        if sub_id in self.physical_entities:
-            return self.physical_mfg_name_map.get(sub_id, "")
-        return None
-
-    def get_phy_model_name(self, sub_id):
-        """
-        :param sub_id: sub OID
-        :return: model name for this OID
-        """
-
-        if sub_id in self.physical_entities:
-            return self.physical_model_name_map.get(sub_id, "")
-        return None
-
-    def get_phy_alias(self, sub_id):
-        """
-        :param sub_id: sub OID
-        :return: alias for this OID
-        """
-
-        return "" if sub_id in self.physical_entities else None
-
-    def get_phy_assert_id(self, sub_id):
-        """
-        :param sub_id: sub OID
-        :return: assert ID for this OID
-        """
-
-        return "" if sub_id in self.physical_entities else None
-
-    def is_fru(self, sub_id):
-        """
-        :param sub_id: sub OID
-        :return: if it is FRU for this OID
-        """
-
-        return "" if sub_id in self.physical_entities else None
 
 
 class PhysicalTableMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.47.1.1.1'):
@@ -861,4 +997,4 @@ class PhysicalTableMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.47.1.1.1'):
         SubtreeMIBEntry('1.15', updater, ValueType.OCTET_STRING, updater.get_phy_assert_id)
 
     entPhysicalIsFRU = \
-        SubtreeMIBEntry('1.16', updater, ValueType.OCTET_STRING, updater.is_fru)
+        SubtreeMIBEntry('1.16', updater, ValueType.INTEGER, updater.is_fru)

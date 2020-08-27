@@ -25,6 +25,17 @@ SNMP_OVERLAY_DB = 'SNMP_OVERLAY_DB'
 TABLE_NAME_SEPARATOR_COLON = ':'
 TABLE_NAME_SEPARATOR_VBAR = '|'
 
+CHASSIS_SUB_ID = 1
+CHASSIS_MGMT_SUB_ID = 200000000
+CHASSIS_THERMAL_OFFSET = 100000
+FAN_DRAWER_BASE_SUB_ID = 500000000
+FAN_DRAWER_POSITION_MULTIPLE = 1000000
+FAN_POSITION_MULTIPLE = 20020
+FAN_TACHOMETERS_OFFSET = 10000
+PSU_BASE_SUB_ID = 600000000
+PSU_POSITION_MULTIPLE = 1000000
+PSU_SENSOR_MULTIPLE = 1000
+
 # This is used in both rfc2737 and rfc3433
 XCVR_SENSOR_PART_ID_MAP = {
     "temperature":  1,
@@ -44,10 +55,10 @@ XCVR_SENSOR_PART_ID_MAP = {
 }
 
 PSU_SENSOR_PART_ID_MAP = {
-    'temperature': 40011,
-    'power': 40030,
-    'current': 40040,
-    'voltage': 40050
+    'temperature': 1,
+    'power': 2,
+    'current': 3,
+    'voltage': 4
 }
 
 # IfIndex to OID multiplier for transceiver
@@ -78,6 +89,14 @@ def fan_info_table(fan_name):
     :return: fan info entry for this fan
     """
     return 'FAN_INFO' + TABLE_NAME_SEPARATOR_VBAR + fan_name
+
+
+def fan_drawer_info_table(drawer_name):
+    """
+    :param: drawer_name: fan drawer name
+    :return: fan drawer info entry for this fan
+    """
+    return 'FAN_DRAWER_INFO' + TABLE_NAME_SEPARATOR_VBAR + drawer_name
 
 
 def psu_info_table(psu_name):
@@ -420,58 +439,58 @@ def get_device_metadata(db_conn):
 def get_chassis_thermal_sub_id(position):
     """
     Returns sub OID for thermals that belong to chassis. Sub OID is calculated as follows:
-    sub OID = 200000000 + 100000 + entPhysicalParentRelPos
+    sub OID = CHASSIS_MGMT_SUB_ID + CHASSIS_THERMAL_OFFSET + entPhysicalParentRelPos
     :param position: thermal position
     :return: sub OID of the thermal
     """
-    return (200000000 + 100000 + position, )
+    return (CHASSIS_MGMT_SUB_ID + CHASSIS_THERMAL_OFFSET + position, )
 
 def get_fan_sub_id(parent_id, position):
     """
     Returns sub OID for fan. Sub OID is calculated as follows:
-    sub OID = parent_id + position * 20020
+    sub OID = parent_id[0] + position * FAN_POSITION_MULTIPLE
     :param parent_id: parent device sub OID
     :param position: fan position
     :return: sub OID of the fan
     """
-    return (parent_id + position + 20020, )
+    return (parent_id[0] + position * FAN_POSITION_MULTIPLE, )
 
 def get_fan_drawer_sub_id(position):
     """
     Returns sub OID for fan drawer. Sub OID is calculated as follows:
-    sub OID = 500000000 + position * 1000000
+    sub OID = FAN_DRAWER_BASE_SUB_ID + position * FAN_DRAWER_POSITION_MULTIPLE
     :param position: fan drawer position
     :return: sub OID of the fan drawer
     """
-    return (500000000 + position * 1000000, )
+    return (FAN_DRAWER_BASE_SUB_ID + position * FAN_DRAWER_POSITION_MULTIPLE, )
 
 def get_fan_tachometers_sub_id(parent_id):
     """
     Returns sub OID for fan tachometers. Sub OID is calculated as follows:
-    sub OID = parent_id + 10000
+    sub OID = parent_id[0] + FAN_TACHOMETERS_OFFSET
     :param parent_id: parent device sub OID
     :return: sub OID of the fan tachometers
     """
-    return (parent_id + 10000, )
+    return (parent_id[0] + FAN_TACHOMETERS_OFFSET, )
 
 def get_psu_sub_id(position):
     """
     Returns sub OID for PSU. Sub OID is calculated as follows:
-    sub OID = 600000000 + position * 1000000
+    sub OID = PSU_BASE_SUB_ID + position * PSU_POSITION_MULTIPLE
     :param position: PSU position
     :return: sub OID of PSU
     """
-    return (600000000 + position * 1000000, )
+    return (PSU_BASE_SUB_ID + position * PSU_POSITION_MULTIPLE, )
 
 def get_psu_sensor_sub_id(parent_id, sensor):
     """
     Returns sub OID for PSU sensor. Sub OID is calculated as follows:
-    sub OID = parent_id + PSU_SENSOR_PART_ID_MAP[sensor]
+    sub OID = parent_id[0] + PSU_SENSOR_PART_ID_MAP[sensor] * PSU_SENSOR_MULTIPLE
     :param parent_id: PSU oid
     :param sensor: PSU sensor name
     :return: sub OID of PSU sensor
     """
-    return (parent_id + PSU_SENSOR_PART_ID_MAP[sensor], )
+    return (parent_id[0] + PSU_SENSOR_PART_ID_MAP[sensor] * PSU_SENSOR_MULTIPLE, )
 
 def get_transceiver_sub_id(ifindex):
     """

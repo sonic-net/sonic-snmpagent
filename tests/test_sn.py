@@ -15,7 +15,8 @@ from ax_interface.pdu_implementations import GetPDU, GetNextPDU
 from ax_interface import ValueType
 from ax_interface.encodings import ObjectIdentifier
 from ax_interface.constants import PduTypes
-from sonic_ax_impl.mibs.ietf.rfc2737 import PhysicalClass
+from sonic_ax_impl.mibs.ietf.rfc2737 import PhysicalClass, PSU_SENSOR_NAME_MAP
+from sonic_ax_impl.mibs import CHASSIS_SUB_ID, CHASSIS_MGMT_SUB_ID, PSU_SENSOR_PART_ID_MAP, get_psu_sensor_sub_id, get_psu_sub_id, get_fan_drawer_sub_id, get_fan_sub_id, get_fan_tachometers_sub_id, get_chassis_thermal_sub_id
 from sonic_ax_impl.main import SonicMIB
 
 class TestSonicMIB(TestCase):
@@ -62,38 +63,137 @@ class TestSonicMIB(TestCase):
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
         self.assertEqual(str(value0.data), "SAMPLETESTSN")
 
+    def test_getpdu_chassis_mgmt_info(self):
+        sub_id = CHASSIS_MGMT_SUB_ID
+        expected_mib = {
+            2: (ValueType.OCTET_STRING, "MGMT for chassis 1"),
+            4: (ValueType.INTEGER, 1),
+            5: (ValueType.INTEGER, PhysicalClass.OTHER),
+            6: (ValueType.INTEGER, 1),
+            16: (ValueType.INTEGER, 2)
+        }
+
+        self._check_getpdu(sub_id, expected_mib)
+
+    def test_getpdu_psu_info(self):
+        sub_id = get_psu_sub_id(2)[0]
+        expected_mib = {
+            2: (ValueType.OCTET_STRING, "PSU 2"),
+            4: (ValueType.INTEGER, 1),
+            5: (ValueType.INTEGER, PhysicalClass.POWERSUPPLY),
+            6: (ValueType.INTEGER, 2),
+            7: (ValueType.OCTET_STRING, "PSU 2"), 
+            8: (ValueType.OCTET_STRING, ""),
+            9: (ValueType.OCTET_STRING, ""), 
+            10: (ValueType.OCTET_STRING, ""), 
+            11: (ValueType.OCTET_STRING, "PSU_SERIAL"),
+            12: (ValueType.OCTET_STRING, ""),
+            13: (ValueType.OCTET_STRING, "PSU_MODEL"),
+            16: (ValueType.INTEGER, 1)
+        }
+
+        self._check_getpdu(sub_id, expected_mib)
+
+    def test_getpdu_psu_sensor_info(self):
+        for sensor_name, oid_offset in PSU_SENSOR_PART_ID_MAP.items():
+            self._check_psu_sensor_info(sensor_name, oid_offset)
+
+    def _check_psu_sensor_info(self, sensor_name, oid_offset):
+        psu_sub_id = get_psu_sub_id(2)[0]
+        sub_id = get_psu_sensor_sub_id((psu_sub_id, ), sensor_name)[0]
+        expected_mib = {
+            2: (ValueType.OCTET_STRING, "{} for PSU 2".format(PSU_SENSOR_NAME_MAP[sensor_name])),
+            4: (ValueType.INTEGER, psu_sub_id),
+            5: (ValueType.INTEGER, PhysicalClass.SENSOR),
+            6: (ValueType.INTEGER, PSU_SENSOR_PART_ID_MAP[sensor_name]),
+            7: (ValueType.OCTET_STRING, "{} for PSU 2".format(PSU_SENSOR_NAME_MAP[sensor_name])), 
+            16: (ValueType.INTEGER, 2)
+        }
+
+        self._check_getpdu(sub_id, expected_mib)
+
+    def test_getpdu_fan_drawer_info(self):
+        sub_id = get_fan_drawer_sub_id(1)[0]
+        expected_mib = {
+            2: (ValueType.OCTET_STRING, "drawer1"),
+            4: (ValueType.INTEGER, 1),
+            5: (ValueType.INTEGER, PhysicalClass.CONTAINER),
+            6: (ValueType.INTEGER, 1),
+            7: (ValueType.OCTET_STRING, "drawer1"), 
+            8: (ValueType.OCTET_STRING, ""),
+            9: (ValueType.OCTET_STRING, ""), 
+            10: (ValueType.OCTET_STRING, ""), 
+            11: (ValueType.OCTET_STRING, "DRAWERSERIAL"),
+            12: (ValueType.OCTET_STRING, ""),
+            13: (ValueType.OCTET_STRING, "DRAWERMODEL"),
+            16: (ValueType.INTEGER, 1)
+        }
+        self._check_getpdu(sub_id, expected_mib)
+
+    def test_getpdu_fan_info(self):
+        drawer_sub_id = get_fan_drawer_sub_id(1)
+        sub_id = get_fan_sub_id(drawer_sub_id, 1)[0]
+        expected_mib = {
+            2: (ValueType.OCTET_STRING, "fan1"),
+            4: (ValueType.INTEGER, drawer_sub_id[0]),
+            5: (ValueType.INTEGER, PhysicalClass.FAN),
+            6: (ValueType.INTEGER, 1),
+            7: (ValueType.OCTET_STRING, "fan1"), 
+            8: (ValueType.OCTET_STRING, ""),
+            9: (ValueType.OCTET_STRING, ""), 
+            10: (ValueType.OCTET_STRING, ""), 
+            11: (ValueType.OCTET_STRING, "FANSERIAL"),
+            12: (ValueType.OCTET_STRING, ""),
+            13: (ValueType.OCTET_STRING, "FANMODEL"),
+            16: (ValueType.INTEGER, 1)
+        }
+        self._check_getpdu(sub_id, expected_mib)
+
+    def test_getpdu_fan_tachometers_info(self):
+        drawer_sub_id = get_fan_drawer_sub_id(1)
+        fan_sub_id = get_fan_sub_id(drawer_sub_id, 1)
+        sub_id = get_fan_tachometers_sub_id(fan_sub_id)[0]
+        expected_mib = {
+            2: (ValueType.OCTET_STRING, "tachometers for fan1"),
+            4: (ValueType.INTEGER, fan_sub_id[0]),
+            5: (ValueType.INTEGER, PhysicalClass.SENSOR),
+            6: (ValueType.INTEGER, 1),
+            7: (ValueType.OCTET_STRING, "tachometers for fan1"), 
+            16: (ValueType.INTEGER, 2)
+        }
+        self._check_getpdu(sub_id, expected_mib)
+
+    def test_getpdu_thermal_info(self):
+        sub_id = get_chassis_thermal_sub_id(1)[0]
+        expected_mib = {
+            2: (ValueType.OCTET_STRING, "thermal1"),
+            4: (ValueType.INTEGER, CHASSIS_MGMT_SUB_ID),
+            5: (ValueType.INTEGER, PhysicalClass.SENSOR),
+            6: (ValueType.INTEGER, 1),
+            7: (ValueType.OCTET_STRING, "thermal1"), 
+            16: (ValueType.INTEGER, 2)
+        }
+        self._check_getpdu(sub_id, expected_mib)
+
     def test_getpdu_xcvr_info(self):
         sub_id = 1000 * 1 # sub id for Ethernet100
 
         expected_mib = {
             2: (ValueType.OCTET_STRING, "QSFP+ for etp1"),
+            4: (ValueType.INTEGER, CHASSIS_SUB_ID),
             5: (ValueType.INTEGER, PhysicalClass.PORT),
-            7: (ValueType.OCTET_STRING, ""), # skip
+            6: (ValueType.INTEGER, -1),
+            7: (ValueType.OCTET_STRING, "Ethernet0"), 
             8: (ValueType.OCTET_STRING, "A1"),
             9: (ValueType.OCTET_STRING, ""), # skip
             10: (ValueType.OCTET_STRING, ""), # skip
             11: (ValueType.OCTET_STRING, "SERIAL_NUM"),
             12: (ValueType.OCTET_STRING, "VENDOR_NAME"),
-            13: (ValueType.OCTET_STRING, "MODEL_NAME")
+            13: (ValueType.OCTET_STRING, "MODEL_NAME"),
+            16: (ValueType.INTEGER, 1)
         }
 
-        oids = [ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, field_sub_id, sub_id))
-                for field_sub_id in expected_mib]
-
-        get_pdu = GetNextPDU(
-            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
-            oids=oids
-        )
-
-        encoded = get_pdu.encode()
-        response = get_pdu.make_response(self.lut)
-
-        for mib_key, value in zip(expected_mib, response.values):
-            expected_oid = ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, mib_key, sub_id))
-            expected_type, expected_value = expected_mib[mib_key]
-            self.assertEqual(str(value.name), str(expected_oid))
-            self.assertEqual(value.type_, expected_type)
-            self.assertEqual(str(value.data), str(expected_value))
+        self._check_getpdu(sub_id, expected_mib)
 
     def test_getpdu_xcvr_dom(self):
         expected_mib = {
@@ -140,6 +240,25 @@ class TestSonicMIB(TestCase):
                 self.assertTrue(False)
 
             expected_oid = ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, *sub_id))
+            self.assertEqual(str(value.name), str(expected_oid))
+            self.assertEqual(value.type_, expected_type)
+            self.assertEqual(str(value.data), str(expected_value))
+
+    def _check_getpdu(self, sub_id, expected_mib):
+        oids = [ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, field_sub_id, sub_id))
+                for field_sub_id in expected_mib]
+        
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=oids
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+
+        for mib_key, value in zip(expected_mib, response.values):
+            expected_oid = ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, mib_key, sub_id))
+            expected_type, expected_value = expected_mib[mib_key]
             self.assertEqual(str(value.name), str(expected_oid))
             self.assertEqual(value.type_, expected_type)
             self.assertEqual(str(value.data), str(expected_value))
