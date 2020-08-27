@@ -21,5 +21,17 @@
     "tx2power": -5.4,
     "tx3power": -5.4,
     "tx4power": -5.4
+  },
+  "NEIGH_STATE_TABLE|10.0.0.0": {
+    "state": "Connect"
+  },
+  "NEIGH_STATE_TABLE|10.0.0.2": {
+    "state": "Active"
+  },
+  "NEIGH_STATE_TABLE|10.10.0.0": {
+    "state": "Established"
+  },
+  "NEIGH_STATE_TABLE|fec0::ffff:afa:07": {
+    "state": "Active"
   }
 }

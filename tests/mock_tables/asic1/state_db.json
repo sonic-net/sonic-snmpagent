@@ -21,5 +21,14 @@
     "tx2power": -5.4,
     "tx3power": -5.4,
     "tx4power": -5.4
+  },
+  "NEIGH_STATE_TABLE|10.0.0.6": {
+    "state": "Idle"
+  },
+  "NEIGH_STATE_TABLE|10.0.0.8": {
+    "state": "Active"
+  },
+  "NEIGH_STATE_TABLE|10.10.0.4": {
+    "state": "Established"
   }
 }

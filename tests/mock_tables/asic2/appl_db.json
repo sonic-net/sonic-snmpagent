@@ -75,7 +75,7 @@
     "scope": "global",
     "family": "IPv4"
   },
-  "INTF_TABLE:PortChannel04:10.10.0.5/31": {
+  "INTF_TABLE:PortChannel04:10.10.0.4/31": {
     "scope": "global",
     "family": "IPv4"
   },
