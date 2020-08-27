@@ -231,7 +231,7 @@ class TestGetNextPDU(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 8, 1))))
-        self.assertEqual(value0.data, 2) # down
+        self.assertEqual(value0.data, 1) # up
 
         oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 8, 1))
         get_pdu = GetNextPDU(
@@ -244,7 +244,7 @@ class TestGetNextPDU(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 8, 5))))
-        self.assertEqual(value0.data, 1) # up
+        self.assertEqual(value0.data, 2) # down
 
 
     def test_if_admin_status(self):
