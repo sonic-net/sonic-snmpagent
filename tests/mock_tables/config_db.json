@@ -3,7 +3,7 @@
     "description": "snowflake",
     "alias": "etp1",
     "speed": 100000,
-    "admin_status": "up"
+    "admin_status": "down"
   },
   "PORT|Ethernet4": {
     "description": "snowflake",
