@@ -126,6 +126,23 @@ XCVR_SENSOR_NAME_MAP = {
     "tx4power"    : "TX Power",
 }
 
+XCVR_SENSOR_INDEX_MAP = {
+    "temperature" : 1,
+    "voltage"     : 2,
+    "rx1power"    : 3,
+    "rx2power"    : 4,
+    "rx3power"    : 5,
+    "rx4power"    : 6,
+    "tx1bias"     : 7,
+    "tx2bias"     : 8,
+    "tx3bias"     : 9,
+    "tx4bias"     : 10,
+    "tx1power"    : 11,
+    "tx2power"    : 12,
+    "tx3power"    : 13,
+    "tx4power"    : 14,
+}
+
 NOT_AVAILABLE = 'N/A'
 QSFP_LANES = (1, 2, 3, 4)
 
@@ -147,8 +164,13 @@ def get_db_data(info_dict, enum_type):
     :return: tuple of fields values defined in enum_type;
     Empty string if field not in info_dict
     """
-    return (info_dict.get(field.value, b"").decode()
-            for field in enum_type)
+    ret = []
+    for field in enum_type:
+        value = info_dict.get(field.value, b"")
+        if value is not None:
+            value = value.decode()
+        ret.append(value)
+    return ret
 
 
 def get_transceiver_description(sfp_type, if_alias):
@@ -313,7 +335,9 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_classes_map[chassis_mgmt_sub_id] = PhysicalClass.OTHER
         self.physical_contained_in_map[chassis_mgmt_sub_id] = mibs.CHASSIS_SUB_ID
         self.physical_parent_relative_pos_map[chassis_mgmt_sub_id] = 1
-        self.physical_description_map[chassis_mgmt_sub_id] = 'MGMT for {}'.format(self.CHASSIS_NAME)
+        name = 'MGMT for {}'.format(self.CHASSIS_NAME)
+        self.physical_description_map[chassis_mgmt_sub_id] = name
+        self.physical_name_map[chassis_mgmt_sub_id] = name
         self.physical_fru_map[chassis_mgmt_sub_id] = self.NOT_REPLACEABLE
 
         for updater in self.physical_entity_updaters:
@@ -696,7 +720,7 @@ class PhysicalEntityCacheUpdater(object):
 
     def get_physical_relation_info(self, name):
         return Namespace.dbs_get_all(self.mib_updater.statedb, mibs.STATE_DB,
-                                     mibs.physical_relation_info_table(name))
+                                     mibs.physical_entity_info_table(name))
 
     def _add_entity_related_oid(self, entity_name, oid):
         if entity_name not in self.entity_to_oid_map:
@@ -813,8 +837,7 @@ class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
             self.mib_updater.set_phy_class(sensor_sub_id, PhysicalClass.SENSOR)
             self.mib_updater.set_phy_descr(sensor_sub_id, sensor_description)
             self.mib_updater.set_phy_name(sensor_sub_id, sensor_description)
-            # TODO: should all sensor index be 1?
-            self.mib_updater.set_phy_parent_relative_pos(sensor_sub_id, 1)
+            self.mib_updater.set_phy_parent_relative_pos(sensor_sub_id, XCVR_SENSOR_INDEX_MAP[sensor])
             self.mib_updater.set_phy_fru(sensor_sub_id, False)
             # add to available OIDs list
             self.mib_updater.add_sub_id(sensor_sub_id)
@@ -1010,6 +1033,8 @@ class ThermalCacheUpdater(PhysicalEntityCacheUpdater):
         temperature, replaceable = get_db_data(thermal_info, ThermalInfoDB)
         if temperature and not is_null_str(temperature):
             thermal_relation_info = self.get_physical_relation_info(thermal_name)
+            if not thermal_relation_info:
+                return
             thermal_position, thermal_parent_name = get_db_data(thermal_relation_info, PhysicalRelationInfoDB)
             thermal_position = int(thermal_position)
 

@@ -108,7 +108,7 @@ def psu_info_table(psu_name):
     return "PSU_INFO" + TABLE_NAME_SEPARATOR_VBAR + psu_name
 
 
-def physical_relation_info_table(name):
+def physical_entity_info_table(name):
     """
     :param: name: object name
     :return: relation info entry for this object
