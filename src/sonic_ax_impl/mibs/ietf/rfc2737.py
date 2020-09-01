@@ -447,16 +447,15 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         :param parent: parent entity name or parent oid
         """
 
-        if sub_id in self.physical_entities:
-            if isinstance(parent, str):
-                if parent in self.physical_name_to_oid_map:
-                    self.physical_contained_in_map[sub_id] = self.physical_name_to_oid_map[parent][0]
-                else:
-                    self._add_pending_entity_name_callback(parent, self.set_phy_contained_in, [sub_id, parent])
-            elif isinstance(parent, int):
-                self.physical_contained_in_map[sub_id] = parent
-            elif isinstance(parent, tuple):
-                self.physical_contained_in_map[sub_id] = parent[0]
+        if isinstance(parent, str):
+            if parent in self.physical_name_to_oid_map:
+                self.physical_contained_in_map[sub_id] = self.physical_name_to_oid_map[parent][0]
+            else:
+                self._add_pending_entity_name_callback(parent, self.set_phy_contained_in, [sub_id, parent])
+        elif isinstance(parent, int):
+            self.physical_contained_in_map[sub_id] = parent
+        elif isinstance(parent, tuple):
+            self.physical_contained_in_map[sub_id] = parent[0]
 
     def set_phy_hw_ver(self, sub_id, phy_hw_ver):
         """
@@ -703,6 +702,8 @@ class PhysicalEntityCacheUpdater(object):
 
             db_entry = msg["channel"].split(b":")[-1].decode()
             data = msg['data']  # event data
+            if not isinstance(data, bytes):
+                continue
 
             # extract interface name
             name = db_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
@@ -808,12 +809,13 @@ class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
         self.mib_updater.set_phy_name(sub_id, interface)
 
         # update transceiver sensor cache
-        self._update_transceiver_sensor_cache(interface)
+        self._update_transceiver_sensor_cache(interface, sub_id)
 
-    def _update_transceiver_sensor_cache(self, interface):
+    def _update_transceiver_sensor_cache(self, interface, sub_id):
         """
         Update sensor data for single transceiver
         :param: interface: Interface name associated with transceiver
+        :param: sub_id: OID of transceiver
         """
 
         ifalias = self.if_alias_map.get(interface.encode(), b"").decode()
@@ -837,10 +839,120 @@ class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
             self.mib_updater.set_phy_class(sensor_sub_id, PhysicalClass.SENSOR)
             self.mib_updater.set_phy_descr(sensor_sub_id, sensor_description)
             self.mib_updater.set_phy_name(sensor_sub_id, sensor_description)
+            self.mib_updater.set_phy_contained_in(sensor_sub_id, sub_id)
             self.mib_updater.set_phy_parent_relative_pos(sensor_sub_id, XCVR_SENSOR_INDEX_MAP[sensor])
             self.mib_updater.set_phy_fru(sensor_sub_id, False)
             # add to available OIDs list
             self.mib_updater.add_sub_id(sensor_sub_id)
+
+
+@physical_entity_updater()
+class PsuCacheUpdater(PhysicalEntityCacheUpdater):
+    KEY_PATTERN = mibs.psu_info_table("*")
+
+    def __init__(self, mib_updater):
+        super(PsuCacheUpdater, self).__init__(mib_updater)
+
+    def get_key_pattern(self):
+        return PsuCacheUpdater.KEY_PATTERN
+
+    def _update_entity_cache(self, psu_name):
+        psu_info = Namespace.dbs_get_all(self.mib_updater.statedb, mibs.STATE_DB,
+                                         mibs.psu_info_table(psu_name))
+
+        if not psu_info:
+            return
+
+        model, serial, current, power, presence, voltage, temperature, replaceable = get_db_data(psu_info, PsuInfoDB)
+        if presence.lower() != 'true':
+            self._remove_entity_cache(psu_name)
+            return
+
+        psu_relation_info = self.get_physical_relation_info(psu_name)
+        psu_position, psu_parent_name = get_db_data(psu_relation_info, PhysicalRelationInfoDB)
+        psu_position = int(psu_position)
+        psu_sub_id = mibs.get_psu_sub_id(psu_position)
+        self._add_entity_related_oid(psu_name, psu_sub_id)
+        #self.mib_updater.update_name_to_oid_map(psu_name, psu_sub_id)
+
+        # add PSU to available OID list
+        self.mib_updater.add_sub_id(psu_sub_id)
+        self.mib_updater.set_phy_class(psu_sub_id, PhysicalClass.POWERSUPPLY)
+        self.mib_updater.set_phy_descr(psu_sub_id, psu_name)
+        self.mib_updater.set_phy_name(psu_sub_id, psu_name)
+        if not is_null_str(model):
+            self.mib_updater.set_phy_model_name(psu_sub_id, model)
+        if not is_null_str(serial):
+            self.mib_updater.set_phy_serial_num(psu_sub_id, serial)
+        self.mib_updater.set_phy_parent_relative_pos(psu_sub_id, psu_position)
+        self.mib_updater.set_phy_contained_in(psu_sub_id, psu_parent_name)
+        self.mib_updater.set_phy_fru(psu_sub_id, replaceable)
+
+        # add psu current sensor as a physical entity
+        if current and not is_null_str(current):
+            self._update_psu_sensor_cache(psu_name, psu_sub_id, 'current')
+        if power and not is_null_str(power):
+            self._update_psu_sensor_cache(psu_name, psu_sub_id, 'power')
+        if temperature and not is_null_str(temperature):
+            self._update_psu_sensor_cache(psu_name, psu_sub_id, 'temperature')
+        if voltage and not is_null_str(voltage):
+            self._update_psu_sensor_cache(psu_name, psu_sub_id, 'voltage')
+
+    def _update_psu_sensor_cache(self, psu_name, psu_sub_id, sensor_name):
+        psu_current_sub_id = mibs.get_psu_sensor_sub_id(psu_sub_id, sensor_name)
+        self._add_entity_related_oid(psu_name, psu_current_sub_id)
+        self.mib_updater.add_sub_id(psu_current_sub_id)
+        self.mib_updater.set_phy_class(psu_current_sub_id, PhysicalClass.SENSOR)
+        desc = '{} for {}'.format(PSU_SENSOR_NAME_MAP[sensor_name], psu_name)
+        self.mib_updater.set_phy_descr(psu_current_sub_id, desc)
+        self.mib_updater.set_phy_name(psu_current_sub_id, desc)
+        self.mib_updater.set_phy_parent_relative_pos(psu_current_sub_id, mibs.PSU_SENSOR_PART_ID_MAP[sensor_name])
+        self.mib_updater.set_phy_contained_in(psu_current_sub_id, psu_sub_id)
+        self.mib_updater.set_phy_fru(psu_current_sub_id, False)
+
+
+@physical_entity_updater()
+class FanDrawerCacheUpdater(PhysicalEntityCacheUpdater):
+    KEY_PATTERN = mibs.fan_drawer_info_table("*")
+
+    def __init__(self, mib_updater):
+        super(FanDrawerCacheUpdater, self).__init__(mib_updater)
+
+    def get_key_pattern(self):
+        return FanDrawerCacheUpdater.KEY_PATTERN
+
+    def _update_entity_cache(self, drawer_name):
+        drawer_info = Namespace.dbs_get_all(self.mib_updater.statedb, mibs.STATE_DB,
+                                            mibs.fan_drawer_info_table(drawer_name))
+
+        if not drawer_info:
+            return
+
+        model, presence, serial, replaceable = get_db_data(drawer_info, FanDrawerInfoDB)
+        if presence.lower() != 'true':
+            self._remove_entity_cache(drawer_name)
+            return
+
+        drawer_relation_info = self.get_physical_relation_info(drawer_name)
+        if drawer_relation_info:
+            drawer_position, drawer_parent_name = get_db_data(drawer_relation_info, PhysicalRelationInfoDB)
+            drawer_position = int(drawer_position)
+            drawer_sub_id = mibs.get_fan_drawer_sub_id(drawer_position)
+            self._add_entity_related_oid(drawer_name, drawer_sub_id)
+            self.mib_updater.update_name_to_oid_map(drawer_name, drawer_sub_id)
+
+            # add fan drawer to available OID list
+            self.mib_updater.add_sub_id(drawer_sub_id)
+            self.mib_updater.set_phy_class(drawer_sub_id, PhysicalClass.CONTAINER)
+            self.mib_updater.set_phy_descr(drawer_sub_id, drawer_name)
+            self.mib_updater.set_phy_name(drawer_sub_id, drawer_name)
+            self.mib_updater.set_phy_parent_relative_pos(drawer_sub_id, drawer_position)
+            self.mib_updater.set_phy_contained_in(drawer_sub_id, drawer_parent_name)
+            if model and not is_null_str(model):
+                self.mib_updater.set_phy_model_name(drawer_sub_id, model)
+            if serial and not is_null_str(serial):
+                self.mib_updater.set_phy_serial_num(drawer_sub_id, serial)
+            self.mib_updater.set_phy_fru(drawer_sub_id, replaceable)
 
 
 @physical_entity_updater()
@@ -905,113 +1017,6 @@ class FanCacheUpdater(PhysicalEntityCacheUpdater):
             self.mib_updater.set_phy_parent_relative_pos(fan_tachometers_sub_id, 1)
             self.mib_updater.set_phy_contained_in(fan_tachometers_sub_id, fan_sub_id)
             self.mib_updater.set_phy_fru(fan_tachometers_sub_id, False)
-
-
-@physical_entity_updater()
-class FanDrawerCacheUpdater(PhysicalEntityCacheUpdater):
-    KEY_PATTERN = mibs.fan_drawer_info_table("*")
-
-    def __init__(self, mib_updater):
-        super(FanDrawerCacheUpdater, self).__init__(mib_updater)
-
-    def get_key_pattern(self):
-        return FanDrawerCacheUpdater.KEY_PATTERN
-
-    def _update_entity_cache(self, drawer_name):
-        drawer_info = Namespace.dbs_get_all(self.mib_updater.statedb, mibs.STATE_DB,
-                                            mibs.fan_drawer_info_table(drawer_name))
-
-        if not drawer_info:
-            return
-
-        model, presence, serial, replaceable = get_db_data(drawer_info, FanDrawerInfoDB)
-        if presence.lower() != 'true':
-            self._remove_entity_cache(drawer_name)
-            return
-
-        drawer_relation_info = self.get_physical_relation_info(drawer_name)
-        if drawer_relation_info:
-            drawer_position, drawer_parent_name = get_db_data(drawer_relation_info, PhysicalRelationInfoDB)
-            drawer_position = int(drawer_position)
-            drawer_sub_id = mibs.get_fan_drawer_sub_id(drawer_position)
-            self._add_entity_related_oid(drawer_name, drawer_sub_id)
-            self.mib_updater.update_name_to_oid_map(drawer_name, drawer_sub_id)
-
-            # add fan drawer to available OID list
-            self.mib_updater.add_sub_id(drawer_sub_id)
-            self.mib_updater.set_phy_class(drawer_sub_id, PhysicalClass.CONTAINER)
-            self.mib_updater.set_phy_descr(drawer_sub_id, drawer_name)
-            self.mib_updater.set_phy_name(drawer_sub_id, drawer_name)
-            self.mib_updater.set_phy_parent_relative_pos(drawer_sub_id, drawer_position)
-            self.mib_updater.set_phy_contained_in(drawer_sub_id, drawer_parent_name)
-            if model and not is_null_str(model):
-                self.mib_updater.set_phy_model_name(drawer_sub_id, model)
-            if serial and not is_null_str(serial):
-                self.mib_updater.set_phy_serial_num(drawer_sub_id, serial)
-            self.mib_updater.set_phy_fru(drawer_sub_id, replaceable)
-
-
-@physical_entity_updater()
-class PsuCacheUpdater(PhysicalEntityCacheUpdater):
-    KEY_PATTERN = mibs.psu_info_table("*")
-
-    def __init__(self, mib_updater):
-        super(PsuCacheUpdater, self).__init__(mib_updater)
-
-    def get_key_pattern(self):
-        return PsuCacheUpdater.KEY_PATTERN
-
-    def _update_entity_cache(self, psu_name):
-        psu_info = Namespace.dbs_get_all(self.mib_updater.statedb, mibs.STATE_DB,
-                                         mibs.psu_info_table(psu_name))
-
-        if not psu_info:
-            return
-
-        model, serial, current, power, presence, voltage, temperature, replaceable = get_db_data(psu_info, PsuInfoDB)
-        if presence.lower() != 'true':
-            self._remove_entity_cache(psu_name)
-            return
-
-        psu_relation_info = self.get_physical_relation_info(psu_name)
-        psu_position, psu_parent_name = get_db_data(psu_relation_info, PhysicalRelationInfoDB)
-        psu_position = int(psu_position)
-        psu_sub_id = mibs.get_psu_sub_id(psu_position)
-        self._add_entity_related_oid(psu_name, psu_sub_id)
-        #self.mib_updater.update_name_to_oid_map(psu_name, psu_sub_id)
-
-        # add PSU to available OID list
-        self.mib_updater.add_sub_id(psu_sub_id)
-        self.mib_updater.set_phy_class(psu_sub_id, PhysicalClass.POWERSUPPLY)
-        self.mib_updater.set_phy_descr(psu_sub_id, psu_name)
-        self.mib_updater.set_phy_name(psu_sub_id, psu_name)
-        self.mib_updater.set_phy_model_name(psu_sub_id, model)
-        self.mib_updater.set_phy_serial_num(psu_sub_id, serial)
-        self.mib_updater.set_phy_parent_relative_pos(psu_sub_id, psu_position)
-        self.mib_updater.set_phy_contained_in(psu_sub_id, psu_parent_name)
-        self.mib_updater.set_phy_fru(psu_sub_id, replaceable)
-
-        # add psu current sensor as a physical entity
-        if current and not is_null_str(current):
-            self._update_psu_sensor_cache(psu_name, psu_sub_id, 'current')
-        if power and not is_null_str(power):
-            self._update_psu_sensor_cache(psu_name, psu_sub_id, 'power')
-        if temperature and not is_null_str(temperature):
-            self._update_psu_sensor_cache(psu_name, psu_sub_id, 'temperature')
-        if voltage and not is_null_str(voltage):
-            self._update_psu_sensor_cache(psu_name, psu_sub_id, 'voltage')
-
-    def _update_psu_sensor_cache(self, psu_name, psu_sub_id, sensor_name):
-        psu_current_sub_id = mibs.get_psu_sensor_sub_id(psu_sub_id, sensor_name)
-        self._add_entity_related_oid(psu_name, psu_current_sub_id)
-        self.mib_updater.add_sub_id(psu_current_sub_id)
-        self.mib_updater.set_phy_class(psu_current_sub_id, PhysicalClass.SENSOR)
-        desc = '{} for {}'.format(PSU_SENSOR_NAME_MAP[sensor_name], psu_name)
-        self.mib_updater.set_phy_descr(psu_current_sub_id, desc)
-        self.mib_updater.set_phy_name(psu_current_sub_id, desc)
-        self.mib_updater.set_phy_parent_relative_pos(psu_current_sub_id, mibs.PSU_SENSOR_PART_ID_MAP[sensor_name])
-        self.mib_updater.set_phy_contained_in(psu_current_sub_id, psu_sub_id)
-        self.mib_updater.set_phy_fru(psu_current_sub_id, False)
 
 
 @physical_entity_updater()

@@ -111,9 +111,9 @@ def psu_info_table(psu_name):
 def physical_entity_info_table(name):
     """
     :param: name: object name
-    :return: relation info entry for this object
+    :return: entity info entry for this object
     """
-    return 'PHYSICAL_RELATION_INFO' + TABLE_NAME_SEPARATOR_VBAR + name
+    return 'PHYSICAL_ENTITY_INFO' + TABLE_NAME_SEPARATOR_VBAR + name
 
 
 def counter_table(sai_id):
@@ -449,11 +449,16 @@ def get_fan_sub_id(parent_id, position):
     """
     Returns sub OID for fan. Sub OID is calculated as follows:
     sub OID = parent_id[0] + position * FAN_POSITION_MULTIPLE
+    If parent_id is chassis OID, will use a "virtual" fan drawer OID as its parent_id
     :param parent_id: parent device sub OID
     :param position: fan position
     :return: sub OID of the fan
     """
-    return (parent_id[0] + position * FAN_POSITION_MULTIPLE, )
+    if parent_id[0] == CHASSIS_SUB_ID:
+        parent_id = FAN_DRAWER_BASE_SUB_ID + position * FAN_DRAWER_POSITION_MULTIPLE
+    else:
+        parent_id = parent_id[0]
+    return (parent_id + position * FAN_POSITION_MULTIPLE, )
 
 def get_fan_drawer_sub_id(position):
     """

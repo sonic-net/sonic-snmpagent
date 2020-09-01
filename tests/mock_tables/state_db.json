@@ -62,27 +62,27 @@
   "MGMT_PORT_TABLE|eth1": {
     "oper_status": "up"
   },
-  "PHYSICAL_RELATION_INFO|PSU 1": {
+  "PHYSICAL_ENTITY_INFO|PSU 1": {
     "position_in_parent": 1,
     "parent_name": "chassis 1"
   },
-  "PHYSICAL_RELATION_INFO|PSU 2": {
+  "PHYSICAL_ENTITY_INFO|PSU 2": {
     "position_in_parent": 2,
     "parent_name": "chassis 1"
   },
-  "PHYSICAL_RELATION_INFO|PSU 3": {
+  "PHYSICAL_ENTITY_INFO|PSU 3": {
     "position_in_parent": 3,
     "parent_name": "chassis 1"
   },
-  "PHYSICAL_RELATION_INFO|drawer1": {
+  "PHYSICAL_ENTITY_INFO|drawer1": {
     "position_in_parent": 1,
     "parent_name": "chassis 1"
   },
-  "PHYSICAL_RELATION_INFO|fan1": {
+  "PHYSICAL_ENTITY_INFO|fan1": {
     "position_in_parent": 1,
     "parent_name": "drawer1"
   },
-  "PHYSICAL_RELATION_INFO|thermal1": {
+  "PHYSICAL_ENTITY_INFO|thermal1": {
     "position_in_parent": 1,
     "parent_name": "chassis 1"
   },
