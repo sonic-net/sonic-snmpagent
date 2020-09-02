@@ -873,7 +873,7 @@ class PsuCacheUpdater(PhysicalEntityCacheUpdater):
         psu_position = int(psu_position)
         psu_sub_id = mibs.get_psu_sub_id(psu_position)
         self._add_entity_related_oid(psu_name, psu_sub_id)
-        #self.mib_updater.update_name_to_oid_map(psu_name, psu_sub_id)
+        self.mib_updater.update_name_to_oid_map(psu_name, psu_sub_id)
 
         # add PSU to available OID list
         self.mib_updater.add_sub_id(psu_sub_id)
