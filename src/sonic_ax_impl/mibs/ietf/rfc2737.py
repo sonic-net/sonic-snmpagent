@@ -326,6 +326,8 @@ class PhysicalTableMIBUpdater(MIBUpdater):
 
         self.physical_classes_map[chassis_sub_id] = PhysicalClass.CHASSIS
         self.physical_serial_number_map[chassis_sub_id] = chassis_serial_number
+        self.physical_name_map[chassis_sub_id] = self.CHASSIS_NAME
+        self.physical_description_map[chassis_sub_id] = self.CHASSIS_NAME
         self.physical_contained_in_map[chassis_sub_id] = 0
         self.physical_fru_map[chassis_sub_id] = self.NOT_REPLACEABLE
 
@@ -1011,7 +1013,7 @@ class FanCacheUpdater(PhysicalEntityCacheUpdater):
             self._add_entity_related_oid(fan_name, fan_tachometers_sub_id)
             self.mib_updater.add_sub_id(fan_tachometers_sub_id)
             self.mib_updater.set_phy_class(fan_tachometers_sub_id, PhysicalClass.SENSOR)
-            desc = 'tachometers for {}'.format(fan_name)
+            desc = 'Tachometers for {}'.format(fan_name)
             self.mib_updater.set_phy_descr(fan_tachometers_sub_id, desc)
             self.mib_updater.set_phy_name(fan_tachometers_sub_id, desc)
             self.mib_updater.set_phy_parent_relative_pos(fan_tachometers_sub_id, 1)
