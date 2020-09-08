@@ -38,26 +38,25 @@ class BgpSessionUpdater(MIBUpdater):
             neigh_str = neigh_key.decode()
             neigh_str = neigh_str.split('|')[1]
             neigh_info = self.db_conn[db_index].get_all(mibs.STATE_DB, neigh_key, blocking=False)
-            if neigh_info is None:
-                continue
-            state = neigh_info[b'state'].decode() 
-            ip = ipaddress.ip_address(neigh_str)
-            if type(ip) is ipaddress.IPv4Address:
-                oid_head = (1, 4)
-            else:
-                oid_head = (2, 16)
-            oid_ip = tuple(i for i in ip.packed)
+            if neigh_info is not None:
+                state = neigh_info[b'state'].decode() 
+                ip = ipaddress.ip_address(neigh_str)
+                if type(ip) is ipaddress.IPv4Address:
+                    oid_head = (1, 4)
+                else:
+                    oid_head = (2, 16)
+                oid_ip = tuple(i for i in ip.packed)
 
-            if state.isdigit():
-                status = 6
-            elif state in STATE_CODE:
-                status = STATE_CODE[state]
-            else:
-                continue 
+                if state.isdigit():
+                    status = 6
+                elif state in STATE_CODE:
+                    status = STATE_CODE[state]
+                else:
+                    continue 
 
-            oid = oid_head + oid_ip
-            self.session_status_list.append(oid)
-            self.session_status_map[oid] = status
+                oid = oid_head + oid_ip
+                self.session_status_list.append(oid)
+                self.session_status_map[oid] = status
 
         self.session_status_list.sort()
 
