@@ -1,2 +1,8 @@
 {
+  "NEIGH_STATE_TABLE|10.10.0.1": {
+    "state": "Established"
+  },
+  "NEIGH_STATE_TABLE|10.10.0.5": {
+    "state": "Established"
+  }
 }
