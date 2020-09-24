@@ -15,8 +15,12 @@ from ax_interface.pdu_implementations import GetPDU, GetNextPDU
 from ax_interface import ValueType
 from ax_interface.encodings import ObjectIdentifier
 from ax_interface.constants import PduTypes
-from sonic_ax_impl.mibs.ietf.rfc2737 import PhysicalClass, PSU_SENSOR_NAME_MAP
-from sonic_ax_impl.mibs import CHASSIS_SUB_ID, CHASSIS_MGMT_SUB_ID, PSU_SENSOR_PART_ID_MAP, get_psu_sensor_sub_id, get_psu_sub_id, get_fan_drawer_sub_id, get_fan_sub_id, get_fan_tachometers_sub_id, get_chassis_thermal_sub_id
+from sonic_ax_impl.mibs.ietf.rfc2737 import PhysicalClass, PSU_SENSOR_NAME_MAP, PSU_SENSOR_POSITION_MAP
+from sonic_ax_impl.mibs import CHASSIS_SUB_ID, CHASSIS_MGMT_SUB_ID, PSU_SENSOR_PART_ID_MAP
+from sonic_ax_impl.mibs import get_psu_sensor_sub_id, get_psu_sub_id, get_fan_drawer_sub_id
+from sonic_ax_impl.mibs import get_fan_sub_id, get_fan_tachometers_sub_id
+from sonic_ax_impl.mibs import get_chassis_thermal_sub_id, get_transceiver_sub_id
+from sonic_ax_impl.mibs import get_transceiver_sensor_sub_id
 from sonic_ax_impl.main import SonicMIB
 
 class TestSonicMIB(TestCase):
@@ -66,9 +70,9 @@ class TestSonicMIB(TestCase):
     def test_getpdu_chassis_mgmt_info(self):
         sub_id = CHASSIS_MGMT_SUB_ID
         expected_mib = {
-            2: (ValueType.OCTET_STRING, "MGMT for chassis 1"),
+            2: (ValueType.OCTET_STRING, "MGMT"),
             4: (ValueType.INTEGER, 1),
-            5: (ValueType.INTEGER, PhysicalClass.OTHER),
+            5: (ValueType.INTEGER, PhysicalClass.CPU),
             6: (ValueType.INTEGER, 1),
             16: (ValueType.INTEGER, 2)
         }
@@ -105,7 +109,7 @@ class TestSonicMIB(TestCase):
             2: (ValueType.OCTET_STRING, "{} for PSU 2".format(PSU_SENSOR_NAME_MAP[sensor_name])),
             4: (ValueType.INTEGER, psu_sub_id),
             5: (ValueType.INTEGER, PhysicalClass.SENSOR),
-            6: (ValueType.INTEGER, PSU_SENSOR_PART_ID_MAP[sensor_name]),
+            6: (ValueType.INTEGER, PSU_SENSOR_POSITION_MAP[sensor_name]),
             7: (ValueType.OCTET_STRING, "{} for PSU 2".format(PSU_SENSOR_NAME_MAP[sensor_name])), 
             16: (ValueType.INTEGER, 2)
         }
@@ -154,11 +158,11 @@ class TestSonicMIB(TestCase):
         fan_sub_id = get_fan_sub_id(drawer_sub_id, 1)
         sub_id = get_fan_tachometers_sub_id(fan_sub_id)[0]
         expected_mib = {
-            2: (ValueType.OCTET_STRING, "tachometers for fan1"),
+            2: (ValueType.OCTET_STRING, "Tachometers for fan1"),
             4: (ValueType.INTEGER, fan_sub_id[0]),
             5: (ValueType.INTEGER, PhysicalClass.SENSOR),
             6: (ValueType.INTEGER, 1),
-            7: (ValueType.OCTET_STRING, "tachometers for fan1"), 
+            7: (ValueType.OCTET_STRING, "Tachometers for fan1"), 
             16: (ValueType.INTEGER, 2)
         }
         self._check_getpdu(sub_id, expected_mib)
@@ -176,7 +180,7 @@ class TestSonicMIB(TestCase):
         self._check_getpdu(sub_id, expected_mib)
 
     def test_getpdu_xcvr_info(self):
-        sub_id = 1000 * 1 # sub id for Ethernet100
+        sub_id = get_transceiver_sub_id(1)[0]
 
         expected_mib = {
             2: (ValueType.OCTET_STRING, "QSFP+ for etp1"),
@@ -197,20 +201,20 @@ class TestSonicMIB(TestCase):
 
     def test_getpdu_xcvr_dom(self):
         expected_mib = {
-            1000 * 1 + 1: "DOM Temperature Sensor for etp1",
-            1000 * 1 + 2: "DOM Voltage Sensor for etp1",
-            1000 * 1 + 11: "DOM RX Power Sensor for etp1/1",
-            1000 * 1 + 21: "DOM RX Power Sensor for etp1/2",
-            1000 * 1 + 31: "DOM RX Power Sensor for etp1/3",
-            1000 * 1 + 41: "DOM RX Power Sensor for etp1/4",
-            1000 * 1 + 12: "DOM TX Bias Sensor for etp1/1",
-            1000 * 1 + 22: "DOM TX Bias Sensor for etp1/2",
-            1000 * 1 + 32: "DOM TX Bias Sensor for etp1/3",
-            1000 * 1 + 42: "DOM TX Bias Sensor for etp1/4",
-            1000 * 1 + 13: "DOM TX Power Sensor for etp1/1",
-            1000 * 1 + 23: "DOM TX Power Sensor for etp1/2",
-            1000 * 1 + 33: "DOM TX Power Sensor for etp1/3",
-            1000 * 1 + 43: "DOM TX Power Sensor for etp1/4",
+            get_transceiver_sensor_sub_id(1, 'temperature')[0]: "DOM Temperature Sensor for etp1",
+            get_transceiver_sensor_sub_id(1, 'voltage')[0]: "DOM Voltage Sensor for etp1",
+            get_transceiver_sensor_sub_id(1, 'rx1power')[0]: "DOM RX Power Sensor for etp1/1",
+            get_transceiver_sensor_sub_id(1, 'rx2power')[0]: "DOM RX Power Sensor for etp1/2",
+            get_transceiver_sensor_sub_id(1, 'rx3power')[0]: "DOM RX Power Sensor for etp1/3",
+            get_transceiver_sensor_sub_id(1, 'rx4power')[0]: "DOM RX Power Sensor for etp1/4",
+            get_transceiver_sensor_sub_id(1, 'tx1bias')[0]: "DOM TX Bias Sensor for etp1/1",
+            get_transceiver_sensor_sub_id(1, 'tx2bias')[0]: "DOM TX Bias Sensor for etp1/2",
+            get_transceiver_sensor_sub_id(1, 'tx3bias')[0]: "DOM TX Bias Sensor for etp1/3",
+            get_transceiver_sensor_sub_id(1, 'tx4bias')[0]: "DOM TX Bias Sensor for etp1/4",
+            get_transceiver_sensor_sub_id(1, 'tx1power')[0]: "DOM TX Power Sensor for etp1/1",
+            get_transceiver_sensor_sub_id(1, 'tx2power')[0]: "DOM TX Power Sensor for etp1/2",
+            get_transceiver_sensor_sub_id(1, 'tx3power')[0]: "DOM TX Power Sensor for etp1/3",
+            get_transceiver_sensor_sub_id(1, 'tx4power')[0]: "DOM TX Power Sensor for etp1/4",
         }
 
         phyDescr, phyClass = 2, 5

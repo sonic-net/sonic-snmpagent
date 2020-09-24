@@ -28,6 +28,7 @@ class PhysicalClass(int, Enum):
     MODULE      = 9
     PORT        = 10
     STACK       = 11
+    CPU         = 12   # Added in RFC 6933
 
 
 @unique
@@ -108,6 +109,13 @@ PSU_SENSOR_NAME_MAP = {
     'voltage': 'Voltage'
 }
 
+PSU_SENSOR_POSITION_MAP = {
+    'temperature': 1,
+    'power': 2,
+    'current': 3,
+    'voltage': 4
+}
+
 # Map used to generate transceiver sensor description
 XCVR_SENSOR_NAME_MAP = {
     "temperature" : "Temperature",
@@ -128,19 +136,19 @@ XCVR_SENSOR_NAME_MAP = {
 
 XCVR_SENSOR_INDEX_MAP = {
     "temperature" : 1,
-    "voltage"     : 2,
-    "rx1power"    : 3,
-    "rx2power"    : 4,
-    "rx3power"    : 5,
-    "rx4power"    : 6,
-    "tx1bias"     : 7,
-    "tx2bias"     : 8,
-    "tx3bias"     : 9,
-    "tx4bias"     : 10,
-    "tx1power"    : 11,
-    "tx2power"    : 12,
-    "tx3power"    : 13,
-    "tx4power"    : 14,
+    "tx1power"    : 2,
+    "tx2power"    : 3,
+    "tx3power"    : 4,
+    "tx4power"    : 5,
+    "rx1power"    : 6,
+    "rx2power"    : 7,
+    "rx3power"    : 8,
+    "rx4power"    : 9,
+    "tx1bias"     : 10,
+    "tx2bias"     : 11,
+    "tx3bias"     : 12,
+    "tx4bias"     : 13,
+    "voltage"     : 14,
 }
 
 NOT_AVAILABLE = 'N/A'
@@ -334,10 +342,10 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         # Add a chassis mgmt node
         chassis_mgmt_sub_id = (mibs.CHASSIS_MGMT_SUB_ID,)
         self.add_sub_id(chassis_mgmt_sub_id)
-        self.physical_classes_map[chassis_mgmt_sub_id] = PhysicalClass.OTHER
+        self.physical_classes_map[chassis_mgmt_sub_id] = PhysicalClass.CPU
         self.physical_contained_in_map[chassis_mgmt_sub_id] = mibs.CHASSIS_SUB_ID
         self.physical_parent_relative_pos_map[chassis_mgmt_sub_id] = 1
-        name = 'MGMT for {}'.format(self.CHASSIS_NAME)
+        name = 'MGMT'
         self.physical_description_map[chassis_mgmt_sub_id] = name
         self.physical_name_map[chassis_mgmt_sub_id] = name
         self.physical_fru_map[chassis_mgmt_sub_id] = self.NOT_REPLACEABLE
@@ -494,7 +502,9 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         """
         if isinstance(replaceable, str):
             replaceable = True if replaceable.lower() == 'true' else False
-        self.physical_fru_map[sub_id] = self.REPLACEABLE if replaceable else self.NOT_REPLACEABLE
+            self.physical_fru_map[sub_id] = self.REPLACEABLE if replaceable else self.NOT_REPLACEABLE
+        elif isinstance(replaceable, bool):
+            self.physical_fru_map[sub_id] = self.REPLACEABLE if replaceable else self.NOT_REPLACEABLE
 
     def get_next(self, sub_id):
         """
@@ -908,7 +918,7 @@ class PsuCacheUpdater(PhysicalEntityCacheUpdater):
         desc = '{} for {}'.format(PSU_SENSOR_NAME_MAP[sensor_name], psu_name)
         self.mib_updater.set_phy_descr(psu_current_sub_id, desc)
         self.mib_updater.set_phy_name(psu_current_sub_id, desc)
-        self.mib_updater.set_phy_parent_relative_pos(psu_current_sub_id, mibs.PSU_SENSOR_PART_ID_MAP[sensor_name])
+        self.mib_updater.set_phy_parent_relative_pos(psu_current_sub_id, PSU_SENSOR_POSITION_MAP[sensor_name])
         self.mib_updater.set_phy_contained_in(psu_current_sub_id, psu_sub_id)
         self.mib_updater.set_phy_fru(psu_current_sub_id, False)
 
