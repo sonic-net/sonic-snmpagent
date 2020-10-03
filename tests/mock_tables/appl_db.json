@@ -473,12 +473,14 @@
   "PORT_TABLE:Ethernet0": {
     "description": "snowflake",
     "alias": "etp1",
-    "speed": 100000
+    "speed": 100000,
+    "oper_status": "up"
   },
   "PORT_TABLE:Ethernet4": {
     "description": "snowflake",
     "alias": "etp2",
-    "speed": 100000
+    "speed": 100000,
+    "oper_status": "down"
   },
   "PORT_TABLE:Ethernet8": {
     "description": "snowflake",

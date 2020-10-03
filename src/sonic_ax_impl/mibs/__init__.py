@@ -114,12 +114,19 @@ def lldp_entry_table(if_name):
     return b'LLDP_ENTRY_TABLE:' + if_name
 
 
-def if_entry_table(if_name):
+def if_entry_table_app_db(if_name):
     """
     :param if_name: given interface to cast.
     :return: PORT_TABLE key.
     """
     return b'PORT_TABLE:' + if_name
+
+def if_entry_table_config_db(if_name):
+    """
+    :param if_name: given interface to cast.
+    :return: PORT key.
+    """
+    return b'PORT|' + if_name
 
 
 def lag_entry_table(lag_name):
@@ -270,7 +277,7 @@ def init_sync_d_interface_tables(db_conn):
     if_alias_map = dict()
 
     for if_name in if_name_map:
-        if_entry = db_conn.get_all(APPL_DB, if_entry_table(if_name), blocking=True)
+        if_entry = db_conn.get_all(CONFIG_DB, if_entry_table_config_db(if_name), blocking=True)
         if_alias_map[if_name] = if_entry.get(b'alias', if_name)
 
     logger.debug("Chassis name map:\n" + pprint.pformat(if_alias_map, indent=2))

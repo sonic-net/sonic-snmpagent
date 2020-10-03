@@ -185,15 +185,11 @@ class LocPortUpdater(MIBUpdater):
 
     def _get_if_entry(self, if_name):
         if_table = ""
-
-        # Once PORT_TABLE will be moved to CONFIG DB
-        # we will get entry from CONFIG_DB for all cases
-        db = mibs.APPL_DB
+        db = mibs.CONFIG_DB
         if if_name in self.if_name_map:
-            if_table = mibs.if_entry_table(if_name)
+            if_table = mibs.if_entry_table_config_db(if_name)
         elif if_name in self.mgmt_oid_name_map.values():
             if_table = mibs.mgmt_if_entry_table(if_name)
-            db = mibs.CONFIG_DB
         else:
             return None
 
