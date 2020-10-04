@@ -5,8 +5,9 @@ import sys
 
 import mockredis
 from .interface import DBInterface
+from .dbconnector_original import SonicV2Connector
+import swsssdk
 from swsssdk.interface import redis
-from swsssdk import SonicV2Connector
 from swsssdk import SonicDBConfig
 
 
@@ -144,3 +145,8 @@ DBInterface._subscribe_keyspace_notification = _subscribe_keyspace_notification
 mockredis.MockRedis.config_set = config_set
 redis.StrictRedis = SwssSyncClient
 SonicV2Connector.connect = connect_SonicV2Connector
+swsssdk.SonicV2Connector = SonicV2Connector
+
+from importlib import reload
+import sonic_ax_impl.mibs
+reload(sonic_ax_impl.mibs)
