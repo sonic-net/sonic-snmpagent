@@ -4,7 +4,8 @@ import os
 import sys
 
 import mockredis
-from swsssdk.interface import redis, DBInterface
+from .interface import DBInterface
+from swsssdk.interface import redis
 from swsssdk import SonicV2Connector
 from swsssdk import SonicDBConfig
 
