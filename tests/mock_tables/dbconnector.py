@@ -9,7 +9,7 @@ from .dbconnector_original import SonicV2Connector
 import swsssdk
 from swsssdk.interface import redis
 from swsssdk import SonicDBConfig
-
+from swsscommon import swsscommon
 
 if sys.version_info >= (3, 0):
     long = int
@@ -146,7 +146,9 @@ mockredis.MockRedis.config_set = config_set
 redis.StrictRedis = SwssSyncClient
 SonicV2Connector.connect = connect_SonicV2Connector
 swsssdk.SonicV2Connector = SonicV2Connector
+swsscommon.SonicV2Connector = SonicV2Connector
 
+# pytest case collecting will import some module before monkey patch, so reload
 from importlib import reload
 import sonic_ax_impl.mibs
 reload(sonic_ax_impl.mibs)
