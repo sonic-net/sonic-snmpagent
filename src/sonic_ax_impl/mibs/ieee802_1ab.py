@@ -312,7 +312,7 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         logger.debug("Got mgmt ip from db : {}".format(self.mgmt_ip_str))
         try:
             addr_subtype_sub_oid = 4
-            mgmt_ip_sub_oid = None
+            mgmt_ip_sub_oid = []
             for mgmt_ip in self.mgmt_ip_str.split(','):
                 if '.' in mgmt_ip:
                     mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i) for i in mgmt_ip.split('.')])
