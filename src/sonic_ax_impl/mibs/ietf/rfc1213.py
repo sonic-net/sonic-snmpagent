@@ -5,7 +5,7 @@ from bisect import bisect_right
 
 from sonic_ax_impl import mibs
 from sonic_ax_impl import logger
-from sonic_ax_impl.mibs import Namespace, exceptions
+from sonic_ax_impl.mibs import Namespace
 from ax_interface.mib import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
 from ax_interface.encodings import ObjectIdentifier
 from ax_interface.util import mac_decimals, ip2tuple_v4
@@ -244,8 +244,7 @@ class InterfacesUpdater(MIBUpdater):
         self.update_if_counters()
         self.update_rif_counters()
 
-        if self.rif_counters:
-            self.aggregate_counters()
+        self.aggregate_counters()
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
@@ -267,15 +266,9 @@ class InterfacesUpdater(MIBUpdater):
 
     def update_rif_counters(self):
         rif_sai_ids = list(self.rif_port_map) + list(self.vlan_name_map)
-        try:
-            self.rif_counters = \
-                {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=True)
-                    for sai_id in rif_sai_ids}
-        except exceptions.UnavailableDataError:
-            # Failed to get all or some RIF counters, assuming RIF counters
-            # are either not populated in DB or not supported by platform.
-            # Leaving self.rif_counters empty.
-            pass
+        self.rif_counters = \
+            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=False)
+            for sai_id in rif_sai_ids}
 
     def get_next(self, sub_id):
         """
@@ -329,13 +322,6 @@ class InterfacesUpdater(MIBUpdater):
         :param table_name: the redis table (either IntEnum or string literal) to query.
         :return: the counter for the respective sub_id/table.
         """
-        sai_id = ''
-        if oid in self.oid_name_map:
-            sai_id = self.if_name_map[self.oid_name_map[oid]]
-        elif oid in self.vlan_oid_sai_map:
-            sai_id = self.vlan_oid_sai_map[oid]
-        else:
-            logger.warning("Unexpected oid {}".format(oid))
         # Enum.name or table_name = 'name_of_the_table'
         _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
 
@@ -366,13 +352,13 @@ class InterfacesUpdater(MIBUpdater):
 
         for vlan_sai_id, vlan_name in self.vlan_name_map.items():
             for port_counter_name, rif_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
-                try:
-                    vlan_idx = mibs.get_index_from_str(vlan_name.decode())
+                vlan_idx = mibs.get_index_from_str(vlan_name.decode())
+                vlan_rif_counters = self.rif_counters[vlan_sai_id]
+                if rif_counter_name in vlan_rif_counters:
                     self.if_counters.setdefault(vlan_idx, {})
                     self.if_counters[vlan_idx][port_counter_name] = \
-                    int(self.rif_counters[vlan_sai_id][rif_counter_name])
-                except KeyError as e:
-                    logger.warning("Not able to aggregate counters for {}: {}\n {}".format(vlan_sai_id, rif_counter_name, e))
+                    int(vlan_rif_counters[rif_counter_name])
+
 
     def get_counter(self, sub_id, table_name):
         """
@@ -399,7 +385,7 @@ class InterfacesUpdater(MIBUpdater):
                 table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
                 if table_name in mibs.RIF_DROPS_AGGR_MAP:
                     rif_table_name = mibs.RIF_DROPS_AGGR_MAP[table_name]
-                    counter_value += int(self.rif_counters[sai_lag_rif_id][rif_table_name])
+                    counter_value += int(self.rif_counters[sai_lag_rif_id].get(rif_table_name, 0))
             # truncate to 32-bit counter
             return counter_value & 0x00000000ffffffff
         else:

@@ -6,7 +6,6 @@ from swsssdk import SonicV2Connector
 from swsssdk import SonicDBConfig
 from swsssdk import port_util
 from swsssdk.port_util import get_index, get_index_from_str
-from swsssdk import exceptions
 from ax_interface.mib import MIBUpdater
 from ax_interface.util import oid2tuple
 from sonic_ax_impl import logger
