@@ -337,17 +337,15 @@ class LLDPLocManAddrUpdater(MIBUpdater):
 
     def get_next(self, sub_id):
         right = bisect_right(self.man_addr_list, sub_id)
-        if right == len(self.man_addr_list):
+        if right >= len(self.man_addr_list):
             return None
         return self.man_addr_list[right]
 
-    def lookup(self, sub_id, callable):
-        if len(sub_id) == 0:
+    def man_addr_subtype(self, sub_id):
+        if sub_id in self.man_addr_list:
+            return ManAddrConst.man_addr_subtype_ipv4
+        else:
             return None
-        return callable(sub_id)
-
-    @staticmethod
-    def man_addr_subtype(sub_id): return ManAddrConst.man_addr_subtype_ipv4
 
     def man_addr(self, sub_id):
         """
@@ -362,17 +360,29 @@ class LLDPLocManAddrUpdater(MIBUpdater):
                     break
             return hex_ip
 
-    @staticmethod
-    def man_addr_len(sub_id): return ManAddrConst.man_addr_len
+    def man_addr_len(self, sub_id):
+        if sub_id in self.man_addr_list:
+            return ManAddrConst.man_addr_len
+        else:
+            return None
 
-    @staticmethod
-    def man_addr_if_subtype(sub_id): return ManAddrConst.man_addr_if_subtype
+    def man_addr_if_subtype(self, sub_id):
+        if sub_id in self.man_addr_list:
+            return ManAddrConst.man_addr_if_subtype
+        else:
+            return None
 
-    @staticmethod
-    def man_addr_if_id(sub_id): return ManAddrConst.man_addr_if_id
+    def man_addr_if_id(self, sub_id):
+        if sub_id in self.man_addr_list:
+            return ManAddrConst.man_addr_if_id
+        else:
+            return None
 
-    @staticmethod
-    def man_addr_OID(sub_id): return ManAddrConst.man_addr_oid
+    def man_addr_OID(self, sub_id):
+        if sub_id in self.man_addr_list:
+            return ManAddrConst.man_addr_oid
+        else:
+            return None
 
 
 class LLDPRemTableUpdater(MIBUpdater):
@@ -705,17 +715,13 @@ class LLDPLocalSystemData(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.3'):
         """
         updater = LLDPLocManAddrUpdater()
 
-        lldpLocManAddrLen = SubtreeMIBEntry('1.3', updater, ValueType.INTEGER,
-                                            updater.lookup, updater.man_addr_len)
+        lldpLocManAddrLen = SubtreeMIBEntry('1.3', updater, ValueType.INTEGER, updater.man_addr_len)
 
-        lldpLocManAddrIfSubtype = SubtreeMIBEntry('1.4', updater, ValueType.INTEGER,
-                                                  updater.lookup, updater.man_addr_if_subtype)
+        lldpLocManAddrIfSubtype = SubtreeMIBEntry('1.4', updater, ValueType.INTEGER, updater.man_addr_if_subtype)
 
-        lldpLocManAddrIfId = SubtreeMIBEntry('1.5', updater, ValueType.INTEGER,
-                                             updater.lookup, updater.man_addr_if_id)
+        lldpLocManAddrIfId = SubtreeMIBEntry('1.5', updater, ValueType.INTEGER, updater.man_addr_if_id)
 
-        lldpLocManAddrOID = SubtreeMIBEntry('1.6', updater, ValueType.OBJECT_IDENTIFIER,
-                                            updater.lookup, updater.man_addr_OID)
+        lldpLocManAddrOID = SubtreeMIBEntry('1.6', updater, ValueType.OBJECT_IDENTIFIER, updater.man_addr_OID)
 
 
 class LLDPRemTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.4.1'):
