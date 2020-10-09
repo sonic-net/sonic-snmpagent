@@ -305,10 +305,7 @@ def init_sync_d_rif_tables(db_conn):
     Initializes map of RIF SAI oids to port SAI oid.
     :return: dict
     """
-    rif_port_map = port_util.get_rif_port_map(db_conn)
-
-    if not rif_port_map:
-        return {}, {}
+    rif_port_map = {get_sai_id_key(db_conn.namespace, rif): port for rif, port in port_util.get_rif_port_map(db_conn).items()}
     port_rif_map = {port: rif for rif, port in rif_port_map.items()}
     logger.debug("Rif port map:\n" + pprint.pformat(rif_port_map, indent=2))
 
