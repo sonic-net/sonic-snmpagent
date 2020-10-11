@@ -110,11 +110,17 @@ class TestLLDPMIB(TestCase):
             print(ret)
 
     def test_subtype_lldp_loc_man_addr_table(self):
-        for entry in range(3, 7):
-            mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 3, 8, 1, entry)]
-            ret = mib_entry(sub_id=(1,))
-            self.assertIsNotNone(ret)
-            print(ret)
+        oid = ObjectIdentifier(13, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 3, 8, 1, 3, 1, 4))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.INTEGER)
+        self.assertEqual(value0.data, 5)
+
 
     def test_subtype_lldp_rem_man_addr_table(self):
         for entry in range(3, 6):
