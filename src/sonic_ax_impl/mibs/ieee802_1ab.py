@@ -317,6 +317,9 @@ class LLDPLocManAddrUpdater(MIBUpdater):
                 if '.' in mgmt_ip:
                     mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i) for i in mgmt_ip.split('.')])
                     break
+            else:
+                logger.error("Could not find IPv4 address in lldp_loc_man_addr")
+                return
         except ValueError:
             logger.error("Invalid local mgmt IP {}".format(self.mgmt_ip_str))
             return
@@ -334,12 +337,12 @@ class LLDPLocManAddrUpdater(MIBUpdater):
 
     def get_next(self, sub_id):
         right = bisect_right(self.man_addr_list, sub_id)
-        if right == len(self.man_addr_list):
+        if right >= len(self.man_addr_list):
             return None
         return self.man_addr_list[right]
 
     def lookup(self, sub_id, callable):
-        if len(sub_id) == 0:
+        if sub_id not in self.man_addr_list:
             return None
         return callable(sub_id)
 
