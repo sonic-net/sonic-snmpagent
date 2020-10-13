@@ -27,6 +27,15 @@
     "lldp_rem_port_id": "Ethernet2",
     "lldp_rem_man_addr": "fe80::268a:7ff:fe3f:834c"
   },
+  "LLDP_LOC_CHASSIS": {
+    "lldp_loc_chassis_id_subtype": "5",
+    "lldp_loc_chassis_id": "00:11:22:AB:CD:EF",
+    "lldp_loc_sys_name": "SONiC",
+    "lldp_loc_sys_desc": "Gotta go Fast!",
+    "lldp_loc_sys_cap_enabled": "28 00",
+    "lldp_loc_sys_cap_supported": "28 00",
+    "lldp_loc_man_addr": "10.224.25.36,fe80::ce37:abff:feec:de9c"
+  },
   "PORT_TABLE:Ethernet0": {
     "description": "snowflake",
     "alias": "etp1",
