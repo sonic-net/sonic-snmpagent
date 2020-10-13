@@ -184,7 +184,7 @@ def init_db():
     SonicDBConfig.load_sonic_global_db_config()
     # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
     # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
-    db_conn = SonicV2Connector(**redis_kwargs)
+    db_conn = SonicV2Connector(use_unix_socket_path=True)
 
     return db_conn
 
