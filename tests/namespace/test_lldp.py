@@ -118,9 +118,9 @@ class TestLLDPMIB(TestCase):
 
         response = get_pdu.make_response(self.lut)
         value0 = response.values[0]
-        self.assertEqual(str(value0.name), str(ObjectIdentifier(13, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 3, 8, 1, 3, 1, 4, 10, 224, 25, 36))))
-        self.assertEqual(value0.type_, ValueType.INTEGER)
-        self.assertEqual(value0.data, 5)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(9, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 3, 8, 1, 3, 1, 4))))
+        self.assertEqual(value0.type_, ValueType.END_OF_MIB_VIEW)
+        self.assertEqual(value0.data, None)
 
 
     def test_subtype_lldp_rem_man_addr_table(self):
