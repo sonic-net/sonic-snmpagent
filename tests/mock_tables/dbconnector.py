@@ -46,7 +46,7 @@ def connect_SonicV2Connector(self, db_name, retry_on=True):
     # In case of multiple namespaces, namespace string passed to
     # SonicV2Connector will specify the namespace or can be empty.
     # Empty namespace represents global or host namespace.
-    if len(ns_list) > 1 and self.namespace == "":
+    if len(ns_list) > 1 and (self.namespace == "" or self.namespace == None):
         self.dbintf.redis_kwargs['namespace'] = "global_db"
     else:
         self.dbintf.redis_kwargs['namespace'] = self.namespace

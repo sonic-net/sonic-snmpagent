@@ -1,56 +1,62 @@
 import socket
 from bisect import bisect_right
 from sonic_ax_impl import mibs
-from sonic_ax_impl.lib.perseverantsocket import PerseverantSocket
-from sonic_ax_impl.lib.quaggaclient import QuaggaClient, bgp_peer_tuple
 from ax_interface import MIBMeta, ValueType, MIBUpdater, SubtreeMIBEntry
 from ax_interface.mib import MIBEntry
+from sonic_ax_impl.mibs import Namespace
+import ipaddress
+
+STATE_CODE = {
+    "Idle": 1,
+    "Idle (Admin)": 1,
+    "Connect": 2,
+    "Active": 3,
+    "OpenSent": 4,
+    "OpenConfirm": 5,
+    "Established": 6
+};
+
 
 class BgpSessionUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
-        self.sock = PerseverantSocket(socket.AF_INET, socket.SOCK_STREAM
-            , address_tuple=(QuaggaClient.HOST, QuaggaClient.PORT))
-        self.QuaggaClient = QuaggaClient(self.sock)
+        self.db_conn = Namespace.init_namespace_dbs()
 
+        self.neigh_state_map = {} 
         self.session_status_map = {}
         self.session_status_list = []
 
     def reinit_data(self):
-        if not self.sock.connected:
-            try:
-                self.sock.reconnect()
-                mibs.logger.info('Connected quagga socket')
-            except (ConnectionRefusedError, socket.timeout) as e:
-                mibs.logger.debug('Failed to connect quagga socket. Retry later...: {}.'.format(e))
-                return
-            self.QuaggaClient.auth()
-            mibs.logger.info('Authed quagga socket')
+        Namespace.connect_all_dbs(self.db_conn, mibs.STATE_DB)
+        self.neigh_state_map = Namespace.dbs_keys_namespace(self.db_conn, mibs.STATE_DB, "NEIGH_STATE_TABLE|*")
 
     def update_data(self):
         self.session_status_map = {}
         self.session_status_list = []
 
-        try:
-            if not self.sock.connected:
-                return
+        for neigh_key, db_index in self.neigh_state_map.items():
+            neigh_str = neigh_key.decode()
+            neigh_str = neigh_str.split('|')[1]
+            neigh_info = self.db_conn[db_index].get_all(mibs.STATE_DB, neigh_key, blocking=False)
+            if neigh_info is not None:
+                state = neigh_info[b'state'].decode() 
+                ip = ipaddress.ip_address(neigh_str)
+                if type(ip) is ipaddress.IPv4Address:
+                    oid_head = (1, 4)
+                else:
+                    oid_head = (2, 16)
+                oid_ip = tuple(i for i in ip.packed)
 
-            sessions = self.QuaggaClient.union_bgp_sessions()
+                if state.isdigit():
+                    status = 6
+                elif state in STATE_CODE:
+                    status = STATE_CODE[state]
+                else:
+                    continue 
 
-        except (socket.error, socket.timeout) as e:
-            self.sock.close()
-            mibs.logger.error('Failed to talk with quagga socket. Reconnect later...: {}.'.format(e))
-            return
-        except ValueError as e:
-            self.sock.close()
-            mibs.logger.error('Receive unexpected data from quagga socket. Reconnect later...: {}.'.format(e))
-            return
-
-        for nei, ses in sessions.items():
-            oid, status = bgp_peer_tuple(ses)
-            if oid is None: continue
-            self.session_status_list.append(oid)
-            self.session_status_map[oid] = status
+                oid = oid_head + oid_ip
+                self.session_status_list.append(oid)
+                self.session_status_map[oid] = status
 
         self.session_status_list.sort()
 

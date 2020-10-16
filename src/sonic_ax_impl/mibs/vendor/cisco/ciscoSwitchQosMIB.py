@@ -87,8 +87,6 @@ class QueueStatUpdater(MIBUpdater):
         for db_conn in Namespace.get_non_host_dbs(self.db_conn):
             self.queue_type_map[db_conn.namespace] = db_conn.get_all(mibs.COUNTERS_DB, "COUNTERS_QUEUE_TYPE_MAP", blocking=False)
  
-        self.update_data()
-
     def update_data(self):
         """
         Update redis (caches config)
