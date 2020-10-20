@@ -104,10 +104,55 @@ class TestLLDPMIB(TestCase):
 
     def test_subtype_lldp_rem_man_addr_table(self):
         for entry in range(3, 6):
+            interface_number = 9
+            time_mark = 18543
             mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, entry)]
-            ret = mib_entry(sub_id=(1, 1))
+            ret = mib_entry(sub_id=(time_mark, interface_number, 1, 1, 4, 10, 224, 25, 102, ))
             self.assertIsNotNone(ret)
             print(ret)
+
+    def test_lldp_rem_man_addr_if_subtype(self):
+        oid = ObjectIdentifier(20, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 9, 1, 1, 4, 10, 224, 25, 102))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.INTEGER)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(20, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 9, 1, 1, 4, 10, 224, 25, 102))))
+        self.assertEqual(str(value0.data), '2')
+
+    def test_lldp_rem_man_addr_if_id(self):
+        oid = ObjectIdentifier(20, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 4, 18543, 9, 1, 1, 4, 10, 224, 25, 102))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.INTEGER)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(20, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 4, 18543, 9, 1, 1, 4, 10, 224, 25, 102))))
+        self.assertEqual(str(value0.data), '0')
+
+    def test_lldp_rem_man_addr_oid(self):
+        oid = ObjectIdentifier(20, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 5, 18543, 9, 1, 1, 4, 10, 224, 25, 102))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        value0 = response.values[0]
+        print(value0)
+        self.assertEqual(value0.type_, ValueType.OBJECT_IDENTIFIER)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(20, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 5, 18543, 9, 1, 1, 4, 10, 224, 25, 102))))
+        self.assertEqual(str(value0.data), '.1.3.6.1.2.1.2.2.1.1')
 
     def test_local_port_identification(self):
         mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 3, 7, 1, 3)]
