@@ -10,21 +10,21 @@ from ax_interface.encodings import ObjectIdentifier
 # Maps SNMP queue stat counters to SAI counters and type
 CounterMap = {
     # Unicast send packets
-    (b'SAI_QUEUE_STAT_PACKETS', b'SAI_QUEUE_TYPE_UNICAST'): 1,
+    ('SAI_QUEUE_STAT_PACKETS', 'SAI_QUEUE_TYPE_UNICAST'): 1,
     # Unicast send bytes
-    (b'SAI_QUEUE_STAT_BYTES', b'SAI_QUEUE_TYPE_UNICAST'): 2,
+    ('SAI_QUEUE_STAT_BYTES', 'SAI_QUEUE_TYPE_UNICAST'): 2,
     # Multicast send packets
-    (b'SAI_QUEUE_STAT_PACKETS',b'SAI_QUEUE_TYPE_MULTICAST'): 3,
+    ('SAI_QUEUE_STAT_PACKETS','SAI_QUEUE_TYPE_MULTICAST'): 3,
     # Multicast send bytes
-    (b'SAI_QUEUE_STAT_BYTES',b'SAI_QUEUE_TYPE_MULTICAST'): 4,
+    ('SAI_QUEUE_STAT_BYTES','SAI_QUEUE_TYPE_MULTICAST'): 4,
     # Unicast dropped packets
-    (b'SAI_QUEUE_STAT_DROPPED_PACKETS',b'SAI_QUEUE_TYPE_UNICAST'): 5,
+    ('SAI_QUEUE_STAT_DROPPED_PACKETS','SAI_QUEUE_TYPE_UNICAST'): 5,
     # Unicast dropped bytes
-    (b'SAI_QUEUE_STAT_DROPPED_BYTES',b'SAI_QUEUE_TYPE_UNICAST'): 6,
+    ('SAI_QUEUE_STAT_DROPPED_BYTES','SAI_QUEUE_TYPE_UNICAST'): 6,
     # Multicast dropped packets
-    (b'SAI_QUEUE_STAT_DROPPED_PACKETS',b'SAI_QUEUE_TYPE_MULTICAST'): 7,
+    ('SAI_QUEUE_STAT_DROPPED_PACKETS','SAI_QUEUE_TYPE_MULTICAST'): 7,
     # Multicast dropped bytes
-    (b'SAI_QUEUE_STAT_DROPPED_BYTES', b'SAI_QUEUE_TYPE_MULTICAST'): 8
+    ('SAI_QUEUE_STAT_DROPPED_BYTES', 'SAI_QUEUE_TYPE_MULTICAST'): 8
 }
 
 

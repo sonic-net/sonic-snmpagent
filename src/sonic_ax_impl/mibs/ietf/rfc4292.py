@@ -28,7 +28,7 @@ class RouteUpdater(MIBUpdater):
 
         ## Collect only ipv4 lo interfaces
         for loopback in loopbacks:
-            lostr = loopback.decode()
+            lostr = loopback
             loipmask = lostr[len("INTF_TABLE:lo:"):]
             loip = loipmask.split('/')[0]
             ipa = ipaddress.ip_address(loip)
@@ -54,13 +54,13 @@ class RouteUpdater(MIBUpdater):
             return
 
         for route_entry in route_entries:
-            routestr = route_entry.decode()
+            routestr = route_entry
             ipnstr = routestr[len("ROUTE_TABLE:"):]
             if ipnstr == "0.0.0.0/0":
                 ipn = ipaddress.ip_network(ipnstr)
                 ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, routestr, blocking=True)
-                nexthops = ent[b"nexthop"].decode()
-                ifnames = ent[b"ifname"].decode()
+                nexthops = ent["nexthop"]
+                ifnames = ent["ifname"]
                 for nh, ifn in zip(nexthops.split(','), ifnames.split(',')):
                     ## Ignore non front panel interfaces
                     ## TODO: non front panel interfaces should not be in APPL_DB at very beginning
