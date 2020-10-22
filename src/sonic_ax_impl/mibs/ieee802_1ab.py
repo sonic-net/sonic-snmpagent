@@ -78,7 +78,7 @@ def poll_lldp_entry_updates(pubsub):
         return ret
 
     try:
-        interface = msg["channel"].split(b":")[-1].decode()
+        interface = msg["channel"].split(":")[-1]
         data = msg['data']
     except (KeyError, AttributeError) as e:
         logger.error("Invalid msg when polling for lldp updates: {}\n"
@@ -112,8 +112,8 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
         # establish connection to application database.
         Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.loc_chassis_data = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
-        self.loc_chassis_data[b'lldp_loc_sys_cap_supported'] = parse_sys_capability(self.loc_chassis_data[b'lldp_loc_sys_cap_supported'])
-        self.loc_chassis_data[b'lldp_loc_sys_cap_enabled'] = parse_sys_capability(self.loc_chassis_data[b'lldp_loc_sys_cap_enabled'])
+        self.loc_chassis_data['lldp_loc_sys_cap_supported'] = parse_sys_capability(self.loc_chassis_data['lldp_loc_sys_cap_supported'])
+        self.loc_chassis_data['lldp_loc_sys_cap_enabled'] = parse_sys_capability(self.loc_chassis_data['lldp_loc_sys_cap_enabled'])
     def update_data(self):
         """
         Avoid NotImplementedError
@@ -123,7 +123,7 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
 
     def table_lookup(self, table_name):
         try:
-            _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
+            _table_name = getattr(table_name, 'name', table_name)
             return self.loc_chassis_data[_table_name]
         except KeyError as e:
             logger.warning(" 0 - b'LOC_CHASSIS' missing attribute '{}'.".format(e))
@@ -229,13 +229,13 @@ class LocPortUpdater(MIBUpdater):
             if not data:
                 break
 
-            if b"set" in data:
-                self.update_interface_data(interface.encode())
+            if "set" in data:
+                self.update_interface_data(interface)
 
     def update_data(self):
         for i in range(len(self.db_conn)):
             if not self.pubsub[i]:
-                pattern = mibs.lldp_entry_table(b'*')
+                pattern = mibs.lldp_entry_table('*')
                 self.pubsub[i] = mibs.get_redis_pubsub(self.db_conn[i], self.db_conn[i].APPL_DB, pattern)
             self._update_per_namespace_data(self.pubsub[i])
 
@@ -270,7 +270,7 @@ class LocPortUpdater(MIBUpdater):
             # no data for this interface
             return None
         counters = self.loc_port_data[if_name]
-        _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
+        _table_name = getattr(table_name, 'name', table_name)
 
         return counters.get(_table_name, '')
 
@@ -302,13 +302,13 @@ class LLDPLocManAddrUpdater(MIBUpdater):
 
         # establish connection to application database.
         self.db_conn.connect(mibs.APPL_DB)
-        mgmt_ip_bytes = self.db_conn.get(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE, b'lldp_loc_man_addr')
+        mgmt_ip_bytes = self.db_conn.get(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE, 'lldp_loc_man_addr')
 
         if not mgmt_ip_bytes:
             logger.warning("Missing lldp_loc_man_addr from APPL DB")
             return
 
-        self.mgmt_ip_str = mgmt_ip_bytes.decode()
+        self.mgmt_ip_str = mgmt_ip_bytes
         logger.debug("Got mgmt ip from db : {}".format(self.mgmt_ip_str))
         try:
             addr_subtype_sub_oid = 4
@@ -435,12 +435,12 @@ class LLDPRemTableUpdater(MIBUpdater):
                 # To avoid repeating the data of same interface index with different remote 
                 # time mark, remote time mark is made as 0 in the OID indexing.
                 time_mark = 0
-                remote_index = int(lldp_kvs[b'lldp_rem_index'])
+                remote_index = int(lldp_kvs['lldp_rem_index'])
                 self.if_range.append((time_mark,
                                       if_oid,
                                       remote_index))
-                lldp_kvs[b'lldp_rem_sys_cap_supported'] = parse_sys_capability(lldp_kvs[b'lldp_rem_sys_cap_supported'])
-                lldp_kvs[b'lldp_rem_sys_cap_enabled'] = parse_sys_capability(lldp_kvs[b'lldp_rem_sys_cap_enabled'])
+                lldp_kvs['lldp_rem_sys_cap_supported'] = parse_sys_capability(lldp_kvs['lldp_rem_sys_cap_supported'])
+                lldp_kvs['lldp_rem_sys_cap_enabled'] = parse_sys_capability(lldp_kvs['lldp_rem_sys_cap_enabled'])
                 self.lldp_counters.update({if_name: lldp_kvs})
             except (KeyError, AttributeError) as e:
                 logger.warning("Exception when updating lldpRemTable: {}".format(e))
@@ -467,7 +467,7 @@ class LLDPRemTableUpdater(MIBUpdater):
             # no LLDP data for this interface
             return None
         counters = self.lldp_counters[if_name]
-        _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
+        _table_name = getattr(table_name, 'name', table_name)
         try:
             return counters[_table_name]
         except KeyError as e:
@@ -500,17 +500,17 @@ class LLDPRemManAddrUpdater(MIBUpdater):
 
     def update_rem_if_mgmt(self, if_oid, if_name):
         lldp_kvs = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.lldp_entry_table(if_name))
-        if not lldp_kvs or b'lldp_rem_man_addr' not in lldp_kvs:
+        if not lldp_kvs or 'lldp_rem_man_addr' not in lldp_kvs:
             # this interfaces doesn't have remote lldp data, or the peer doesn't advertise his mgmt address
             return
         try:
-            mgmt_ip_str = lldp_kvs[b'lldp_rem_man_addr'].decode()
+            mgmt_ip_str = lldp_kvs['lldp_rem_man_addr']
             mgmt_ip_str = mgmt_ip_str.strip()
             if len(mgmt_ip_str) == 0:
                 # the peer advertise an emtpy mgmt address
                 return
-            time_mark = int(lldp_kvs[b'lldp_rem_time_mark'])
-            remote_index = int(lldp_kvs[b'lldp_rem_index'])
+            time_mark = int(lldp_kvs['lldp_rem_time_mark'])
+            remote_index = int(lldp_kvs['lldp_rem_index'])
             subtype = self.get_subtype(mgmt_ip_str)
             ip_hex = self.get_ip_hex(mgmt_ip_str, subtype)
             if subtype == ManAddrConst.man_addr_subtype_ipv4:
@@ -546,17 +546,17 @@ class LLDPRemManAddrUpdater(MIBUpdater):
             if not data:
                 break
 
-            if b"set" in data:
-                self.update_rem_if_mgmt(if_index, interface.encode())
-            elif b"del" in data:
+            if "set" in data:
+                self.update_rem_if_mgmt(if_index, interface)
+            elif "del" in data:
                 # some remote data about that neighbor is gone, del it and try to query again
                 self.if_range = [sub_oid for sub_oid in self.if_range if sub_oid[0] != if_index]
-                self.update_rem_if_mgmt(if_index, interface.encode())
+                self.update_rem_if_mgmt(if_index, interface)
 
     def update_data(self):
         for i in range(len(self.db_conn)):
             if not self.pubsub[i]:
-                pattern = mibs.lldp_entry_table(b'*')
+                pattern = mibs.lldp_entry_table('*')
                 self.pubsub[i] = mibs.get_redis_pubsub(self.db_conn[i], self.db_conn[i].APPL_DB, pattern)
             self._update_per_namespace_data(self.pubsub[i])
 

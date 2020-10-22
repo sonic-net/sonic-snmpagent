@@ -31,16 +31,16 @@ class PhysicalClass(int, Enum):
 
 
 @unique
-class XcvrInfoDB(bytes, Enum):
+class XcvrInfoDB(str, Enum):
     """
     Transceiver info keys
     """
 
-    TYPE              = b"type"
-    HARDWARE_REVISION = b"hardware_rev"
-    SERIAL_NUMBER     = b"serial"
-    MANUFACTURE_NAME  = b"manufacturer"
-    MODEL_NAME        = b"model"
+    TYPE              = "type"
+    HARDWARE_REVISION = "hardware_rev"
+    SERIAL_NUMBER     = "serial"
+    MANUFACTURE_NAME  = "manufacturer"
+    MODEL_NAME        = "model"
 
 
 # Map used to generate sensor description
@@ -71,7 +71,7 @@ def get_transceiver_data(xcvr_info):
     Empty string if field not in xcvr_info
     """
 
-    return (xcvr_info.get(xcvr_field.value, b"").decode()
+    return (xcvr_info.get(xcvr_field.value, "")
             for xcvr_field in XcvrInfoDB)
 
 
@@ -159,10 +159,10 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         chassis_sub_id = (self.CHASSIS_ID, )
         self.physical_entities = [chassis_sub_id]
 
-        if not device_metadata or not device_metadata.get(b"chassis_serial_number"):
+        if not device_metadata or not device_metadata.get("chassis_serial_number"):
             chassis_serial_number = ""
         else:
-            chassis_serial_number = device_metadata[b"chassis_serial_number"]
+            chassis_serial_number = device_metadata["chassis_serial_number"]
 
         self.physical_classes_map[chassis_sub_id] = PhysicalClass.CHASSIS
         self.physical_serial_number_map[chassis_sub_id] = chassis_serial_number
@@ -170,7 +170,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         # retrieve the initial list of transceivers that are present in the system
         transceiver_info = Namespace.dbs_keys(self.statedb, mibs.STATE_DB, self.TRANSCEIVER_KEY_PATTERN)
         if transceiver_info:
-            self.transceiver_entries = [entry.decode() \
+            self.transceiver_entries = [entry \
                 for entry in transceiver_info]
         else:
             self.transceiver_entries = []
@@ -196,7 +196,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
             if not msg:
                 break
 
-            transceiver_entry = msg["channel"].split(b":")[-1].decode()
+            transceiver_entry = msg["channel"].split(":")[-1]
             data = msg['data'] # event data
 
             # extract interface name
@@ -212,9 +212,9 @@ class PhysicalTableMIBUpdater(MIBUpdater):
                      in STATE_DB, skipping".format(transceiver_entry))
                 continue
 
-            if b"set" in data:
+            if "set" in data:
                 self._update_transceiver_cache(interface)
-            elif b"del" in data:
+            elif "del" in data:
                 # remove deleted transceiver
                 remove_sub_ids = [mibs.get_transceiver_sub_id(ifindex)]
 
@@ -268,7 +268,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_mfg_name_map[sub_id], \
         self.physical_model_name_map[sub_id] = get_transceiver_data(transceiver_info)
 
-        ifalias = self.if_alias_map.get(interface.encode(), b"").decode()
+        ifalias = self.if_alias_map.get(interface, "")
 
         # generate a description for this transceiver
         self.physical_description_map[sub_id] = get_transceiver_description(sfp_type, ifalias)
@@ -282,7 +282,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         :param: interface: Interface name associated with transceiver
         """
 
-        ifalias = self.if_alias_map.get(interface.encode(), b"").decode()
+        ifalias = self.if_alias_map.get(interface, "")
         ifindex = port_util.get_index_from_str(interface)
 
         # get transceiver sensors from transceiver dom entry in STATE DB
@@ -293,7 +293,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
             return
 
         # go over transceiver sensors
-        for sensor in map(bytes.decode, transceiver_dom_entry):
+        for sensor in transceiver_dom_entry:
             if sensor not in SENSOR_NAME_MAP:
                 continue
             sensor_sub_id = mibs.get_transceiver_sensor_sub_id(ifindex, sensor)

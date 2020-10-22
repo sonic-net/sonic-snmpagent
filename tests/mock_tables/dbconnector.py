@@ -1,12 +1,19 @@
 # MONKEY PATCH!!!
 import json
 import os
+import sys
 
 import mockredis
 from swsssdk.interface import redis, DBInterface
 from swsssdk import SonicV2Connector
 from swsssdk import SonicDBConfig
 
+
+if sys.version_info >= (3, 0):
+    long = int
+    xrange = range
+    basestring = str
+    from functools import reduce
 
 def clean_up_config():
     # Set SonicDBConfig variables to initial state
@@ -52,6 +59,7 @@ def connect_SonicV2Connector(self, db_name, retry_on=True):
         self.dbintf.redis_kwargs['namespace'] = self.namespace
     # Mock DB filename for unit-test
     self.dbintf.redis_kwargs['db_name'] = db_name
+    self.dbintf.redis_kwargs['decode_responses'] = True
     _old_connect_SonicV2Connector(self, db_name, retry_on)
 
 
@@ -76,7 +84,6 @@ class MockPubSub:
 
 INPUT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-
 class SwssSyncClient(mockredis.MockRedis):
     def __init__(self, *args, **kwargs):
         super(SwssSyncClient, self).__init__(strict=True, *args, **kwargs)
@@ -98,6 +105,20 @@ class SwssSyncClient(mockredis.MockRedis):
                 for k, v in table.items():
                     self.hset(h, k, v)
 
+    def _encode(self, value):
+        "Return a bytestring representation of the value. Taken from redis-py connection.py"
+        if isinstance(value, bytes):
+            return value
+        elif isinstance(value, (int, long)):
+            value = str(value).encode('utf-8')
+        elif isinstance(value, float):
+            value = repr(value).encode('utf-8')
+        elif not isinstance(value, basestring):
+            value = str(value).encode('utf-8')
+        # else:
+        #     value = value.encode('utf-8', 'strict')
+        return value
+
     # Patch mockredis/mockredis/client.py
     # The official implementation will filter out keys with a slash '/'
     # ref: https://github.com/locationlabs/mockredis/blob/master/mockredis/client.py
@@ -106,20 +127,12 @@ class SwssSyncClient(mockredis.MockRedis):
         import fnmatch
         import re
 
-        # making sure the pattern is unicode/str.
-        try:
-            pattern = pattern.decode('utf-8')
-            # This throws an AttributeError in python 3, or an
-            # UnicodeEncodeError in python 2
-        except (AttributeError, UnicodeEncodeError):
-            pass
-
         # Make regex out of glob styled pattern.
         regex = fnmatch.translate(pattern)
         regex = re.compile(regex)
 
         # Find every key that matches the pattern
-        return [key for key in self.redis.keys() if regex.match(key.decode('utf-8'))]
+        return [key for key in self.redis.keys() if regex.match(key)]
 
 
 DBInterface._subscribe_keyspace_notification = _subscribe_keyspace_notification

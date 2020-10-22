@@ -5,16 +5,16 @@ import os
 from swsssdk import SonicV2Connector
 from swsssdk import SonicDBConfig
 from swsssdk import port_util
-from swsssdk.port_util import get_index, get_index_from_str
+from swsssdk.port_util import get_index_from_str
 from ax_interface.mib import MIBUpdater
 from ax_interface.util import oid2tuple
 from sonic_ax_impl import logger
 
-COUNTERS_PORT_NAME_MAP = b'COUNTERS_PORT_NAME_MAP'
-COUNTERS_QUEUE_NAME_MAP = b'COUNTERS_QUEUE_NAME_MAP'
-LAG_TABLE = b'LAG_TABLE'
-LAG_MEMBER_TABLE = b'LAG_MEMBER_TABLE'
-LOC_CHASSIS_TABLE = b'LLDP_LOC_CHASSIS'
+COUNTERS_PORT_NAME_MAP = 'COUNTERS_PORT_NAME_MAP'
+COUNTERS_QUEUE_NAME_MAP = 'COUNTERS_QUEUE_NAME_MAP'
+LAG_TABLE = 'LAG_TABLE'
+LAG_MEMBER_TABLE = 'LAG_MEMBER_TABLE'
+LOC_CHASSIS_TABLE = 'LLDP_LOC_CHASSIS'
 APPL_DB = 'APPL_DB'
 ASIC_DB = 'ASIC_DB'
 COUNTERS_DB = 'COUNTERS_DB'
@@ -78,14 +78,14 @@ def counter_table(sai_id):
     :param if_name: given sai_id to cast.
     :return: COUNTERS table key.
     """
-    return b'COUNTERS:oid:0x' + sai_id
+    return 'COUNTERS:oid:0x' + sai_id
 
 def queue_table(sai_id):
     """
     :param sai_id: given sai_id to cast.
     :return: COUNTERS table key.
     """
-    return b'COUNTERS:' + sai_id
+    return 'COUNTERS:' + sai_id
 
 def queue_key(port_index, queue_index):
     return str(port_index) + ':' + str(queue_index)
@@ -111,7 +111,7 @@ def lldp_entry_table(if_name):
     :param if_name: given interface to cast.
     :return: LLDP_ENTRY_TABLE key.
     """
-    return b'LLDP_ENTRY_TABLE:' + if_name
+    return 'LLDP_ENTRY_TABLE:' + if_name
 
 
 def if_entry_table(if_name):
@@ -119,7 +119,7 @@ def if_entry_table(if_name):
     :param if_name: given interface to cast.
     :return: PORT_TABLE key.
     """
-    return b'PORT_TABLE:' + if_name
+    return 'PORT_TABLE:' + if_name
 
 
 def lag_entry_table(lag_name):
@@ -127,7 +127,7 @@ def lag_entry_table(lag_name):
     :param lag_name: given lag to cast.
     :return: LAG_TABLE key.
     """
-    return b'LAG_TABLE:' + lag_name
+    return 'LAG_TABLE:' + lag_name
 
 
 def mgmt_if_entry_table(if_name):
@@ -136,7 +136,7 @@ def mgmt_if_entry_table(if_name):
     :return: MGMT_PORT_TABLE key
     """
 
-    return b'MGMT_PORT|' + if_name
+    return 'MGMT_PORT|' + if_name
 
 
 def mgmt_if_entry_table_state_db(if_name):
@@ -145,7 +145,7 @@ def mgmt_if_entry_table_state_db(if_name):
     :return: MGMT_PORT_TABLE key
     """
 
-    return b'MGMT_PORT_TABLE|' + if_name
+    return 'MGMT_PORT_TABLE|' + if_name
 
 def get_sai_id_key(namespace, sai_id):
     """
@@ -157,7 +157,7 @@ def get_sai_id_key(namespace, sai_id):
     Return value: namespace:sai id or sai id
     """
     if namespace != '':
-        return namespace.encode() + b':' + sai_id
+        return namespace + ':' + sai_id
     else:
         return sai_id
 
@@ -166,15 +166,16 @@ def split_sai_id_key(sai_id_key):
     Input - bytes
     Return namespace string and sai id in byte string.
     """
-    result = sai_id_key.split(b':')
+    result = sai_id_key.split(':')
     if len(result) == 1:
         return '', sai_id_key
     else:
-        return result[0].decode(), result[1]
+        return result[0], result[1]
 
 def config(**kwargs):
     global redis_kwargs
     redis_kwargs = {k:v for (k,v) in kwargs.items() if k in ['unix_socket_path', 'host', 'port']}
+    redis_kwargs['decode_responses'] = True
 
 def init_db():
     """
@@ -198,21 +199,21 @@ def init_mgmt_interface_tables(db_conn):
     db_conn.connect(CONFIG_DB)
     db_conn.connect(STATE_DB)
 
-    mgmt_ports_keys = db_conn.keys(CONFIG_DB, mgmt_if_entry_table(b'*'))
+    mgmt_ports_keys = db_conn.keys(CONFIG_DB, mgmt_if_entry_table('*'))
 
     if not mgmt_ports_keys:
-        logger.debug('No managment ports found in {}'.format(mgmt_if_entry_table(b'')))
+        logger.debug('No managment ports found in {}'.format(mgmt_if_entry_table('')))
         return {}, {}
 
-    mgmt_ports = [key.split(mgmt_if_entry_table(b''))[-1] for key in mgmt_ports_keys]
-    oid_name_map = {get_index(mgmt_name): mgmt_name for mgmt_name in mgmt_ports}
+    mgmt_ports = [key.split(mgmt_if_entry_table(''))[-1] for key in mgmt_ports_keys]
+    oid_name_map = {get_index_from_str(mgmt_name): mgmt_name for mgmt_name in mgmt_ports}
     logger.debug('Managment port map:\n' + pprint.pformat(oid_name_map, indent=2))
 
     if_alias_map = dict()
 
     for if_name in oid_name_map.values():
         if_entry = db_conn.get_all(CONFIG_DB, mgmt_if_entry_table(if_name), blocking=True)
-        if_alias_map[if_name] = if_entry.get(b'alias', if_name)
+        if_alias_map[if_name] = if_entry.get('alias', if_name)
 
     logger.debug("Management alias map:\n" + pprint.pformat(if_alias_map, indent=2))
 
@@ -230,7 +231,7 @@ def init_sync_d_interface_tables(db_conn):
     # ex: { "Ethernet76" : "1000000000023" }
     if_name_map_util, if_id_map_util = port_util.get_interface_oid_map(db_conn)
     for if_name, sai_id in if_name_map_util.items():
-        if_name_str = if_name.decode()
+        if_name_str = if_name
         if (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name_str) or \
                 re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name_str)):
             if_name_map[if_name] = sai_id
@@ -239,7 +240,6 @@ def init_sync_d_interface_tables(db_conn):
     # string or in sai id.
     # sai_id_key = namespace : sai_id
     for sai_id, if_name in if_id_map_util.items():
-        if_name = if_name.decode()
         if (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name) or \
                 re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name)):
             if_id_map[get_sai_id_key(db_conn.namespace, sai_id)] = if_name
@@ -247,9 +247,9 @@ def init_sync_d_interface_tables(db_conn):
     logger.debug("Interface name map:\n" + pprint.pformat(if_id_map, indent=2))
 
     # { OID -> if_name (SONiC) }
-    oid_name_map = {get_index(if_name): if_name for if_name in if_name_map
+    oid_name_map = {get_index_from_str(if_name): if_name for if_name in if_name_map
                     # only map the interface if it's a style understood to be a SONiC interface.
-                    if get_index(if_name) is not None}
+                    if get_index_from_str(if_name) is not None}
 
     logger.debug("OID name map:\n" + pprint.pformat(oid_name_map, indent=2))
 
@@ -272,7 +272,7 @@ def init_sync_d_interface_tables(db_conn):
 
     for if_name in if_name_map:
         if_entry = db_conn.get_all(APPL_DB, if_entry_table(if_name), blocking=True)
-        if_alias_map[if_name] = if_entry.get(b'alias', if_name)
+        if_alias_map[if_name] = if_entry.get('alias', if_name)
 
     logger.debug("Chassis name map:\n" + pprint.pformat(if_alias_map, indent=2))
 
@@ -295,20 +295,20 @@ def init_sync_d_lag_tables(db_conn):
 
     db_conn.connect(APPL_DB)
 
-    lag_entries = db_conn.keys(APPL_DB, b"LAG_TABLE:*")
+    lag_entries = db_conn.keys(APPL_DB, "LAG_TABLE:*")
 
     if not lag_entries:
         return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map
 
     for lag_entry in lag_entries:
-        lag_name = lag_entry[len(b"LAG_TABLE:"):]
-        lag_members = db_conn.keys(APPL_DB, b"LAG_MEMBER_TABLE:%s:*" % lag_name)
+        lag_name = lag_entry[len("LAG_TABLE:"):]
+        lag_members = db_conn.keys(APPL_DB, "LAG_MEMBER_TABLE:%s:*" % lag_name)
         # TODO: db_conn.keys() should really return [] instead of None
         if lag_members is None:
             lag_members = []
 
         def member_name_str(val, lag_name):
-            return val[len(b"LAG_MEMBER_TABLE:%s:" % lag_name):]
+            return val[len("LAG_MEMBER_TABLE:%s:" % lag_name):]
 
         lag_member_names = [member_name_str(m, lag_name) for m in lag_members]
         lag_name_if_name_map[lag_name] = lag_member_names
@@ -316,7 +316,7 @@ def init_sync_d_lag_tables(db_conn):
             if_name_lag_name_map[lag_member_name] = lag_name
 
     for if_name in lag_name_if_name_map.keys():
-        idx = get_index(if_name)
+        idx = get_index_from_str(if_name)
         if idx:
             oid_lag_name_map[idx] = if_name
 
@@ -342,7 +342,7 @@ def init_sync_d_queue_tables(db_conn):
     port_queue_list_map = {}
 
     for queue_name, sai_id in queue_name_map.items():
-        port_name, queue_index = queue_name.decode().split(':')
+        port_name, queue_index = queue_name.split(':')
         queue_index = ''.join(i for i in queue_index if i.isdigit())
         port_index = get_index_from_str(port_name)
         key = queue_key(port_index, queue_index)
@@ -464,12 +464,11 @@ class RedisOidTreeUpdater(MIBUpdater):
             keys = []
 
         for key in keys:
-            key = key.decode()
             oid = oid2tuple(key, dot_prefix=False)
             self.oid_list.append(oid)
             value = Namespace.dbs_get_all(self.db_conn, SNMP_OVERLAY_DB, key)
-            if value[b'type'] in [b'COUNTER_32', b'COUNTER_64']:
-                self.oid_map[oid] = int(value[b'data'])
+            if value['type'] in ['COUNTER_32', 'COUNTER_64']:
+                self.oid_map[oid] = int(value['data'])
             else:
                 raise ValueError("Invalid value type")
 
@@ -486,7 +485,7 @@ class Namespace:
         db_conn = []
         SonicDBConfig.load_sonic_global_db_config()
         for namespace in SonicDBConfig.get_ns_list():
-            db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
+            db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace, decode_responses=True)
             db_conn.append(db)
 
         Namespace.connect_namespace_dbs(db_conn)

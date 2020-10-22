@@ -23,16 +23,16 @@ class TestGetNextPDU(TestCase):
         if_name_lag_name_map, \
         oid_lag_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, dbs)
         #PortChannel in asic0 Namespace
-        self.assertTrue(b"PortChannel01" in lag_name_if_name_map)
-        self.assertTrue(b"Ethernet-BP0" in lag_name_if_name_map[b"PortChannel01"])
-        self.assertTrue(b"Ethernet-BP4" in lag_name_if_name_map[b"PortChannel01"])
+        self.assertTrue("PortChannel01" in lag_name_if_name_map)
+        self.assertTrue("Ethernet-BP0" in lag_name_if_name_map["PortChannel01"])
+        self.assertTrue("Ethernet-BP4" in lag_name_if_name_map["PortChannel01"])
         #PortChannel in asic2 Namespace
-        self.assertTrue(b"PortChannel03" in lag_name_if_name_map)
-        self.assertTrue(b"Ethernet-BP16" in lag_name_if_name_map[b"PortChannel03"])
-        self.assertTrue(b"Ethernet-BP20" in lag_name_if_name_map[b"PortChannel03"])
+        self.assertTrue("PortChannel03" in lag_name_if_name_map)
+        self.assertTrue("Ethernet-BP16" in lag_name_if_name_map["PortChannel03"])
+        self.assertTrue("Ethernet-BP20" in lag_name_if_name_map["PortChannel03"])
 
-        self.assertTrue(b"PortChannel_Temp" in lag_name_if_name_map)
-        self.assertTrue(lag_name_if_name_map[b"PortChannel_Temp"] == [])
+        self.assertTrue("PortChannel_Temp" in lag_name_if_name_map)
+        self.assertTrue(lag_name_if_name_map["PortChannel_Temp"] == [])
 
     @classmethod
     def tearDownClass(cls):

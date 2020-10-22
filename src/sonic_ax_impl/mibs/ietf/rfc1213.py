@@ -74,15 +74,15 @@ class ArpUpdater(MIBUpdater):
 
     def _update_from_db(self):
         for neigh_key in self.neigh_key_list:
-            neigh_str = neigh_key.decode()
+            neigh_str = neigh_key
             db_index = self.neigh_key_list[neigh_key]
             neigh_info = self.db_conn[db_index].get_all(mibs.APPL_DB, neigh_key, blocking=False)
             if neigh_info is None:
                 continue
-            ip_family = neigh_info[b'family'].decode()
+            ip_family = neigh_info['family']
             if ip_family == "IPv4":
                 dev, ip = mibs.get_neigh_info(neigh_str)
-                mac = neigh_info[b'neigh'].decode()
+                mac = neigh_info['neigh']
                 # eth0 interface in a namespace is not management interface
                 # but is a part of docker0 bridge. Ignore this interface.
                 if len(self.db_conn) > 1 and dev == "eth0":
@@ -145,12 +145,12 @@ class NextHopUpdater(MIBUpdater):
             return
 
         for route_entry in route_entries:
-            routestr = route_entry.decode()
+            routestr = route_entry
             ipnstr = routestr[len("ROUTE_TABLE:"):]
             if ipnstr == "0.0.0.0/0":
                 ipn = ipaddress.ip_network(ipnstr)
                 ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, routestr, blocking=True)
-                nexthops = ent[b"nexthop"].decode()
+                nexthops = ent["nexthop"]
                 for nh in nexthops.split(','):
                     # TODO: if ipn contains IP range, create more sub_id here
                     sub_id = ip2tuple_v4(ipn.network_address)
@@ -290,7 +290,7 @@ class InterfacesUpdater(MIBUpdater):
         :return: the counter for the respective sub_id/table.
         """
         # Enum.name or table_name = 'name_of_the_table'
-        _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
+        _table_name = getattr(table_name, 'name', table_name)
 
         try:
             counter_value = self.if_counters[oid][_table_name]
@@ -320,7 +320,7 @@ class InterfacesUpdater(MIBUpdater):
         elif oid in self.oid_lag_name_map:
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
-                counter_value += self._get_counter(mibs.get_index(lag_member), table_name)
+                counter_value += self._get_counter(mibs.get_index_from_str(lag_member), table_name)
 
             # truncate to 32-bit counter
             return counter_value & 0x00000000ffffffff
@@ -384,45 +384,45 @@ class InterfacesUpdater(MIBUpdater):
         :return: state value for the respective sub_id/key.
         """
         status_map = {
-            b"up": 1,
-            b"down": 2,
-            b"testing": 3,
-            b"unknown": 4,
-            b"dormant": 5,
-            b"notPresent": 6,
-            b"lowerLayerDown": 7
+            "up": 1,
+            "down": 2,
+            "testing": 3,
+            "unknown": 4,
+            "dormant": 5,
+            "notPresent": 6,
+            "lowerLayerDown": 7
         }
 
         # Once PORT_TABLE will be moved to CONFIG DB
         # we will get rid of this if-else
         # and read oper status from STATE_DB
-        if self.get_oid(sub_id) in self.mgmt_oid_name_map and key == b"oper_status":
+        if self.get_oid(sub_id) in self.mgmt_oid_name_map and key == "oper_status":
             entry = self._get_if_entry_state_db(sub_id)
         else:
             entry = self._get_if_entry(sub_id)
 
         if not entry:
-            return status_map.get(b"unknown")
+            return status_map.get("unknown")
 
         # Note: If interface never become up its state won't be reflected in DB entry
         # If state key is not in DB entry assume interface is down
-        state = entry.get(key, b"down")
+        state = entry.get(key, "down")
 
-        return status_map.get(state, status_map[b"down"])
+        return status_map.get(state, status_map["down"])
 
     def get_admin_status(self, sub_id):
         """
         :param sub_id: The 1-based sub-identifier query.
         :return: admin state value for the respective sub_id.
         """
-        return self._get_status(sub_id, b"admin_status")
+        return self._get_status(sub_id, "admin_status")
 
     def get_oper_status(self, sub_id):
         """
         :param sub_id: The 1-based sub-identifier query.
         :return: oper state value for the respective sub_id.
         """
-        return self._get_status(sub_id, b"oper_status")
+        return self._get_status(sub_id, "oper_status")
 
     def get_mtu(self, sub_id):
         """
@@ -433,7 +433,7 @@ class InterfacesUpdater(MIBUpdater):
         if not entry:
             return
 
-        return int(entry.get(b"mtu", 0))
+        return int(entry.get("mtu", 0))
 
     def get_speed_bps(self, sub_id):
         """
@@ -444,7 +444,7 @@ class InterfacesUpdater(MIBUpdater):
         if not entry:
             return
 
-        speed = int(entry.get(b"speed", 0))
+        speed = int(entry.get("speed", 0))
         # speed is reported in Mbps in the db
         return min(self.RFC1213_MAX_SPEED, speed * 1000000)
 

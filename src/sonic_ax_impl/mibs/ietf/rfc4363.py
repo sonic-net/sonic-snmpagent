@@ -57,7 +57,7 @@ class FdbUpdater(MIBUpdater):
             return
 
         for s in fdb_strings:
-            fdb_str = s.decode()
+            fdb_str = s
             try:
                 fdb = json.loads(fdb_str.split(":", maxsplit=2)[-1])
             except ValueError as e:  # includes simplejson.decoder.JSONDecodeError
@@ -66,7 +66,7 @@ class FdbUpdater(MIBUpdater):
 
             ent = Namespace.dbs_get_all(self.db_conn, mibs.ASIC_DB, s, blocking=True)
             # Example output: oid:0x3a000000000608
-            bridge_port_id = ent[b"SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"][6:]
+            bridge_port_id = ent["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"][6:]
             if bridge_port_id not in self.if_bpid_map:
                 continue
             port_id = self.if_bpid_map[bridge_port_id]
