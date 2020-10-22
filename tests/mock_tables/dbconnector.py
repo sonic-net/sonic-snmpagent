@@ -91,6 +91,7 @@ class SwssSyncClient(mockredis.MockRedis):
         # to identify the file path to load the db json files.
         namespace = kwargs.pop('namespace')
         db_name = kwargs.pop('db_name')
+        self.decode_responses = kwargs.pop('decode_responses') == True
         fname = db_name.lower() + ".json"
         self.pubsub = MockPubSub()
 
@@ -105,6 +106,9 @@ class SwssSyncClient(mockredis.MockRedis):
                 for k, v in table.items():
                     self.hset(h, k, v)
 
+    # Patch mockredis/mockredis/client.py
+    # The offical implementation assume decode_responses=False
+    # Here we detect the option first and only encode when decode_responses=False
     def _encode(self, value):
         "Return a bytestring representation of the value. Taken from redis-py connection.py"
         if isinstance(value, bytes):
@@ -115,8 +119,8 @@ class SwssSyncClient(mockredis.MockRedis):
             value = repr(value).encode('utf-8')
         elif not isinstance(value, basestring):
             value = str(value).encode('utf-8')
-        # else:
-        #     value = value.encode('utf-8', 'strict')
+        elif not self.decode_responses:
+            value = value.encode('utf-8', 'strict')
         return value
 
     # Patch mockredis/mockredis/client.py
