@@ -8,9 +8,9 @@ import redis
 import swsssdk
 from swsssdk import SonicV2Connector
 from swsssdk.interface import DBInterface
-from swsssdk import SonicV2Connector
 from swsssdk import SonicDBConfig
 from swsscommon import swsscommon
+
 
 if sys.version_info >= (3, 0):
     long = int
