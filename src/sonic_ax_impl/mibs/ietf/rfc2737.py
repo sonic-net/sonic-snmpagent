@@ -32,7 +32,7 @@ class PhysicalClass(int, Enum):
 
 
 @unique
-class FanInfoDB(bytes, Enum):
+class FanInfoDB(str, Enum):
     """
     FAN info keys
     """
@@ -44,7 +44,7 @@ class FanInfoDB(bytes, Enum):
 
 
 @unique
-class FanDrawerInfoDB(bytes, Enum):
+class FanDrawerInfoDB(str, Enum):
     """
     FAN drawer info keys
     """
@@ -55,7 +55,7 @@ class FanDrawerInfoDB(bytes, Enum):
 
 
 @unique
-class PhysicalRelationInfoDB(bytes, Enum):
+class PhysicalRelationInfoDB(str, Enum):
     """
     Physical relation info keys
     """
@@ -64,7 +64,7 @@ class PhysicalRelationInfoDB(bytes, Enum):
 
 
 @unique
-class PsuInfoDB(bytes, Enum):
+class PsuInfoDB(str, Enum):
     """
     PSU info keys
     """
@@ -91,7 +91,7 @@ class XcvrInfoDB(str, Enum):
     REPLACEABLE       = 'is_replaceable'
 
 @unique
-class ThermalInfoDB(bytes, Enum):
+class ThermalInfoDB(str, Enum):
     """
     FAN drawer info keys
     """
@@ -102,16 +102,16 @@ class ThermalInfoDB(bytes, Enum):
 # Map used to generate PSU sensor description
 PSU_SENSOR_NAME_MAP = {
     'temperature': 'Temperature',
-    'power': 'Power',
-    'current': 'Current',
-    'voltage': 'Voltage'
+    'power'      : 'Power',
+    'current'    : 'Current',
+    'voltage'    : 'Voltage'
 }
 
 PSU_SENSOR_POSITION_MAP = {
     'temperature': 1,
-    'power': 2,
-    'current': 3,
-    'voltage': 4
+    'power'      : 2,
+    'current'    : 3,
+    'voltage'    : 4
 }
 
 # Map used to generate transceiver sensor description
@@ -158,7 +158,7 @@ def is_null_str(value):
     :param value: input string value
     :return: True is string value is empty or equal to 'N/A' or 'None'
     """
-    if not value or value == NOT_AVAILABLE or value == str(None):
+    if not isinstance(value, str) or value == NOT_AVAILABLE or value == str(None):
         return True
     return False
 
@@ -170,13 +170,8 @@ def get_db_data(info_dict, enum_type):
     :return: tuple of fields values defined in enum_type;
     Empty string if field not in info_dict
     """
-    ret = []
-    for field in enum_type:
-        value = info_dict.get(field.value, "")
-        if value is not None:
-            value = value.decode()
-        ret.append(value)
-    return ret
+    return (info_dict.get(field.value, "")
+            for field in enum_type)
 
 
 def get_transceiver_description(sfp_type, if_alias):
