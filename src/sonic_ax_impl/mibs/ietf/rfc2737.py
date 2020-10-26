@@ -36,11 +36,11 @@ class FanInfoDB(bytes, Enum):
     """
     FAN info keys
     """
-    MODEL       = b'model'
-    PRESENCE    = b'presence'
-    SERIAL      = b'serial'
-    SPEED       = b'speed'
-    REPLACEABLE = b'is_replaceable'
+    MODEL       = 'model'
+    PRESENCE    = 'presence'
+    SERIAL      = 'serial'
+    SPEED       = 'speed'
+    REPLACEABLE = 'is_replaceable'
 
 
 @unique
@@ -48,10 +48,10 @@ class FanDrawerInfoDB(bytes, Enum):
     """
     FAN drawer info keys
     """
-    MODEL       = b'model'
-    PRESENCE    = b'presence'
-    SERIAL      = b'serial'
-    REPLACEABLE = b'is_replaceable'
+    MODEL       = 'model'
+    PRESENCE    = 'presence'
+    SERIAL      = 'serial'
+    REPLACEABLE = 'is_replaceable'
 
 
 @unique
@@ -59,8 +59,8 @@ class PhysicalRelationInfoDB(bytes, Enum):
     """
     Physical relation info keys
     """
-    POSITION_IN_PARENT    = b'position_in_parent'
-    PARENT_NAME           = b'parent_name'
+    POSITION_IN_PARENT    = 'position_in_parent'
+    PARENT_NAME           = 'parent_name'
 
 
 @unique
@@ -68,37 +68,35 @@ class PsuInfoDB(bytes, Enum):
     """
     PSU info keys
     """
-    MODEL       = b'model'
-    SERIAL      = b'serial'
-    CURRENT     = b'current'
-    POWER       = b'power'
-    PRESENCE    = b'presence'
-    VOLTAGE     = b'voltage'
-    TEMPERATURE = b'temp'
-    REPLACEABLE = b'is_replaceable'
+    MODEL       = 'model'
+    SERIAL      = 'serial'
+    CURRENT     = 'current'
+    POWER       = 'power'
+    PRESENCE    = 'presence'
+    VOLTAGE     = 'voltage'
+    TEMPERATURE = 'temp'
+    REPLACEABLE = 'is_replaceable'
 
 
 @unique
-class XcvrInfoDB(bytes, Enum):
+class XcvrInfoDB(str, Enum):
     """
     Transceiver info keys
     """
-
-    TYPE              = b"type"
-    HARDWARE_REVISION = b"hardware_rev"
-    SERIAL_NUMBER     = b"serial"
-    MANUFACTURE_NAME  = b"manufacturer"
-    MODEL_NAME        = b"model"
-    REPLACEABLE       = b'is_replaceable'
-
+    TYPE              = "type"
+    HARDWARE_REVISION = "hardware_rev"
+    SERIAL_NUMBER     = "serial"
+    MANUFACTURE_NAME  = "manufacturer"
+    MODEL_NAME        = "model"
+    REPLACEABLE       = 'is_replaceable'
 
 @unique
 class ThermalInfoDB(bytes, Enum):
     """
     FAN drawer info keys
     """
-    TEMPERATURE = b'temperature'
-    REPLACEABLE = b'is_replaceable'
+    TEMPERATURE = 'temperature'
+    REPLACEABLE = 'is_replaceable'
 
 
 # Map used to generate PSU sensor description
@@ -174,7 +172,7 @@ def get_db_data(info_dict, enum_type):
     """
     ret = []
     for field in enum_type:
-        value = info_dict.get(field.value, b"")
+        value = info_dict.get(field.value, "")
         if value is not None:
             value = value.decode()
         ret.append(value)
@@ -327,10 +325,10 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_entities = [chassis_sub_id]
         self.physical_name_to_oid_map[self.CHASSIS_NAME] = chassis_sub_id
 
-        if not device_metadata or not device_metadata.get(b"chassis_serial_number"):
+        if not device_metadata or not device_metadata.get("chassis_serial_number"):
             chassis_serial_number = ""
         else:
-            chassis_serial_number = device_metadata[b"chassis_serial_number"]
+            chassis_serial_number = device_metadata["chassis_serial_number"]
 
         self.physical_classes_map[chassis_sub_id] = PhysicalClass.CHASSIS
         self.physical_serial_number_map[chassis_sub_id] = chassis_serial_number

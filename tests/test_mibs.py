@@ -23,10 +23,10 @@ class TestGetNextPDU(TestCase):
         if_name_lag_name_map, \
         oid_lag_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, db_conn)
 
-        self.assertTrue(b"PortChannel04" in lag_name_if_name_map)
-        self.assertTrue(lag_name_if_name_map[b"PortChannel04"] == [b"Ethernet124"])
-        self.assertTrue(b"Ethernet124" in if_name_lag_name_map)
-        self.assertTrue(if_name_lag_name_map[b"Ethernet124"] == b"PortChannel04")
+        self.assertTrue("PortChannel04" in lag_name_if_name_map)
+        self.assertTrue(lag_name_if_name_map["PortChannel04"] == ["Ethernet124"])
+        self.assertTrue("Ethernet124" in if_name_lag_name_map)
+        self.assertTrue(if_name_lag_name_map["Ethernet124"] == "PortChannel04")
 
-        self.assertTrue(b"PortChannel_Temp" in lag_name_if_name_map)
-        self.assertTrue(lag_name_if_name_map[b"PortChannel_Temp"] == [])
+        self.assertTrue("PortChannel_Temp" in lag_name_if_name_map)
+        self.assertTrue(lag_name_if_name_map["PortChannel_Temp"] == [])
