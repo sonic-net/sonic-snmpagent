@@ -5,18 +5,18 @@
   "PSU_INFO|PSU 1": {
     "presence": "false",
     "status": "false",
-    "current": 15.4,
-    "power": 302.6,
-    "voltage": 15.1,
-    "temp": 30.1
+    "current": "15.4",
+    "power": "302.6",
+    "voltage": "15.1",
+    "temp": "30.1"
   },
   "PSU_INFO|PSU 2": {
     "presence": "true",
     "status": "true",
-    "current": 13.4,
-    "power": 312.6,
-    "voltage": 13.1,
-    "temp": 31.1,
+    "current": "13.4",
+    "power": "312.6",
+    "voltage": "13.1",
+    "temp": "31.1",
     "model": "PSU_MODEL",
     "serial": "PSU_SERIAL",
     "is_replaceable": "True"
@@ -24,10 +24,10 @@
   "PSU_INFO|PSU 3": {
     "presence": "true",
     "status": "false",
-    "current": 15.5,
-    "power": 302.8,
-    "voltage": 15.5,
-    "temp": 30.8
+    "current": "15.5",
+    "power": "302.8",
+    "voltage": "15.5",
+    "temp": "30.8"
   },
   "CHASSIS_INFO|chassis 1": {
     "psu_num": "3"
@@ -95,12 +95,12 @@
   "FAN_INFO|fan1": {
     "model": "FANMODEL",
     "serial": "FANSERIAL",
-    "speed": 50,
+    "speed": "50",
     "presence": "True",
     "is_replaceable": "True"
   },
   "TEMPERATURE_INFO|thermal1": {
-    "temperature": 20.5,
+    "temperature": "20.5",
     "is_replaceable": "False"
   },
   "NEIGH_STATE_TABLE|10.0.0.57": {

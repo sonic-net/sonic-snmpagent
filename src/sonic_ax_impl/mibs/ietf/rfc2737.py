@@ -677,7 +677,7 @@ class PhysicalEntityCacheUpdater(object):
         # retrieve the initial list of entity in db
         key_info = Namespace.dbs_keys(self.mib_updater.statedb, mibs.STATE_DB, self.get_key_pattern())
         if key_info:
-            keys = [entry.decode() for entry in key_info]
+            keys = [entry for entry in key_info]
         else:
             keys = []
 
@@ -705,7 +705,7 @@ class PhysicalEntityCacheUpdater(object):
             if not msg:
                 break
 
-            db_entry = msg["channel"].split(b":")[-1].decode()
+            db_entry = msg["channel"].split(":")[-1]
             data = msg['data']  # event data
             if not isinstance(data, bytes):
                 continue
@@ -713,9 +713,9 @@ class PhysicalEntityCacheUpdater(object):
             # extract interface name
             name = db_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
 
-            if b"set" in data:
+            if "set" in data:
                 self._update_entity_cache(name)
-            elif b"del" in data:
+            elif "del" in data:
                 self._remove_entity_cache(name)
 
     def get_key_pattern(self):
@@ -807,7 +807,7 @@ class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
         # See https://tools.ietf.org/html/rfc2737.
         self.mib_updater.set_phy_parent_relative_pos(sub_id, -1)
 
-        ifalias = self.if_alias_map.get(interface.encode(), b"").decode()
+        ifalias = self.if_alias_map.get(interface, "")
 
         # generate a description for this transceiver
         self.mib_updater.set_phy_descr(sub_id, get_transceiver_description(sfp_type, ifalias))
@@ -823,7 +823,7 @@ class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
         :param: sub_id: OID of transceiver
         """
 
-        ifalias = self.if_alias_map.get(interface.encode(), b"").decode()
+        ifalias = self.if_alias_map.get(interface, "")
         ifindex = port_util.get_index_from_str(interface)
 
         # get transceiver sensors from transceiver dom entry in STATE DB
@@ -834,7 +834,7 @@ class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
             return
 
         # go over transceiver sensors
-        for sensor in map(bytes.decode, transceiver_dom_entry):
+        for sensor in transceiver_dom_entry:
             if sensor not in XCVR_SENSOR_NAME_MAP:
                 continue
             sensor_sub_id = mibs.get_transceiver_sensor_sub_id(ifindex, sensor)
