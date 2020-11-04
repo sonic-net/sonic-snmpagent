@@ -3,8 +3,7 @@ import python_arptable
 from enum import unique, Enum
 from bisect import bisect_right
 
-from sonic_ax_impl import mibs
-from sonic_ax_impl import logger
+from sonic_ax_impl import mibs, logger
 from sonic_ax_impl.mibs import Namespace
 from ax_interface.mib import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
 from ax_interface.encodings import ObjectIdentifier
