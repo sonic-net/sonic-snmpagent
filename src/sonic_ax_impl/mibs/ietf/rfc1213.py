@@ -267,7 +267,9 @@ class InterfacesUpdater(MIBUpdater):
     def update_rif_counters(self):
         rif_sai_ids = list(self.rif_port_map) + list(self.vlan_name_map)
         self.rif_counters = \
-            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB, mibs.counter_table(sai_id), blocking=False)
+            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB,
+                                           mibs.counter_table(mibs.split_sai_id_key(sai_id)[1]),
+                                           blocking=False)
             for sai_id in rif_sai_ids}
 
     def get_next(self, sub_id):

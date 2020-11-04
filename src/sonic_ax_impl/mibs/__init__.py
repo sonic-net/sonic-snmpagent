@@ -306,7 +306,8 @@ def init_sync_d_rif_tables(db_conn):
     Initializes map of RIF SAI oids to port SAI oid.
     :return: dict
     """
-    rif_port_map = {get_sai_id_key(db_conn.namespace, rif): port for rif, port in port_util.get_rif_port_map(db_conn).items()}
+    rif_port_map = {get_sai_id_key(db_conn.namespace, rif): get_sai_id_key(db_conn.namespace, port)
+                    for rif, port in port_util.get_rif_port_map(db_conn).items()}
     port_rif_map = {port: rif for rif, port in rif_port_map.items()}
     logger.debug("Rif port map:\n" + pprint.pformat(rif_port_map, indent=2))
 
@@ -365,7 +366,7 @@ def init_sync_d_lag_tables(db_conn):
 
     db_conn.connect(COUNTERS_DB)
     lag_sai_map = db_conn.get_all(COUNTERS_DB, "COUNTERS_LAG_NAME_MAP")
-    lag_sai_map = {name: sai_id.lstrip("oid:0x") for name, sai_id in lag_sai_map.items()}
+    lag_sai_map = {name: get_sai_id_key(db_conn.namespace, sai_id.lstrip("oid:0x")) for name, sai_id in lag_sai_map.items()}
 
     for lag_entry in lag_entries:
         lag_name = lag_entry[len("LAG_TABLE:"):]

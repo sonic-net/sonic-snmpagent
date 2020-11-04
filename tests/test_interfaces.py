@@ -641,7 +641,7 @@ class TestGetNextPDU(TestCase):
 
     def test_in_octets_vlan_subinterface(self):
         """
-        For a port with multiple vlan subinterfaces (RIF) all RIF drops are accumulated 
+        For a port with multiple vlan subinterfaces (RIF) all RIF drops are accumulated
         """
         oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 10, 9))
         get_pdu = GetPDU(
@@ -749,7 +749,7 @@ class TestGetNextPDU(TestCase):
 
     def test_in_octets_portchannel(self):
         """
-        For a l3 portchannel interface value is accumulated on members plus added Rif counters 
+        For a l3 portchannel interface value is accumulated on members plus added Rif counters
         """
         oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 10, 1001))
         get_pdu = GetPDU(
