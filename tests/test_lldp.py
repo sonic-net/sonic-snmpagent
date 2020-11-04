@@ -1,11 +1,14 @@
 import os
 import sys
 
+# noinspection PyUnresolvedReferences
+import tests.mock_tables.dbconnector
+from tests.mock_tables.dbconnector import SonicV2Connector
+
 modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from unittest import TestCase
-import tests.mock_tables.dbconnector
 
 from ax_interface import ValueType
 from ax_interface.pdu_implementations import GetPDU, GetNextPDU
@@ -89,11 +92,18 @@ class TestLLDPMIB(TestCase):
             print(ret)
 
     def test_subtype_lldp_loc_man_addr_table(self):
-        for entry in range(3, 7):
-            mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 3, 8, 1, entry)]
-            ret = mib_entry(sub_id=(1,))
-            self.assertIsNotNone(ret)
-            print(ret)
+        oid = ObjectIdentifier(13, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 3, 8, 1, 3, 1, 4))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        value0 = response.values[0]
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(13, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 3, 8, 1, 3, 1, 4, 10, 224, 25, 26))))
+        self.assertEqual(value0.type_, ValueType.INTEGER)
+        self.assertEqual(value0.data, 5)
+
 
     def test_subtype_lldp_rem_man_addr_table(self):
         for entry in range(3, 6):
@@ -105,13 +115,13 @@ class TestLLDPMIB(TestCase):
     def test_local_port_identification(self):
         mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 3, 7, 1, 3)]
         ret = mib_entry(sub_id=(1,))
-        self.assertEquals(ret, b'etp1')
+        self.assertEquals(ret, 'etp1')
         print(ret)
 
     def test_mgmt_local_port_identification(self):
         mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 3, 7, 1, 3)]
         ret = mib_entry(sub_id=(10001,))
-        self.assertEquals(ret, b'mgmt1')
+        self.assertEquals(ret, 'mgmt1')
         print(ret)
 
     def test_getnextpdu_local_port_identification(self):

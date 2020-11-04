@@ -1,7 +1,6 @@
 from enum import Enum, unique
 from sonic_ax_impl import mibs
 from ax_interface import MIBMeta, ValueType, SubtreeMIBEntry
-from swsssdk import SonicV2Connector
 
 CHASSIS_INFO_KEY_TEMPLATE = 'chassis {}'
 PSU_INFO_KEY_TEMPLATE = 'PSU {}'
@@ -10,21 +9,21 @@ PSU_PRESENCE_OK = 'true'
 PSU_STATUS_OK = 'true'
 
 @unique
-class CHASSISInfoDB(bytes, Enum):
+class CHASSISInfoDB(str, Enum):
     """
     CHASSIS info keys
     """
 
-    PSU_NUM = b"psu_num"
+    PSU_NUM = "psu_num"
 
 @unique
-class PSUInfoDB(bytes, Enum):
+class PSUInfoDB(str, Enum):
     """
     PSU info keys
     """
 
-    PRESENCE = b"presence"
-    STATUS = b"status"
+    PRESENCE = "presence"
+    STATUS = "status"
 
 def get_chassis_data(chassis_info):
     """
@@ -33,7 +32,7 @@ def get_chassis_data(chassis_info):
     Empty string if field not in chassis_info
     """
 
-    return tuple(chassis_info.get(chassis_field.value, b"").decode() for chassis_field in CHASSISInfoDB)
+    return tuple(chassis_info.get(chassis_field.value, "") for chassis_field in CHASSISInfoDB)
 
 def get_psu_data(psu_info):
     """
@@ -42,7 +41,7 @@ def get_psu_data(psu_info):
     Empty string if field not in psu_info
     """
 
-    return tuple(psu_info.get(psu_field.value, b"").decode() for psu_field in PSUInfoDB)
+    return tuple(psu_info.get(psu_field.value, "") for psu_field in PSUInfoDB)
 
 class PowerStatusHandler:
     """
@@ -52,7 +51,7 @@ class PowerStatusHandler:
         """
         init the handler
         """
-        self.statedb = SonicV2Connector()
+        self.statedb = mibs.init_db()
         self.statedb.connect(self.statedb.STATE_DB)
 
     def _get_num_psus(self):

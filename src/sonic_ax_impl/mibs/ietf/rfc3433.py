@@ -280,7 +280,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         transceiver_dom_encoded = Namespace.dbs_keys(self.statedb, mibs.STATE_DB,
                                                     self.TRANSCEIVER_DOM_KEY_PATTERN)
         if transceiver_dom_encoded:
-            self.transceiver_dom = [entry.decode() for entry in transceiver_dom_encoded]
+            self.transceiver_dom = [entry for entry in transceiver_dom_encoded]
 
     def update_data(self):
         """
@@ -311,11 +311,11 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
             if not transceiver_dom_entry_data:
                 continue
 
-            for sensor_key in map(bytes.decode, transceiver_dom_entry_data):
+            for sensor_key in transceiver_dom_entry_data:
                 if sensor_key not in TRANSCEIVER_SENSOR_MAP:
                     continue
 
-                raw_sensor_value = transceiver_dom_entry_data.get(sensor_key.encode()).decode()
+                raw_sensor_value = transceiver_dom_entry_data.get(sensor_key)
 
                 sensor = get_transceiver_sensor(sensor_key)
                 sub_id = mibs.get_transceiver_sensor_sub_id(ifindex, sensor_key)
