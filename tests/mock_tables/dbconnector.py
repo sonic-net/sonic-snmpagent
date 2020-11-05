@@ -7,8 +7,8 @@ import mockredis
 import redis
 import swsssdk
 from swsssdk import SonicV2Connector
-from swsssdk.interface import DBInterface
 from swsssdk import SonicDBConfig
+from swsssdk.interface import DBInterface
 from swsscommon import swsscommon
 
 
@@ -94,7 +94,7 @@ class SwssSyncClient(mockredis.MockRedis):
         # to identify the file path to load the db json files.
         namespace = kwargs.pop('namespace')
         db_name = kwargs.pop('db_name')
-        self.decode_responses = kwargs.pop('decode_responses') == True
+        self.decode_responses = kwargs.pop('decode_responses', False) == True
         fname = db_name.lower() + ".json"
         self.pubsub = MockPubSub()
 
@@ -146,7 +146,6 @@ DBInterface._subscribe_keyspace_notification = _subscribe_keyspace_notification
 mockredis.MockRedis.config_set = config_set
 redis.StrictRedis = SwssSyncClient
 SonicV2Connector.connect = connect_SonicV2Connector
-swsssdk.SonicV2Connector = SonicV2Connector
 swsscommon.SonicV2Connector = SonicV2Connector
 
 # pytest case collecting will import some module before monkey patch, so reload
