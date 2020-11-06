@@ -2,7 +2,7 @@ import pprint
 import re
 import os
 
-from swsssdk import SonicV2Connector
+from swsscommon.swsscommon import SonicV2Connector
 from swsssdk import SonicDBConfig
 from swsssdk import port_util
 from swsssdk.port_util import get_index_from_str
