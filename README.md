@@ -39,3 +39,4 @@ root 42 1 12 06:37 ? 01:23:46 python3.6 -m sonic_ax_impl
 root@lnos-x1-a-csw04:/# kill -SIGUSR1 42
 ```
 Sending SIGUSR1 signal to process again will reset the log level. 
+test
