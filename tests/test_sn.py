@@ -16,11 +16,11 @@ from ax_interface import ValueType
 from ax_interface.encodings import ObjectIdentifier
 from ax_interface.constants import PduTypes
 from sonic_ax_impl.mibs.ietf.rfc2737 import PhysicalClass, PSU_SENSOR_NAME_MAP, PSU_SENSOR_POSITION_MAP
-from sonic_ax_impl.mibs import CHASSIS_SUB_ID, CHASSIS_MGMT_SUB_ID, PSU_SENSOR_PART_ID_MAP
-from sonic_ax_impl.mibs import get_psu_sensor_sub_id, get_psu_sub_id, get_fan_drawer_sub_id
-from sonic_ax_impl.mibs import get_fan_sub_id, get_fan_tachometers_sub_id
-from sonic_ax_impl.mibs import get_chassis_thermal_sub_id, get_transceiver_sub_id
-from sonic_ax_impl.mibs import get_transceiver_sensor_sub_id
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import CHASSIS_SUB_ID, CHASSIS_MGMT_SUB_ID, PSU_SENSOR_PART_ID_MAP
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_psu_sensor_sub_id, get_psu_sub_id, get_fan_drawer_sub_id
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_fan_sub_id, get_fan_tachometers_sub_id
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_chassis_thermal_sub_id, get_transceiver_sub_id
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_transceiver_sensor_sub_id
 from sonic_ax_impl.main import SonicMIB
 
 class TestSonicMIB(TestCase):

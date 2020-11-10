@@ -11,6 +11,18 @@ from ax_interface import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry
 from sonic_ax_impl import mibs
 from sonic_ax_impl.mibs import Namespace
 
+from .physical_entity_sub_oid_generator import CHASSIS_SUB_ID
+from .physical_entity_sub_oid_generator import CHASSIS_MGMT_SUB_ID
+from .physical_entity_sub_oid_generator import get_chassis_thermal_sub_id
+from .physical_entity_sub_oid_generator import get_fan_sub_id
+from .physical_entity_sub_oid_generator import get_fan_drawer_sub_id
+from .physical_entity_sub_oid_generator import get_fan_tachometers_sub_id
+from .physical_entity_sub_oid_generator import get_psu_sub_id
+from .physical_entity_sub_oid_generator import get_psu_sensor_sub_id
+from .physical_entity_sub_oid_generator import get_transceiver_sub_id
+from .physical_entity_sub_oid_generator import get_transceiver_sensor_sub_id
+
+
 @unique
 class PhysicalClass(int, Enum):
     """
@@ -316,7 +328,7 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.pending_resolve_parent_name_map = {}
 
         device_metadata = mibs.get_device_metadata(self.statedb[0])
-        chassis_sub_id = (mibs.CHASSIS_SUB_ID, )
+        chassis_sub_id = (CHASSIS_SUB_ID, )
         self.physical_entities = [chassis_sub_id]
         self.physical_name_to_oid_map[self.CHASSIS_NAME] = chassis_sub_id
 
@@ -333,10 +345,10 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_fru_map[chassis_sub_id] = self.NOT_REPLACEABLE
 
         # Add a chassis mgmt node
-        chassis_mgmt_sub_id = (mibs.CHASSIS_MGMT_SUB_ID,)
+        chassis_mgmt_sub_id = (CHASSIS_MGMT_SUB_ID,)
         self.add_sub_id(chassis_mgmt_sub_id)
         self.physical_classes_map[chassis_mgmt_sub_id] = PhysicalClass.CPU
-        self.physical_contained_in_map[chassis_mgmt_sub_id] = mibs.CHASSIS_SUB_ID
+        self.physical_contained_in_map[chassis_mgmt_sub_id] = CHASSIS_SUB_ID
         self.physical_parent_relative_pos_map[chassis_mgmt_sub_id] = 1
         name = 'MGMT'
         self.physical_description_map[chassis_mgmt_sub_id] = name
@@ -782,7 +794,7 @@ class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
 
         # update xcvr info from DB
         # use port's name as key for transceiver info entries
-        sub_id = mibs.get_transceiver_sub_id(ifindex)
+        sub_id = get_transceiver_sub_id(ifindex)
 
         # add interface to available OID list
         self.mib_updater.add_sub_id(sub_id)
@@ -798,7 +810,7 @@ class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
         self.mib_updater.set_phy_serial_num(sub_id, serial_number)
         self.mib_updater.set_phy_mfg_name(sub_id, mfg_name)
         self.mib_updater.set_phy_model_name(sub_id, model_name)
-        self.mib_updater.set_phy_contained_in(sub_id, mibs.CHASSIS_SUB_ID)
+        self.mib_updater.set_phy_contained_in(sub_id, CHASSIS_SUB_ID)
         self.mib_updater.set_phy_fru(sub_id, replaceable)
         # Relative position of SFP can be changed at run time. For example, plug out a normal cable SFP3 and plug in
         # a 1 split 4 SFP, the relative position of SFPs after SPF3 will change. In this case, it is hard to determine
@@ -837,7 +849,7 @@ class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
         for sensor in transceiver_dom_entry:
             if sensor not in XCVR_SENSOR_NAME_MAP:
                 continue
-            sensor_sub_id = mibs.get_transceiver_sensor_sub_id(ifindex, sensor)
+            sensor_sub_id = get_transceiver_sensor_sub_id(ifindex, sensor)
             self._add_entity_related_oid(interface, sensor_sub_id)
             sensor_description = get_transceiver_sensor_description(sensor, ifalias)
 
@@ -876,7 +888,7 @@ class PsuCacheUpdater(PhysicalEntityCacheUpdater):
         psu_relation_info = self.get_physical_relation_info(psu_name)
         psu_position, psu_parent_name = get_db_data(psu_relation_info, PhysicalRelationInfoDB)
         psu_position = int(psu_position)
-        psu_sub_id = mibs.get_psu_sub_id(psu_position)
+        psu_sub_id = get_psu_sub_id(psu_position)
         self._add_entity_related_oid(psu_name, psu_sub_id)
         self.mib_updater.update_name_to_oid_map(psu_name, psu_sub_id)
 
@@ -904,7 +916,7 @@ class PsuCacheUpdater(PhysicalEntityCacheUpdater):
             self._update_psu_sensor_cache(psu_name, psu_sub_id, 'voltage')
 
     def _update_psu_sensor_cache(self, psu_name, psu_sub_id, sensor_name):
-        psu_current_sub_id = mibs.get_psu_sensor_sub_id(psu_sub_id, sensor_name)
+        psu_current_sub_id = get_psu_sensor_sub_id(psu_sub_id, sensor_name)
         self._add_entity_related_oid(psu_name, psu_current_sub_id)
         self.mib_updater.add_sub_id(psu_current_sub_id)
         self.mib_updater.set_phy_class(psu_current_sub_id, PhysicalClass.SENSOR)
@@ -942,7 +954,7 @@ class FanDrawerCacheUpdater(PhysicalEntityCacheUpdater):
         if drawer_relation_info:
             drawer_position, drawer_parent_name = get_db_data(drawer_relation_info, PhysicalRelationInfoDB)
             drawer_position = int(drawer_position)
-            drawer_sub_id = mibs.get_fan_drawer_sub_id(drawer_position)
+            drawer_sub_id = get_fan_drawer_sub_id(drawer_position)
             self._add_entity_related_oid(drawer_name, drawer_sub_id)
             self.mib_updater.update_name_to_oid_map(drawer_name, drawer_sub_id)
 
@@ -993,7 +1005,7 @@ class FanCacheUpdater(PhysicalEntityCacheUpdater):
 
     def _update_fan_mib_info(self, fan_parent_name, fan_position, fan_name, serial, model, speed, replaceable):
         fan_parent_sub_id = self.mib_updater.physical_name_to_oid_map[fan_parent_name]
-        fan_sub_id = mibs.get_fan_sub_id(fan_parent_sub_id, fan_position)
+        fan_sub_id = get_fan_sub_id(fan_parent_sub_id, fan_position)
         self._add_entity_related_oid(fan_name, fan_sub_id)
         #self.mib_updater.update_name_to_oid_map(fan_name, fan_sub_id)
 
@@ -1012,7 +1024,7 @@ class FanCacheUpdater(PhysicalEntityCacheUpdater):
 
         # add fan tachometers as a physical entity
         if speed and not is_null_str(speed):
-            fan_tachometers_sub_id = mibs.get_fan_tachometers_sub_id(fan_sub_id)
+            fan_tachometers_sub_id = get_fan_tachometers_sub_id(fan_sub_id)
             self._add_entity_related_oid(fan_name, fan_tachometers_sub_id)
             self.mib_updater.add_sub_id(fan_tachometers_sub_id)
             self.mib_updater.set_phy_class(fan_tachometers_sub_id, PhysicalClass.SENSOR)
@@ -1052,8 +1064,8 @@ class ThermalCacheUpdater(PhysicalEntityCacheUpdater):
             # physical entity will be processed in other entity updater, for example
             # PSU thermal will be processed by PsuCacheUpdater
             if thermal_parent_name in self.mib_updater.physical_name_to_oid_map and \
-                self.mib_updater.physical_name_to_oid_map[thermal_parent_name] == (mibs.CHASSIS_SUB_ID,):
-                thermal_sub_id = mibs.get_chassis_thermal_sub_id(thermal_position)
+                self.mib_updater.physical_name_to_oid_map[thermal_parent_name] == (CHASSIS_SUB_ID,):
+                thermal_sub_id = get_chassis_thermal_sub_id(thermal_position)
                 self._add_entity_related_oid(thermal_name, thermal_sub_id)
 
                 # add thermal to available OID list
@@ -1062,7 +1074,7 @@ class ThermalCacheUpdater(PhysicalEntityCacheUpdater):
                 self.mib_updater.set_phy_descr(thermal_sub_id, thermal_name)
                 self.mib_updater.set_phy_name(thermal_sub_id, thermal_name)
                 self.mib_updater.set_phy_parent_relative_pos(thermal_sub_id, thermal_position)
-                self.mib_updater.set_phy_contained_in(thermal_sub_id, mibs.CHASSIS_MGMT_SUB_ID)
+                self.mib_updater.set_phy_contained_in(thermal_sub_id, CHASSIS_MGMT_SUB_ID)
                 self.mib_updater.set_phy_fru(thermal_sub_id, replaceable)
         else:
             self._remove_entity_cache(thermal_name)

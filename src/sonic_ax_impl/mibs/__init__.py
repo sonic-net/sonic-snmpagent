@@ -10,8 +10,6 @@ from ax_interface.mib import MIBUpdater
 from ax_interface.util import oid2tuple
 from sonic_ax_impl import logger
 
-from .physical_entity_sub_oid_generator import *
-
 COUNTERS_PORT_NAME_MAP = 'COUNTERS_PORT_NAME_MAP'
 COUNTERS_QUEUE_NAME_MAP = 'COUNTERS_QUEUE_NAME_MAP'
 LAG_TABLE = 'LAG_TABLE'

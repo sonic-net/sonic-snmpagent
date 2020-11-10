@@ -15,7 +15,7 @@ from ax_interface.pdu_implementations import GetPDU, GetNextPDU
 from ax_interface import ValueType
 from ax_interface.encodings import ObjectIdentifier
 from ax_interface.constants import PduTypes
-from sonic_ax_impl.mibs import get_transceiver_sub_id, get_transceiver_sensor_sub_id
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_transceiver_sub_id, get_transceiver_sensor_sub_id
 from sonic_ax_impl.mibs.ietf import rfc3433
 from sonic_ax_impl.main import SonicMIB
 
