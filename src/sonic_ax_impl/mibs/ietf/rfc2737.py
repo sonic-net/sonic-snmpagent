@@ -170,7 +170,7 @@ def is_null_str(value):
     :param value: input string value
     :return: True is string value is empty or equal to 'N/A' or 'None'
     """
-    if not isinstance(value, str) or value == NOT_AVAILABLE or value == str(None):
+    if not isinstance(value, str) or value == NOT_AVAILABLE or value == 'None':
         return True
     return False
 
