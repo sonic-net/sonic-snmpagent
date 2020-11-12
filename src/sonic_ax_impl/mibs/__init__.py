@@ -25,27 +25,6 @@ SNMP_OVERLAY_DB = 'SNMP_OVERLAY_DB'
 TABLE_NAME_SEPARATOR_COLON = ':'
 TABLE_NAME_SEPARATOR_VBAR = '|'
 
-# This is used in both rfc2737 and rfc3433
-SENSOR_PART_ID_MAP = {
-    "temperature":  1,
-    "voltage":      2,
-    "rx1power":     11,
-    "rx2power":     21,
-    "rx3power":     31,
-    "rx4power":     41,
-    "tx1bias":      12,
-    "tx2bias":      22,
-    "tx3bias":      32,
-    "tx4bias":      42,
-    "tx1power":     13,
-    "tx2power":     23,
-    "tx3power":     33,
-    "tx4power":     43,
-}
-
-# IfIndex to OID multiplier for transceiver
-IFINDEX_SUB_ID_MULTIPLIER = 1000
-
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
 
 
@@ -65,6 +44,22 @@ def chassis_info_table(chassis_name):
 
     return "CHASSIS_INFO" + TABLE_NAME_SEPARATOR_VBAR + chassis_name
 
+def fan_info_table(fan_name):
+    """
+    :param: fan_name: fan name
+    :return: fan info entry for this fan
+    """
+    return 'FAN_INFO' + TABLE_NAME_SEPARATOR_VBAR + fan_name
+
+
+def fan_drawer_info_table(drawer_name):
+    """
+    :param: drawer_name: fan drawer name
+    :return: fan drawer info entry for this fan
+    """
+    return 'FAN_DRAWER_INFO' + TABLE_NAME_SEPARATOR_VBAR + drawer_name
+
+
 def psu_info_table(psu_name):
     """
     :param: psu_name: psu name
@@ -72,6 +67,15 @@ def psu_info_table(psu_name):
     """
 
     return "PSU_INFO" + TABLE_NAME_SEPARATOR_VBAR + psu_name
+
+
+def physical_entity_info_table(name):
+    """
+    :param: name: object name
+    :return: entity info entry for this object
+    """
+    return 'PHYSICAL_ENTITY_INFO' + TABLE_NAME_SEPARATOR_VBAR + name
+
 
 def counter_table(sai_id):
     """
@@ -105,6 +109,14 @@ def transceiver_dom_table(port_name):
     """
 
     return "TRANSCEIVER_DOM_SENSOR" + TABLE_NAME_SEPARATOR_VBAR + port_name
+
+def thermal_info_table(thermal_name):
+    """
+    :param: port_name: port name
+    :return: transceiver dom entry for this port
+    """
+
+    return "TEMPERATURE_INFO" + TABLE_NAME_SEPARATOR_VBAR + thermal_name
 
 def lldp_entry_table(if_name):
     """
@@ -386,40 +398,6 @@ def get_device_metadata(db_conn):
     device_metadata = db_conn.get_all(db_conn.STATE_DB, DEVICE_METADATA)
     return device_metadata
 
-def get_transceiver_sub_id(ifindex):
-    """
-    Returns sub OID for transceiver. Sub OID is calculated as folows:
-    +------------+------------+
-    |Interface   |Index       |
-    +------------+------------+
-    |Ethernet[X] |X * 1000    |
-    +------------+------------+
-    ()
-    :param ifindex: interface index
-    :return: sub OID of a port calculated as sub OID = {{index}} * 1000
-    """
-
-    return (ifindex * IFINDEX_SUB_ID_MULTIPLIER, )
-
-def get_transceiver_sensor_sub_id(ifindex, sensor):
-    """
-    Returns sub OID for transceiver sensor. Sub OID is calculated as folows:
-    +-------------------------------------+------------------------------+
-    |Sensor                               |Index                         |
-    +-------------------------------------+------------------------------+
-    |RX Power for Ethernet[X]/[LANEID]    |X * 1000 + LANEID * 10 + 1    |
-    |TX Bias for Ethernet[X]/[LANEID]     |X * 1000 + LANEID * 10 + 2    |
-    |Temperature for Ethernet[X]          |X * 1000 + 1                  |
-    |Voltage for Ethernet[X]/[LANEID]     |X * 1000 + 2                  |
-    +-------------------------------------+------------------------------+
-    ()
-    :param ifindex: interface index
-    :param sensor: sensor key
-    :return: sub OID = {{index}} * 1000 + {{lane}} * 10 + sensor id
-    """
-
-    transceiver_oid, = get_transceiver_sub_id(ifindex)
-    return (transceiver_oid + SENSOR_PART_ID_MAP[sensor], )
 
 def get_redis_pubsub(db_conn, db_name, pattern):
     redis_client = db_conn.get_redis_client(db_name)
@@ -427,6 +405,7 @@ def get_redis_pubsub(db_conn, db_name, pattern):
     pubsub = redis_client.pubsub()
     pubsub.psubscribe("__keyspace@{}__:{}".format(db, pattern))
     return pubsub
+
 
 class RedisOidTreeUpdater(MIBUpdater):
     def __init__(self, prefix_str):
