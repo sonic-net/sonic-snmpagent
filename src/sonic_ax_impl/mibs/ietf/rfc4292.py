@@ -53,18 +53,17 @@ class RouteUpdater(MIBUpdater):
         # Get list of front end asic namespaces for multi-asic platform.
         # This list will be empty for single asic platform.
         front_ns = multi_asic.get_all_namespaces()['front_ns']
+        ipnstr = "0.0.0.0/0"
+        ipn = ipaddress.ip_network(ipnstr)
+        route_str = "ROUTE_TABLE:0.0.0.0/0"
 
         for db_conn in Namespace.get_non_host_dbs(self.db_conn):
             # For multi-asic platform, proceed to get routes only for front end namespaces.
-            if db_conn.namespace != multi_asic.DEFAULT_NAMESPACE and \
-               db_conn.namespace not in front_ns:
-                continue
-            ipnstr = "0.0.0.0/0"
-            route_str = "ROUTE_TABLE:0.0.0.0/0"
+            if front_ns and db_conn.namespace not in front_ns: continue
+            port_config = multi_asic.get_port_table(db_conn.namespace)
             route_entry  = db_conn.keys(mibs.APPL_DB, route_str)
             if not route_entry:
                 continue
-            ipn = ipaddress.ip_network(ipnstr)
             ent = db_conn.get_all(mibs.APPL_DB, route_str, blocking=True)
             nexthops = ent["nexthop"]
             ifnames = ent["ifname"]
@@ -75,6 +74,9 @@ class RouteUpdater(MIBUpdater):
                 if ifn == "eth0" or ifn == "lo" or ifn == "docker0": continue
                 # Ignore internal asic routes
                 if multi_asic.is_port_channel_internal(ifn, db_conn.namespace): continue
+                if ifn in port_config and \
+                   multi_asic.ROLE in port_config[ifn] and \
+                   port_config[ifn][multi_asic.ROLE] == multi_asic.INTERNAL_PORT : continue
                 sub_id = ip2tuple_v4(ipn.network_address) + ip2tuple_v4(ipn.netmask) + (self.tos,) + ip2tuple_v4(nh)
                 self.route_dest_list.append(sub_id)
                 self.route_dest_map[sub_id] = ipn.network_address.packed
