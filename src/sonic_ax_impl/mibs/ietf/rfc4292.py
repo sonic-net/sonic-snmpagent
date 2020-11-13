@@ -61,10 +61,9 @@ class RouteUpdater(MIBUpdater):
             # For multi-asic platform, proceed to get routes only for front end namespaces.
             if front_ns and db_conn.namespace not in front_ns: continue
             port_config = multi_asic.get_port_table(db_conn.namespace)
-            route_entry  = db_conn.keys(mibs.APPL_DB, route_str)
-            if not route_entry:
+            ent = db_conn.get_all(mibs.APPL_DB, route_str, blocking=False)
+            if ent is None:
                 continue
-            ent = db_conn.get_all(mibs.APPL_DB, route_str, blocking=True)
             nexthops = ent["nexthop"]
             ifnames = ent["ifname"]
             for nh, ifn in zip(nexthops.split(','), ifnames.split(',')):
