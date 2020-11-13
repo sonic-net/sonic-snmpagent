@@ -151,7 +151,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         if not entry:
             return
 
-        return entry.get(b"description", "")
+        return entry.get("description", "")
 
     def get_counter32(self, sub_id, table_name):
         oid = self.get_oid(sub_id)
@@ -183,12 +183,12 @@ class InterfaceMIBUpdater(MIBUpdater):
         if oid in self.oid_lag_name_map:
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
-                counter_value += self._get_counter(mibs.get_index(lag_member), table_name, mask)
+                counter_value += self._get_counter(mibs.get_index_from_str(lag_member), table_name, mask)
 
             return counter_value & mask
 
         # Enum.name or table_name = 'name_of_the_table'
-        _table_name = bytes(getattr(table_name, 'name', table_name), 'utf-8')
+        _table_name = getattr(table_name, 'name', table_name)
         try:
             counter_value = self.if_counters[oid][_table_name]
             # truncate to 32-bit counter (database implements 64-bit counters)
@@ -233,7 +233,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         if not entry:
             return
 
-        return int(entry.get(b"speed", 40000))
+        return int(entry.get("speed", 40000))
 
 
 class InterfaceMIBObjects(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.31.1'):

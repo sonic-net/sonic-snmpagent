@@ -15,6 +15,7 @@ from ax_interface.pdu_implementations import GetPDU, GetNextPDU
 from ax_interface import ValueType
 from ax_interface.encodings import ObjectIdentifier
 from ax_interface.constants import PduTypes
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_transceiver_sub_id, get_transceiver_sensor_sub_id
 from sonic_ax_impl.mibs.ietf import rfc3433
 from sonic_ax_impl.main import SonicMIB
 
@@ -22,7 +23,8 @@ class TestSonicMIB(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.lut = MIBTable(rfc3433.PhysicalSensorTableMIB)
-        cls.XCVR_SUB_ID = 1 * 1000
+        cls.IFINDEX = 1
+        cls.XCVR_SUB_ID = get_transceiver_sub_id(cls.IFINDEX)
         cls.XCVR_CHANNELS = (1, 2, 3, 4)
 
         # Update MIBs
@@ -74,7 +76,7 @@ class TestSonicMIB(TestCase):
             rfc3433.EntitySensorStatus.OK
         ]
 
-        self._test_getpdu_xcvr_sensor(self.XCVR_SUB_ID + 1, expected_values)
+        self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, 'temperature')[0], expected_values)
 
     def test_getpdu_xcvr_voltage_sensor(self):
         """
@@ -89,7 +91,7 @@ class TestSonicMIB(TestCase):
             rfc3433.EntitySensorStatus.OK
         ]
 
-        self._test_getpdu_xcvr_sensor(self.XCVR_SUB_ID + 2, expected_values)
+        self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, 'voltage')[0], expected_values)
 
     def test_getpdu_xcvr_rx_power_sensor_minus_infinity(self):
         """
@@ -105,8 +107,7 @@ class TestSonicMIB(TestCase):
             rfc3433.EntitySensorStatus.OK
         ]
 
-        channel = 1
-        self._test_getpdu_xcvr_sensor(self.XCVR_SUB_ID + 10 * channel + 1, expected_values)
+        self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, 'rx1power')[0], expected_values)
 
     def test_getpdu_xcvr_rx_power_sensor(self):
         """
@@ -123,7 +124,8 @@ class TestSonicMIB(TestCase):
 
         # test for each channel except first, we already test above
         for channel in (2, 3, 4):
-            self._test_getpdu_xcvr_sensor(self.XCVR_SUB_ID + 10 * channel + 1, expected_values)
+            sensor = 'rx{}power'.format(channel)
+            self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, sensor)[0], expected_values)
 
     def test_getpdu_xcvr_tx_power_sensor(self):
         """
@@ -140,7 +142,8 @@ class TestSonicMIB(TestCase):
 
         # test for each channel except first, we already test above
         for channel in (1, 2, 3, 4):
-            self._test_getpdu_xcvr_sensor(self.XCVR_SUB_ID + 10 * channel + 3, expected_values)
+            sensor = 'tx{}power'.format(channel)
+            self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, sensor)[0], expected_values)
 
     def test_getpdu_xcvr_tx_bias_sensor_unknown(self):
         """
@@ -156,8 +159,7 @@ class TestSonicMIB(TestCase):
             rfc3433.EntitySensorStatus.UNAVAILABLE
         ]
 
-        channel = 1
-        self._test_getpdu_xcvr_sensor(self.XCVR_SUB_ID + 10 * channel + 2, expected_values)
+        self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, 'tx1bias')[0], expected_values)
 
     def test_getpdu_xcvr_tx_bias_sensor_overflow(self):
         """
@@ -173,8 +175,7 @@ class TestSonicMIB(TestCase):
             rfc3433.EntitySensorStatus.OK
         ]
 
-        channel = 3
-        self._test_getpdu_xcvr_sensor(self.XCVR_SUB_ID + 10 * channel + 2, expected_values)
+        self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, 'tx3bias')[0], expected_values)
 
     def test_getpdu_xcvr_tx_bias_sensor(self):
         """
@@ -191,5 +192,6 @@ class TestSonicMIB(TestCase):
 
         # test for each channel
         for channel in (2, 4):
-            self._test_getpdu_xcvr_sensor(self.XCVR_SUB_ID + 10 * channel + 2, expected_values)
+            sensor = 'tx{}bias'.format(channel)
+            self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, sensor)[0], expected_values)
 
