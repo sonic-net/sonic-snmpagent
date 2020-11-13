@@ -8,6 +8,7 @@ from swsssdk import SonicV2Connector
 from swsssdk import SonicDBConfig
 from sonic_py_common import multi_asic
 
+int_port_channel = ['PortChannel01', 'PortChannel02', 'PortChannel03', 'PortChannel04']
 
 def clean_up_config():
     # Set SonicDBConfig variables to initial state
@@ -144,7 +145,7 @@ def mock_is_port_channel_internal(port_channel, namespace=None):
     if (mock_get_num_asics() == 1):
         return False
     else:
-        return True if '_BP' in port_channel else False
+        return True if port_channel in int_port_channel else False
 
 
 multi_asic.get_num_asics = mock_get_num_asics
