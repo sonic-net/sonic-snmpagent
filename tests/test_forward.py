@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.join(modules_path, 'src'))
 from unittest import TestCase
 
 import tests.mock_tables.dbconnector
+import tests.mock_tables.multi_asic
 
 from ax_interface.mib import MIBTable
 from ax_interface.pdu import PDUHeader
