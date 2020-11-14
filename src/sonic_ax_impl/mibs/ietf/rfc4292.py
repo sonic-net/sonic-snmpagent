@@ -63,7 +63,7 @@ class RouteUpdater(MIBUpdater):
             # For single-asic platform, front_ns will be empty list.
             if front_ns and db_conn.namespace not in front_ns:
                 continue
-            port_config = multi_asic.get_port_table(db_conn.namespace)
+            port_table = multi_asic.get_port_table(db_conn.namespace)
             ent = db_conn.get_all(mibs.APPL_DB, route_str, blocking=False)
             if ent is None:
                 continue
@@ -79,9 +79,9 @@ class RouteUpdater(MIBUpdater):
                 # Ignore internal asic routes
                 if multi_asic.is_port_channel_internal(ifn, db_conn.namespace):
                     continue
-                if (ifn in port_config and
-                   multi_asic.ROLE in port_config[ifn] and
-                   port_config[ifn][multi_asic.ROLE] == multi_asic.INTERNAL_PORT): 
+                if (ifn in port_table and
+                   multi_asic.ROLE in port_table[ifn] and
+                   port_table[ifn][multi_asic.ROLE] == multi_asic.INTERNAL_PORT): 
                     continue
                 sub_id = ip2tuple_v4(ipn.network_address) + ip2tuple_v4(ipn.netmask) + (self.tos,) + ip2tuple_v4(nh)
                 self.route_dest_list.append(sub_id)
