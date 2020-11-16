@@ -5,6 +5,7 @@ from sonic_ax_impl.mibs import Namespace
 from ax_interface import MIBMeta, ValueType, MIBUpdater, SubtreeMIBEntry
 from ax_interface.util import ip2tuple_v4
 from bisect import bisect_right
+from sonic_py_common import multi_asic
 
 class RouteUpdater(MIBUpdater):
     def __init__(self):
@@ -49,26 +50,41 @@ class RouteUpdater(MIBUpdater):
             self.route_dest_list.append(sub_id)
             self.route_dest_map[sub_id] = self.loips[loip].packed
 
-        route_entries = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "ROUTE_TABLE:*")
-        if not route_entries:
-            return
+        # Get list of front end asic namespaces for multi-asic platform.
+        # This list will be empty for single asic platform.
+        front_ns = multi_asic.get_all_namespaces()['front_ns']
+        ipnstr = "0.0.0.0/0"
+        ipn = ipaddress.ip_network(ipnstr)
+        route_str = "ROUTE_TABLE:0.0.0.0/0"
 
-        for route_entry in route_entries:
-            routestr = route_entry
-            ipnstr = routestr[len("ROUTE_TABLE:"):]
-            if ipnstr == "0.0.0.0/0":
-                ipn = ipaddress.ip_network(ipnstr)
-                ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, routestr, blocking=True)
-                nexthops = ent["nexthop"]
-                ifnames = ent["ifname"]
-                for nh, ifn in zip(nexthops.split(','), ifnames.split(',')):
-                    ## Ignore non front panel interfaces
-                    ## TODO: non front panel interfaces should not be in APPL_DB at very beginning
-                    ## This is to workaround the bug in current sonic-swss implementation
-                    if ifn == "eth0" or ifn == "lo" or ifn == "docker0": continue
-                    sub_id = ip2tuple_v4(ipn.network_address) + ip2tuple_v4(ipn.netmask) + (self.tos,) + ip2tuple_v4(nh)
-                    self.route_dest_list.append(sub_id)
-                    self.route_dest_map[sub_id] = ipn.network_address.packed
+        for db_conn in Namespace.get_non_host_dbs(self.db_conn):
+            # For multi-asic platform, proceed to get routes only for 
+            # front end namespaces.
+            # For single-asic platform, front_ns will be empty list.
+            if front_ns and db_conn.namespace not in front_ns:
+                continue
+            port_table = multi_asic.get_port_table(db_conn.namespace)
+            ent = db_conn.get_all(mibs.APPL_DB, route_str, blocking=False)
+            if ent is None:
+                continue
+            nexthops = ent["nexthop"]
+            ifnames = ent["ifname"]
+            for nh, ifn in zip(nexthops.split(','), ifnames.split(',')):
+                ## Ignore non front panel interfaces
+                ## TODO: non front panel interfaces should not be in APPL_DB at very beginning
+                ## This is to workaround the bug in current sonic-swss implementation
+                if ifn == "eth0" or ifn == "lo" or ifn == "docker0":
+                    continue
+                # Ignore internal asic routes
+                if multi_asic.is_port_channel_internal(ifn, db_conn.namespace):
+                    continue
+                if (ifn in port_table and
+                   multi_asic.ROLE in port_table[ifn] and
+                   port_table[ifn][multi_asic.ROLE] == multi_asic.INTERNAL_PORT): 
+                    continue
+                sub_id = ip2tuple_v4(ipn.network_address) + ip2tuple_v4(ipn.netmask) + (self.tos,) + ip2tuple_v4(nh)
+                self.route_dest_list.append(sub_id)
+                self.route_dest_map[sub_id] = ipn.network_address.packed
 
         self.route_dest_list.sort()
 

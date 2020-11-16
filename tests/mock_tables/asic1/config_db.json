@@ -1,2 +1,38 @@
 {
+  "DEVICE_METADATA|localhost": {
+    "chassis_serial_number": "SAMPLETESTSN",
+    "sub_role": "FrontEnd"
+  },
+  "PORT_TABLE:Ethernet8": {
+    "description": "snowflake",
+    "alias": "etp5",
+    "role": "Ext",
+    "speed": 100000
+  },
+  "PORT_TABLE:Ethernet12": {
+    "speed": 1000,
+    "role": "Ext",
+    "alias": "etp6"
+  },
+  "PORT_TABLE:Ethernet-BP8": {
+    "role": "Int",
+    "alias": "etp7"
+  },
+  "PORT_TABLE:Ethernet-BP12": {
+    "description": "snowflake",
+    "role": "Int",
+    "alias": "etp8",
+    "speed": 1000
+  },
+  "LAG_MEMBER_TABLE:PortChannel02:Ethernet-BP08": {
+    "status": "enabled"
+  },
+  "LAG_MEMBER_TABLE:PortChannel02:Ethernet-BP12": {
+    "status": "enabled"
+  },
+  "LAG_TABLE:PortChannel02": {
+    "admin_status": "up",
+    "oper_status": "up",
+    "mtu": "9216"
+  }
 }
