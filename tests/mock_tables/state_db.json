@@ -4,15 +4,30 @@
   },
   "PSU_INFO|PSU 1": {
     "presence": "false",
-    "status": "false"
+    "status": "false",
+    "current": "15.4",
+    "power": "302.6",
+    "voltage": "15.1",
+    "temp": "30.1"
   },
   "PSU_INFO|PSU 2": {
     "presence": "true",
-    "status": "true"
+    "status": "true",
+    "current": "13.4",
+    "power": "312.6",
+    "voltage": "13.1",
+    "temp": "31.1",
+    "model": "PSU_MODEL",
+    "serial": "PSU_SERIAL",
+    "is_replaceable": "True"
   },
   "PSU_INFO|PSU 3": {
     "presence": "true",
-    "status": "false"
+    "status": "false",
+    "current": "15.5",
+    "power": "302.8",
+    "voltage": "15.5",
+    "temp": "30.8"
   },
   "CHASSIS_INFO|chassis 1": {
     "psu_num": "3"
@@ -22,7 +37,8 @@
     "hardware_rev": "A1",
     "serial": "SERIAL_NUM",
     "manufacturer": "VENDOR_NAME",
-    "model": "MODEL_NAME"
+    "model": "MODEL_NAME",
+    "is_replaceable": "True"
   },
   "TRANSCEIVER_DOM_SENSOR|Ethernet0": {
     "temperature": 25.39,
@@ -45,6 +61,47 @@
   },
   "MGMT_PORT_TABLE|eth1": {
     "oper_status": "up"
+  },
+  "PHYSICAL_ENTITY_INFO|PSU 1": {
+    "position_in_parent": 1,
+    "parent_name": "chassis 1"
+  },
+  "PHYSICAL_ENTITY_INFO|PSU 2": {
+    "position_in_parent": 2,
+    "parent_name": "chassis 1"
+  },
+  "PHYSICAL_ENTITY_INFO|PSU 3": {
+    "position_in_parent": 3,
+    "parent_name": "chassis 1"
+  },
+  "PHYSICAL_ENTITY_INFO|drawer1": {
+    "position_in_parent": 1,
+    "parent_name": "chassis 1"
+  },
+  "PHYSICAL_ENTITY_INFO|fan1": {
+    "position_in_parent": 1,
+    "parent_name": "drawer1"
+  },
+  "PHYSICAL_ENTITY_INFO|thermal1": {
+    "position_in_parent": 1,
+    "parent_name": "chassis 1"
+  },
+  "FAN_DRAWER_INFO|drawer1": {
+    "model": "DRAWERMODEL",
+    "serial": "DRAWERSERIAL",
+    "presence": "True",
+    "is_replaceable": "True"
+  },
+  "FAN_INFO|fan1": {
+    "model": "FANMODEL",
+    "serial": "FANSERIAL",
+    "speed": "50",
+    "presence": "True",
+    "is_replaceable": "True"
+  },
+  "TEMPERATURE_INFO|thermal1": {
+    "temperature": "20.5",
+    "is_replaceable": "False"
   },
   "NEIGH_STATE_TABLE|10.0.0.57": {
     "state" : "6402"

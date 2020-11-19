@@ -1,2 +1,53 @@
 {
+  "DEVICE_METADATA|localhost": {
+    "chassis_serial_number": "SAMPLETESTSN",
+    "sub_role": "BackEnd"
+  },
+  "PORT_TABLE:Ethernet-BP16": {
+    "description": "backplane",
+    "alias": "etp9",
+    "speed": 100000
+  },
+  "PORT_TABLE:Ethernet-BP20": {
+    "description": "backplane",
+    "alias": "etp10",
+    "speed": 100000
+  },
+  "PORT_TABLE:Ethernet-BP24": {
+    "description": "backplane",
+    "alias": "etp11",
+    "speed": 100000
+  },
+  "PORT_TABLE:Ethernet-BP28": {
+    "description": "backplane",
+    "alias": "etp12",
+    "speed": 100000
+  },
+  "LAG_MEMBER_TABLE:PortChannel03:Ethernet-BP16": {
+    "status": "enabled"
+  },
+  "LAG_MEMBER_TABLE:PortChannel03:Ethernet-BP20": {
+    "status": "enabled"
+  },
+  "LAG_MEMBER_TABLE:PortChannel04:Ethernet-BP24": {
+    "status": "enabled"
+  },
+  "LAG_MEMBER_TABLE:PortChannel04:Ethernet-BP28": {
+    "status": "enabled"
+  },
+  "LAG_TABLE:PortChannel03": {
+    "admin_status": "up",
+    "oper_status": "up",
+    "mtu": "9216"
+  },
+  "LAG_TABLE:PortChannel04": {
+    "admin_status": "up",
+    "oper_status": "up",
+    "mtu": "9216"
+  },
+  "LAG_TABLE:PortChannel_Temp": {
+    "admin_status": "up",
+    "oper_status": "up",
+    "mtu": "9216"
+  }
 }
