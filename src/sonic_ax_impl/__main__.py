@@ -5,6 +5,7 @@ import shutil
 import sys
 
 import swsssdk.util
+from swsscommon import swsscommon
 
 import ax_interface
 import sonic_ax_impl
@@ -75,6 +76,10 @@ if __name__ == "__main__":
     sonic_ax_impl.logger.setLevel(log_level)
     ax_interface.logger.setLevel(log_level)
     swsssdk.logger.setLevel(log_level_sdk)
+    # Note: swsscommon uses a fixed log level for simplicity
+    # TODO: improve it when log_level option is used
+    log_level_swsscommon = swsscommon.Logger.SWSS_ERROR
+    swsscommon.Logger.getInstance().setMinPrio(log_level_swsscommon)
 
     # inherit logging handlers in submodules
     ax_interface.logger.handlers = sonic_ax_impl.logger.handlers
