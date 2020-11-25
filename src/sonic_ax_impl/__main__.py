@@ -1,10 +1,12 @@
 from signal import signal, SIGUSR1
+import logging
 import logging.handlers
 import os
 import shutil
 import sys
 
 import swsssdk.util
+from swsscommon import swsscommon
 
 import ax_interface
 import sonic_ax_impl
@@ -43,6 +45,24 @@ def install_fragments():
     install_file(pass_script, '/usr/share/snmp', executable=True)
 
 
+# Mapping logging log level to SWSS log level
+# ref: https://docs.python.org/3/library/logging.html#logging-levels
+def logging_level_to_swss_level(log_level):
+    if not isinstance(log_level, int):
+        raise ValueError('log_level must be a int')
+    if log_level >= logging.CRITICAL:
+        log_level_swsscommon = swsscommon.Logger.SWSS_CRIT
+    elif log_level >= logging.ERROR:
+        log_level_swsscommon = swsscommon.Logger.SWSS_ERROR
+    elif log_level >= logging.WARNING:
+        log_level_swsscommon = swsscommon.Logger.SWSS_WARN
+    elif log_level >= logging.INFO:
+        log_level_swsscommon = swsscommon.Logger.SWSS_INFO
+    else:
+        log_level_swsscommon = swsscommon.Logger.SWSS_DEBUG
+    return log_level_swsscommon
+
+
 if __name__ == "__main__":
 
     if 'install' in sys.argv:
@@ -68,13 +88,16 @@ if __name__ == "__main__":
         sonic_ax_impl.logger.addHandler(logging_handler)
         log_level = logging.INFO
         log_level_sdk = logging.ERROR
+        log_level_swsscommon = swsscommon.Logger.SWSS_ERROR
     else:
         sonic_ax_impl.logger.addHandler(logging.StreamHandler(sys.stdout))
+        log_level_swsscommon = logging_level_to_swss_level(log_level)
 
     # set the log levels
     sonic_ax_impl.logger.setLevel(log_level)
     ax_interface.logger.setLevel(log_level)
     swsssdk.logger.setLevel(log_level_sdk)
+    swsscommon.Logger.getInstance().setMinPrio(log_level_swsscommon)
 
     # inherit logging handlers in submodules
     ax_interface.logger.handlers = sonic_ax_impl.logger.handlers
