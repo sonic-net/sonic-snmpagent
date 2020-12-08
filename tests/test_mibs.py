@@ -14,14 +14,15 @@ class TestGetNextPDU(TestCase):
     @classmethod
     def setUpClass(cls):
         #For single namespace scenario, load database_config.json
-        tests.mock_tables.dbconnector.load_database_config() 
+        tests.mock_tables.dbconnector.load_database_config()
 
     def test_init_sync_d_lag_tables(self):
         db_conn = Namespace.init_namespace_dbs()
 
         lag_name_if_name_map, \
         if_name_lag_name_map, \
-        oid_lag_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, db_conn)
+        oid_lag_name_map, \
+        lag_sai_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, db_conn)
 
         self.assertTrue("PortChannel04" in lag_name_if_name_map)
         self.assertTrue(lag_name_if_name_map["PortChannel04"] == ["Ethernet124"])
@@ -30,3 +31,4 @@ class TestGetNextPDU(TestCase):
 
         self.assertTrue("PortChannel_Temp" in lag_name_if_name_map)
         self.assertTrue(lag_name_if_name_map["PortChannel_Temp"] == [])
+        self.assertTrue(lag_sai_map["PortChannel01"] == "2000000000006")
