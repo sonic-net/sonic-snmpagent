@@ -21,6 +21,11 @@ from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_psu_se
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_fan_sub_id, get_fan_tachometers_sub_id
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_chassis_thermal_sub_id, get_transceiver_sub_id
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_transceiver_sensor_sub_id
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import SENSOR_TYPE_TEMP
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import SENSOR_TYPE_VOLTAGE
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import SENSOR_TYPE_PORT_RX_POWER
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import SENSOR_TYPE_PORT_TX_POWER
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import SENSOR_TYPE_PORT_TX_BIAS
 from sonic_ax_impl.main import SonicMIB
 
 class TestSonicMIB(TestCase):
@@ -201,20 +206,20 @@ class TestSonicMIB(TestCase):
 
     def test_getpdu_xcvr_dom(self):
         expected_mib = {
-            get_transceiver_sensor_sub_id(1, 'temperature')[0]: "DOM Temperature Sensor for etp1",
-            get_transceiver_sensor_sub_id(1, 'voltage')[0]: "DOM Voltage Sensor for etp1",
-            get_transceiver_sensor_sub_id(1, 'rx1power')[0]: "DOM RX Power Sensor for etp1/1",
-            get_transceiver_sensor_sub_id(1, 'rx2power')[0]: "DOM RX Power Sensor for etp1/2",
-            get_transceiver_sensor_sub_id(1, 'rx3power')[0]: "DOM RX Power Sensor for etp1/3",
-            get_transceiver_sensor_sub_id(1, 'rx4power')[0]: "DOM RX Power Sensor for etp1/4",
-            get_transceiver_sensor_sub_id(1, 'tx1bias')[0]: "DOM TX Bias Sensor for etp1/1",
-            get_transceiver_sensor_sub_id(1, 'tx2bias')[0]: "DOM TX Bias Sensor for etp1/2",
-            get_transceiver_sensor_sub_id(1, 'tx3bias')[0]: "DOM TX Bias Sensor for etp1/3",
-            get_transceiver_sensor_sub_id(1, 'tx4bias')[0]: "DOM TX Bias Sensor for etp1/4",
-            get_transceiver_sensor_sub_id(1, 'tx1power')[0]: "DOM TX Power Sensor for etp1/1",
-            get_transceiver_sensor_sub_id(1, 'tx2power')[0]: "DOM TX Power Sensor for etp1/2",
-            get_transceiver_sensor_sub_id(1, 'tx3power')[0]: "DOM TX Power Sensor for etp1/3",
-            get_transceiver_sensor_sub_id(1, 'tx4power')[0]: "DOM TX Power Sensor for etp1/4",
+            get_transceiver_sensor_sub_id(1, SENSOR_TYPE_TEMP)[0]: "DOM Temperature Sensor for etp1",
+            get_transceiver_sensor_sub_id(1, SENSOR_TYPE_VOLTAGE)[0]: "DOM Voltage Sensor for etp1",
+            get_transceiver_sensor_sub_id(1, 1 + SENSOR_TYPE_PORT_RX_POWER)[0]: "DOM RX Power Sensor for etp1/1",
+            get_transceiver_sensor_sub_id(1, 2 + SENSOR_TYPE_PORT_RX_POWER)[0]: "DOM RX Power Sensor for etp1/2",
+            get_transceiver_sensor_sub_id(1, 3 + SENSOR_TYPE_PORT_RX_POWER)[0]: "DOM RX Power Sensor for etp1/3",
+            get_transceiver_sensor_sub_id(1, 4 + SENSOR_TYPE_PORT_RX_POWER)[0]: "DOM RX Power Sensor for etp1/4",
+            get_transceiver_sensor_sub_id(1, 1 + SENSOR_TYPE_PORT_TX_BIAS)[0]: "DOM TX Bias Sensor for etp1/1",
+            get_transceiver_sensor_sub_id(1, 2 + SENSOR_TYPE_PORT_TX_BIAS)[0]: "DOM TX Bias Sensor for etp1/2",
+            get_transceiver_sensor_sub_id(1, 3 + SENSOR_TYPE_PORT_TX_BIAS)[0]: "DOM TX Bias Sensor for etp1/3",
+            get_transceiver_sensor_sub_id(1, 4 + SENSOR_TYPE_PORT_TX_BIAS)[0]: "DOM TX Bias Sensor for etp1/4",
+            get_transceiver_sensor_sub_id(1, 1 + SENSOR_TYPE_PORT_TX_POWER)[0]: "DOM TX Power Sensor for etp1/1",
+            get_transceiver_sensor_sub_id(1, 2 + SENSOR_TYPE_PORT_TX_POWER)[0]: "DOM TX Power Sensor for etp1/2",
+            get_transceiver_sensor_sub_id(1, 3 + SENSOR_TYPE_PORT_TX_POWER)[0]: "DOM TX Power Sensor for etp1/3",
+            get_transceiver_sensor_sub_id(1, 4 + SENSOR_TYPE_PORT_TX_POWER)[0]: "DOM TX Power Sensor for etp1/4",
         }
 
         phyDescr, phyClass = 2, 5
