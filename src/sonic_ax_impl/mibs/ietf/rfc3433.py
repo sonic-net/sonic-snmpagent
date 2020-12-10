@@ -299,7 +299,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
             if not transceiver_dom_entry_data:
                 continue
 
-            sensor_data_list = TransceiverSensorData.create_sensor_data(transceiver_dom_entry)
+            sensor_data_list = TransceiverSensorData.create_sensor_data(transceiver_dom_entry_data)
             for sensor_data in sensor_data_list:
                 raw_sensor_value = sensor_data.get_raw_value()
                 sensor = sensor_data.sensor_interface
