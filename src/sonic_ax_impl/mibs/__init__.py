@@ -156,7 +156,7 @@ def vlan_entry_table(if_name):
     :param if_name: given interface to cast.
     :return: VLAN_TABLE key.
     """
-    return b'VLAN_TABLE:' + if_name
+    return 'VLAN_TABLE:' + if_name
 
 
 def lag_entry_table(lag_name):
