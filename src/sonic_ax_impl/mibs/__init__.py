@@ -25,24 +25,6 @@ SNMP_OVERLAY_DB = 'SNMP_OVERLAY_DB'
 TABLE_NAME_SEPARATOR_COLON = ':'
 TABLE_NAME_SEPARATOR_VBAR = '|'
 
-# This is used in both rfc2737 and rfc3433
-SENSOR_PART_ID_MAP = {
-    "temperature":  1,
-    "voltage":      2,
-    "rx1power":     11,
-    "rx2power":     21,
-    "rx3power":     31,
-    "rx4power":     41,
-    "tx1bias":      12,
-    "tx2bias":      22,
-    "tx3bias":      32,
-    "tx4bias":      42,
-    "tx1power":     13,
-    "tx2power":     23,
-    "tx3power":     33,
-    "tx4power":     43,
-}
-
 # IfIndex to OID multiplier for transceiver
 IFINDEX_SUB_ID_MULTIPLIER = 1000
 
@@ -399,7 +381,7 @@ def get_transceiver_sub_id(ifindex):
 
     return (ifindex * IFINDEX_SUB_ID_MULTIPLIER, )
 
-def get_transceiver_sensor_sub_id(ifindex, sensor):
+def get_transceiver_sensor_sub_id(ifindex, offset):
     """
     Returns sub OID for transceiver sensor. Sub OID is calculated as folows:
     +-------------------------------------+------------------------------+
@@ -417,7 +399,7 @@ def get_transceiver_sensor_sub_id(ifindex, sensor):
     """
 
     transceiver_oid, = get_transceiver_sub_id(ifindex)
-    return (transceiver_oid + SENSOR_PART_ID_MAP[sensor], )
+    return (transceiver_oid + offset, )
 
 def get_redis_pubsub(db_conn, db_name, pattern):
     redis_client = db_conn.get_redis_client(db_name)

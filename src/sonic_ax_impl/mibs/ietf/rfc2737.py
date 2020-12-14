@@ -11,6 +11,9 @@ from ax_interface import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry
 from sonic_ax_impl import mibs
 from sonic_ax_impl.mibs import Namespace
 
+from .transceiver_sensor_data import TransceiverSensorData
+
+
 @unique
 class PhysicalClass(int, Enum):
     """
@@ -43,27 +46,6 @@ class XcvrInfoDB(bytes, Enum):
     MODEL_NAME        = b"model"
 
 
-# Map used to generate sensor description
-SENSOR_NAME_MAP = {
-    "temperature" : "Temperature",
-    "voltage"     : "Voltage",
-    "rx1power"    : "RX Power",
-    "rx2power"    : "RX Power",
-    "rx3power"    : "RX Power",
-    "rx4power"    : "RX Power",
-    "tx1bias"     : "TX Bias",
-    "tx2bias"     : "TX Bias",
-    "tx3bias"     : "TX Bias",
-    "tx4bias"     : "TX Bias",
-    "tx1power"    : "TX Power",
-    "tx2power"    : "TX Power",
-    "tx3power"    : "TX Power",
-    "tx4power"    : "TX Power",
-}
-
-QSFP_LANES = (1, 2, 3, 4)
-
-
 def get_transceiver_data(xcvr_info):
     """
     :param xcvr_info: transceiver info dict
@@ -84,29 +66,19 @@ def get_transceiver_description(sfp_type, if_alias):
 
     return "{} for {}".format(sfp_type, if_alias)
 
-def get_transceiver_sensor_description(sensor, if_alias):
+def get_transceiver_sensor_description(name, lane_number, if_alias):
     """
-    :param sensor: sensor key name
+    :param name: sensor name
+    :param lane_number: lane number of this sensor
     :param if_alias: interface alias
     :return: description string about sensor
     """
-
-    # assume sensors that is per channel in transceiver port
-    # has digit equals to channel number in the sensor's key name in DB
-    # e.g. rx3power (lane 3)
-    lane_number = list(filter(lambda c: c.isdigit(), sensor))
-
-    if len(lane_number) == 0:
+    if lane_number == 0:
         port_name = if_alias
-    elif len(lane_number) == 1 and int(lane_number[0]) in QSFP_LANES:
-        port_name = "{}/{}".format(if_alias, lane_number[0])
     else:
-        mibs.logger.warning("Tried to parse lane number from sensor name - {} ".format(sensor)
-                + "but parsed value is not a valid QSFP lane number")
-        # continue as with non per channel sensor
-        port_name = if_alias
+        port_name = "{}/{}".format(if_alias, lane_number)
 
-    return "DOM {} Sensor for {}".format(SENSOR_NAME_MAP[sensor], port_name)
+    return "DOM {} Sensor for {}".format(name, port_name)
 
 
 class PhysicalTableMIBUpdater(MIBUpdater):
@@ -136,6 +108,8 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_mfg_name_map = {}
         self.physical_model_name_map = {}
 
+        self.ifindex_sensor_oid_map = {}
+
         self.pubsub = [None] * len(self.statedb)
 
     def reinit_data(self):
@@ -150,6 +124,8 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_serial_number_map = {}
         self.physical_mfg_name_map = {}
         self.physical_model_name_map = {}
+
+        self.ifindex_sensor_oid_map = {}
 
         # update interface maps
         _, self.if_alias_map, _, _ = \
@@ -219,8 +195,8 @@ class PhysicalTableMIBUpdater(MIBUpdater):
                 remove_sub_ids = [mibs.get_transceiver_sub_id(ifindex)]
 
                 # remove all sensor OIDs associated with removed transceiver
-                for sensor in SENSOR_NAME_MAP:
-                    remove_sub_ids.append(mibs.get_transceiver_sensor_sub_id(ifindex, sensor))
+                if ifindex in self.ifindex_sensor_oid_map:
+                    remove_sub_ids.extend(self.ifindex_sensor_oid_map[ifindex])
 
                 for sub_id in remove_sub_ids:
                     if sub_id and sub_id in self.physical_entities:
@@ -292,12 +268,17 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         if not transceiver_dom_entry:
             return
 
-        # go over transceiver sensors
-        for sensor in map(bytes.decode, transceiver_dom_entry):
-            if sensor not in SENSOR_NAME_MAP:
-                continue
-            sensor_sub_id = mibs.get_transceiver_sensor_sub_id(ifindex, sensor)
-            sensor_description = get_transceiver_sensor_description(sensor, ifalias)
+        sensor_data_list = TransceiverSensorData.create_sensor_data(transceiver_dom_entry)
+        sensor_data_list = TransceiverSensorData.sort_sensor_data(sensor_data_list)
+        for sensor_data in sensor_data_list:
+            sensor_sub_id = mibs.get_transceiver_sensor_sub_id(ifindex, sensor_data.get_oid_offset())
+            if ifindex not in self.ifindex_sensor_oid_map:
+                self.ifindex_sensor_oid_map[ifindex] = set()
+            
+            # save the sub oids for remove
+            self.ifindex_sensor_oid_map[ifindex].add(sensor_sub_id)
+
+            sensor_description = get_transceiver_sensor_description(sensor_data.get_name(), sensor_data.get_lane_number(), ifalias)
 
             self.physical_classes_map[sensor_sub_id] = PhysicalClass.SENSOR
             self.physical_description_map[sensor_sub_id] = sensor_description
