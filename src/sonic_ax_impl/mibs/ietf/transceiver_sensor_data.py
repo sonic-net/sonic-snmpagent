@@ -43,6 +43,7 @@ class TransceiverSensorData:
                 if match_result:
                     sensor_data = concrete_type(name, value, match_result)
                     sensor_data_list.append(sensor_data)
+                    break
         return sensor_data_list
 
     @classmethod
