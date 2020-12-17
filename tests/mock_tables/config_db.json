@@ -14,5 +14,9 @@
     "admin_status": "up",
     "alias": "mgmt2",
     "speed": 1000
+  },
+  "DEVICE_METADATA|localhost": {
+    "chassis_serial_number": "SAMPLETESTSN",
+    "hostname" : "test_hostname"
   }
 }
