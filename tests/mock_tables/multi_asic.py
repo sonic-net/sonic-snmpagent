@@ -34,7 +34,7 @@ def mock_is_port_channel_internal(port_channel, namespace=None):
     else:
         return True if port_channel in int_port_channel else False
 
-def mock_get_port_table(namespace=None):
+def mock_get_port_table_for_asic(namespace=None):
     if namespace is not None:
         fname = os.path.join(INPUT_DIR, namespace, 'config_db.json')
     else:
@@ -44,7 +44,7 @@ def mock_get_port_table(namespace=None):
     with open(fname) as f:
         db = json.load(f)
     for k in db:
-        if 'PORT_TABLE' in db:
+        if 'PORT_TABLE' in k:
             new_key = k[len('PORT_TABLE:'):]
             port_table[new_key] = db[k]
     return port_table
@@ -53,4 +53,4 @@ multi_asic.get_num_asics = mock_get_num_asics
 multi_asic.is_multi_asic = mock_is_multi_asic
 multi_asic.get_all_namespaces = mock_get_all_namespaces
 multi_asic.is_port_channel_internal = mock_is_port_channel_internal
-multi_asic.get_port_table = mock_get_port_table
+multi_asic.get_port_table_for_asic = mock_get_port_table_for_asic
