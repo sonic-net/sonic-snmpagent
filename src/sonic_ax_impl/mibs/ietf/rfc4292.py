@@ -75,13 +75,15 @@ class RouteUpdater(MIBUpdater):
                 ## This is to workaround the bug in current sonic-swss implementation
                 if ifn == "eth0" or ifn == "lo" or ifn == "docker0":
                     continue
+
                 # Ignore internal asic routes
                 if multi_asic.is_port_channel_internal(ifn, db_conn.namespace):
                     continue
                 if (ifn in port_table and
-                   multi_asic.PORT_ROLE in port_table[ifn] and
-                   port_table[ifn][multi_asic.PORT_ROLE] == multi_asic.INTERNAL_PORT): 
+                    multi_asic.PORT_ROLE in port_table[ifn] and
+                    port_table[ifn][multi_asic.PORT_ROLE] == multi_asic.INTERNAL_PORT):
                     continue
+
                 sub_id = ip2tuple_v4(ipn.network_address) + ip2tuple_v4(ipn.netmask) + (self.tos,) + ip2tuple_v4(nh)
                 self.route_dest_list.append(sub_id)
                 self.route_dest_map[sub_id] = ipn.network_address.packed
