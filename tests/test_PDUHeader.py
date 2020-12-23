@@ -8,11 +8,11 @@ import struct
 import pprint
 from unittest import TestCase
 from ax_interface.pdu import PDU, PDUHeader, PDUHeaderTags, supported_pdus, ContextOptionalPDU, _ignored_pdus, PDUStream
-from ax_interface.pdu_implementations import OpenPDU, ResponsePDU, RegisterPDU, GetPDU
+from ax_interface.pdu_implementations import OpenPDU, ResponsePDU, RegisterPDU, GetPDU, NotifyPDU
 from ax_interface import exceptions
-from ax_interface.encodings import ObjectIdentifier
+from ax_interface.encodings import ObjectIdentifier, ValueRepresentation
 from ax_interface.constants import PduTypes
-from ax_interface.mib import MIBTable
+from ax_interface.mib import MIBTable, ValueType
 from sonic_ax_impl.mibs.vendor.dell import force10
 
 
@@ -232,6 +232,32 @@ class TestGetPDU(TestCase):
         self.assertEqual(get_pdu, decoded)
         print(get_pdu)
 
+class TestNotifyPDU(TestCase):
+    def test_roundtrip(self):
+        varbindsList = []
+        snmpTrapOid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0))
+        TrapOid = ObjectIdentifier(10, 0, 0, 0, (1, 3, 6, 1, 6, 3, 1, 1, 5, 4))
+        snmpTrapVarBind = ValueRepresentation(ValueType.OBJECT_IDENTIFIER, 0, snmpTrapOid, TrapOid)
+        varbindsList.append(snmpTrapVarBind)
+
+        notify_pdu = NotifyPDU(header=PDUHeader(1, PduTypes.NOTIFY, \
+            PDUHeader.MASK_NEWORK_BYTE_ORDER, 0, 16, \
+                0, 0, 0), varBinds=varbindsList)
+
+        encoded = notify_pdu.encode()
+        decoded = PDU.decode(encoded)
+
+        self.assertEqual(decoded.header.type_, PduTypes.NOTIFY)
+        self.assertIsInstance(notify_pdu, NotifyPDU)
+        # there is not a need to have a decode method implemented for NOTIFY header
+        # therefore doing decoders job in next 3 lines
+        # Decode message start
+        decoded.varBinds = [ValueRepresentation.from_bytes(decoded._trailing_bytes,notify_pdu.header.endianness)]
+        decoded.header = decoded.header._replace(payload_length=len(decoded._trailing_bytes))
+        decoded._trailing_bytes = b'' # since we extracted message, remove the extracted part, which is whole in our case
+        # Decode message end
+        self.assertEqual(notify_pdu, decoded)
+        print(notify_pdu)
 
 class TestGetNextPDU(TestCase):
     @classmethod

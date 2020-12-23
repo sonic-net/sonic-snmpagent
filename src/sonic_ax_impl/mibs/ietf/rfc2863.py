@@ -65,6 +65,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.lag_name_if_name_map = {}
         self.if_name_lag_name_map = {}
         self.oid_lag_name_map = {}
+        self.vlan_oid_name_map = {}
 
         self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
 
@@ -72,10 +73,13 @@ class InterfaceMIBUpdater(MIBUpdater):
         """
         Subclass update interface information
         """
+        #update interface naming mode                                             
+        mibs.interfaceNamingChangeNotify.intf_name_mode_std = mibs.get_interface_naming_mode(self.db_conn[0])
+
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \
-        self.oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
+        self.oid_name_map,_ = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
@@ -88,8 +92,11 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.mgmt_oid_name_map, \
         self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn[0])
 
+        _, _, self.vlan_oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_vlan_tables, self.db_conn)
+
         self.if_range = sorted(list(self.oid_name_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
+                               list(self.vlan_oid_name_map.keys()) +
                                list(self.mgmt_oid_name_map.keys()))
         self.if_range = [(i,) for i in self.if_range]
 
@@ -137,8 +144,13 @@ class InterfaceMIBUpdater(MIBUpdater):
             return self.oid_lag_name_map[oid]
         elif oid in self.mgmt_oid_name_map:
             return self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
+        elif oid in self.vlan_oid_name_map:
+            return self.vlan_oid_name_map[oid]
 
-        return self.if_alias_map[self.oid_name_map[oid]]
+        if mibs.interfaceNamingChangeNotify.intf_name_mode_std:
+            return self.if_alias_map[self.oid_name_map[oid]]
+        else:
+            return self.oid_name_map[oid]
 
     def interface_alias(self, sub_id):
         """
@@ -178,6 +190,8 @@ class InterfaceMIBUpdater(MIBUpdater):
         if oid in self.mgmt_oid_name_map:
             # TODO: mgmt counters not available through SNMP right now
             # COUNTERS DB does not have support for generic linux (mgmt) interface counters
+            return 0
+        if oid in self.vlan_oid_name_map:
             return 0
 
         if oid in self.oid_lag_name_map:

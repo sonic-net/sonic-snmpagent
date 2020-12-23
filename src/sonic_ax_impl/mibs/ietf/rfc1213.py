@@ -1,3 +1,5 @@
+import time
+import re
 import ipaddress
 import python_arptable
 from enum import unique, Enum
@@ -6,7 +8,9 @@ from bisect import bisect_right
 from sonic_ax_impl import mibs
 from sonic_ax_impl.mibs import Namespace
 from ax_interface.mib import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
-from ax_interface.encodings import ObjectIdentifier
+from ax_interface.trap import Trap
+from swsssdk.port_util import get_index_from_str
+from ax_interface.encodings import ObjectIdentifier, ValueRepresentation
 from ax_interface.util import mac_decimals, ip2tuple_v4
 
 @unique
@@ -61,6 +65,7 @@ class ArpUpdater(MIBUpdater):
         self.arp_dest_map = {}
         self.arp_dest_list = []
         self.neigh_key_list = {}
+        self.cache_time = 0.0
 
     def reinit_data(self):
         Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
@@ -104,6 +109,7 @@ class ArpUpdater(MIBUpdater):
         subid = (if_index,) + iptuple
         self.arp_dest_map[subid] = machex
         self.arp_dest_list.append(subid)
+        self.cache_time = time.time()
 
     def update_data(self):
         self.arp_dest_map = {}
@@ -151,9 +157,20 @@ class NextHopUpdater(MIBUpdater):
             if ipnstr == "0.0.0.0/0":
                 ipn = ipaddress.ip_network(ipnstr)
                 ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, routestr, blocking=True)
-                nexthops = ent["nexthop"]
+				
+                try:
+                    nexthops = ent["nexthop"]
+                except Exception:
+                  # possible reasons include Null0 or blackhole nexthop
+                  nexthops = ""
+                  continue
+				  
                 for nh in nexthops.split(','):
                     # TODO: if ipn contains IP range, create more sub_id here
+                    #Allow ipv4 only.
+                    ip1 = ipaddress.ip_address(nh)
+                    if (ip1.version != 4):
+                        continue;
                     sub_id = ip2tuple_v4(ipn.network_address)
                     self.route_list.append(sub_id)
                     self.nexthop_map[sub_id] = ipaddress.ip_address(nh).packed
@@ -208,6 +225,8 @@ class InterfacesUpdater(MIBUpdater):
         self.if_id_map = {}
         self.oid_name_map = {}
         self.rif_counters = {}
+        self.oid_vlan_phy_addr_map = {}
+        self.eth_phy_addr = None
 
         self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
 
@@ -215,15 +234,22 @@ class InterfacesUpdater(MIBUpdater):
         """
         Subclass update interface information
         """
+        #update interface naming mode
+        mibs.interfaceNamingChangeNotify.intf_name_mode_std = mibs.get_interface_naming_mode(self.db_conn[0])
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \
-        self.oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
+        self.oid_name_map,_ = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
         """
         db_conn - will have db_conn to all namespace DBs and
         global db. First db in the list is global db.
         Use first global db to get management interface table.
         """
+        #fill physical address.
+        device_meta = mibs.get_config_device_metadata(self.db_conn[0])
+        if device_meta and 'mac' in device_meta:
+            mactuple = mac_decimals(device_meta['mac'])
+            self.eth_phy_addr = ''.join(chr(b) for b in mactuple)
         self.mgmt_oid_name_map, \
         self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn[0])
 
@@ -262,6 +288,17 @@ class InterfacesUpdater(MIBUpdater):
             if_idx = mibs.get_index_from_str(self.if_id_map[sai_id_key])
             self.if_counters[if_idx] = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB, \
                     mibs.counter_table(sai_id), blocking=True)
+
+        self.lag_name_if_name_map, \
+        self.if_name_lag_name_map, \
+        self.oid_lag_name_map, \
+        self.lag_sai_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
+
+        self.if_range = sorted(list(self.oid_name_map.keys()) +
+                               list(self.oid_lag_name_map.keys()) +
+                               list(self.mgmt_oid_name_map.keys()) +
+                               list(self.vlan_oid_name_map.keys()))
+        self.if_range = [(i,) for i in self.if_range]
 
     def update_rif_counters(self):
         rif_sai_ids = list(self.rif_port_map) + list(self.vlan_name_map)
@@ -315,7 +352,22 @@ class InterfacesUpdater(MIBUpdater):
         elif oid in self.vlan_oid_name_map:
             return self.vlan_oid_name_map[oid]
 
-        return self.if_alias_map[self.oid_name_map[oid]]
+        if mibs.interfaceNamingChangeNotify.intf_name_mode_std:
+            return self.if_alias_map[self.oid_name_map[oid]]
+        else:
+            return self.oid_name_map[oid]
+
+    def get_phy_address(self, sub_id):
+        """
+        :param sub_id: The 1-based sub-identifier query.
+        :return: the physical address for the respective sub_id
+        """
+        oid = self.get_oid(sub_id)
+        if not oid:
+            return
+        if oid in self.oid_vlan_phy_addr_map:
+            return self.oid_vlan_phy_addr_map[oid]
+        return self.eth_phy_addr
 
     def _get_counter(self, oid, table_name):
         """
@@ -482,6 +534,9 @@ class InterfacesUpdater(MIBUpdater):
         :param sub_id: The 1-based sub-identifier query.
         :return: admin state value for the respective sub_id.
         """
+        oid = self.get_oid(sub_id)
+        if not oid:
+            return
         return self._get_status(sub_id, "admin_status")
 
     def get_oper_status(self, sub_id):
@@ -489,7 +544,38 @@ class InterfacesUpdater(MIBUpdater):
         :param sub_id: The 1-based sub-identifier query.
         :return: oper state value for the respective sub_id.
         """
+        oid = self.get_oid(sub_id)
+        if not oid:
+            return
         return self._get_status(sub_id, "oper_status")
+
+    def get_if_last_changed(self, sub_id):
+        """
+        :param sub_id: The 1-based sub-identifier query.
+        :return: oper status change uptime for the respective sub_id.
+        """
+        oid = self.get_oid(sub_id)
+        if not oid:
+            return 0
+
+        if_table = ""
+        db = mibs.APPL_DB
+        if oid in self.oid_lag_name_map:
+            return 0
+        elif oid in self.mgmt_oid_name_map:
+            return 0
+        elif oid in self.vlan_oid_name_map:
+            return 0
+        elif oid in self.oid_name_map:
+            if_table = mibs.if_entry_table(self.oid_name_map[oid])
+            entry = Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=False)
+            if not entry:
+                return 0
+            else:
+                return int(entry.get("oper_status_change_uptime", 0))
+        else:
+            return 0
+
 
     def get_mtu(self, sub_id):
         """
@@ -568,7 +654,7 @@ class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
 
     # FIXME Placeholder.
     ifPhysAddress = \
-        SubtreeMIBEntry('2.1.6', if_updater, ValueType.OCTET_STRING, lambda sub_id: '')
+        SubtreeMIBEntry('2.1.6', if_updater, ValueType.OCTET_STRING, if_updater.get_phy_address)
 
     ifAdminStatus = \
         SubtreeMIBEntry('2.1.7', if_updater, ValueType.INTEGER, if_updater.get_admin_status)
@@ -578,7 +664,7 @@ class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
 
     # FIXME Placeholder.
     ifLastChange = \
-        SubtreeMIBEntry('2.1.9', if_updater, ValueType.TIME_TICKS, lambda sub_id: 0)
+        SubtreeMIBEntry('2.1.9', if_updater, ValueType.TIME_TICKS, if_updater.get_if_last_changed)
 
     ifInOctets = \
         OverlayAdpaterMIBEntry(
@@ -667,3 +753,213 @@ class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
     # FIXME Placeholder
     ifSpecific = \
         SubtreeMIBEntry('2.1.22', if_updater, ValueType.OBJECT_IDENTIFIER, lambda sub_id: ObjectIdentifier.null_oid())
+
+
+class linkUpDownTrap(Trap):
+    def __init__(self):
+        super().__init__(dbKeys=["__keyspace@0__:LAG_TABLE:PortChannel*", \
+            "__keyspace@0__:PORT_TABLE:Ethernet*", \
+                "__keyspace@6__:MGMT_PORT_TABLE|eth*", \
+                    "__keyspace@4__:MGMT_PORT|eth*"])
+        self.db_conn = Namespace.init_namespace_dbs()
+        # Connect to all required DBs
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
+        Namespace.connect_all_dbs(self.db_conn, mibs.CONFIG_DB)
+        Namespace.connect_all_dbs(self.db_conn, mibs.STATE_DB)
+
+    def trap_init(self):
+        self.ethernetKeys = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "PORT_TABLE:Ethernet*")
+        self.etherTable = dict()
+        if self.ethernetKeys is None:
+            self.ethernetKeys = []
+        for etherKey in self.ethernetKeys:
+            entry = etherKey
+            etherEntry = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, entry, blocking=True)
+            self.etherTable[entry] = dict()
+            if 'oper_status' in etherEntry:
+                self.etherTable[entry]['oper_status'] = etherEntry['oper_status']
+            else:
+                self.etherTable[entry]['oper_status'] = 'down'
+            if 'admin_status' in etherEntry:
+                self.etherTable[entry]['admin_status'] = etherEntry['admin_status']
+            else:
+                self.etherTable[entry]['admin_status'] = 'down'
+
+        self.portChannelKeys = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "LAG_TABLE:PortChannel*")
+        self.portChannelTable = dict()
+        if self.portChannelKeys is None:
+            self.portChannelKeys = []
+        for portChannelKey in self.portChannelKeys:
+            entry = portChannelKey
+            portChannelEntry = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, entry, blocking=True)
+            self.portChannelTable[entry] = dict()
+            if 'oper_status' in portChannelEntry:
+                self.portChannelTable[entry]['oper_status'] = portChannelEntry['oper_status']
+            else:
+                self.portChannelTable[entry]['oper_status'] = 'down'
+            if 'admin_status' in portChannelEntry:
+                self.portChannelTable[entry]['admin_status'] = portChannelEntry['admin_status']
+            else:
+                self.portChannelTable[entry]['admin_status'] = 'down'
+
+        ## For mgmt interface
+        # Get admin_status from configDB
+        self.mgmtKeys = Namespace.dbs_keys(self.db_conn, mibs.CONFIG_DB, "MGMT_PORT|eth*")
+        self.mgmtDict = dict()
+        if self.mgmtKeys is not None:
+            for mgmtKey in self.mgmtKeys:
+                entry = mgmtKey
+                mgmt_interface = entry.split('|')[1]
+                self.mgmtDict[mgmt_interface] = dict()
+                # check to see if admin_status is set if not set it as 'down'
+                mgmtEntry = Namespace.dbs_get_all(self.db_conn, mibs.CONFIG_DB, entry, blocking=True)
+                if 'admin_status' in mgmtEntry:
+                    self.mgmtDict[mgmt_interface]["admin_status"] = mgmtEntry['admin_status']
+                else:
+                    self.mgmtDict[mgmt_interface]["admin_status"] = 'down'
+                self.mgmtDict[mgmt_interface]["oper_status"] = 'down'
+
+        # Get the oper_status from stateDB
+        self.mgmtStateDBKeys = Namespace.dbs_keys(self.db_conn, mibs.STATE_DB, "MGMT_PORT_TABLE|eth*")
+        if self.mgmtStateDBKeys is not None:
+            for mgmtKey in self.mgmtStateDBKeys:
+                entry = mgmtKey
+                mgmt_interface = entry.split('|')[1]
+                mgmtEntry = Namespace.dbs_get_all(self.db_conn, mibs.STATE_DB, entry, blocking=True)
+                if mgmt_interface not in self.mgmtDict:
+                    self.mgmtDict[mgmt_interface] = dict()
+                    self.mgmtDict[mgmt_interface]["admin_status"] = 'down'
+                    self.mgmtDict[mgmt_interface]["oper_status"] = mgmtEntry['oper_status']
+                else:
+                    self.mgmtDict[mgmt_interface]["oper_status"] = mgmtEntry['oper_status']
+
+    def trap_process(self, dbMessage, changedKey):
+        returnDict = dict()
+        genTrap = False
+        dbCache = None
+        if_name = None
+        varBindsList = list()
+        status_map = {
+            "up": 1,
+            "down": 2
+        }
+
+        # Get the actual key
+        actualKey = changedKey[len(re.match(r'__keyspace@(\d+)__:',changedKey).group(0)):]
+
+        # handle MGMT interface
+        db_num = re.match(r'__keyspace@(\d+)__:',changedKey).group(1)
+        if db_num == '6':
+            try:
+                dbEntry = Namespace.dbs_get_all(self.db_conn, mibs.STATE_DB, actualKey, blocking=False)
+                if not dbEntry:
+                    return None
+            except Exception as e:
+                mibs.logger.warning("{}, no Trap generated.".format(e))
+                return None
+
+            oper_status = dbEntry['oper_status']
+            actualKey = actualKey.split('|')[1]
+            if 'admin_status' in self.mgmtDict:
+                admin_status = self.mgmtDict['admin_status']
+            else:
+                admin_status = 'down'
+        elif db_num == '4':
+            try:
+                dbEntry = Namespace.dbs_get_all(self.db_conn, mibs.CONFIG_DB, actualKey, blocking=False)
+                if not dbEntry:
+                    return None
+            except Exception as e:
+                mibs.logger.warning("{}, no Trap generated.".format(e))
+                return None
+
+            actualKey = actualKey.split('|')[1]
+            admin_status = dbEntry['admin_status']
+            if 'oper_status' in self.mgmtDict:
+                oper_status = self.mgmtDict['oper_status']
+            else:
+                oper_status = 'down'
+        else:
+            # retrieve current DB entry
+            try:
+                dbEntry = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, actualKey, blocking=False)
+                if not dbEntry:
+                    return None
+            except Exception as e:
+                mibs.logger.warning("{}, no Trap generated.".format(e))
+                return None
+
+            # Extract required fields
+            if 'admin_status' in dbEntry:
+                admin_status = dbEntry['admin_status']
+            else:
+                admin_status = 'down'
+            if 'oper_status' in dbEntry:
+                oper_status = dbEntry['oper_status']
+            else:
+                oper_status = 'down'
+
+        # check if there is an entry in cache and update if required
+        if actualKey.startswith('PORT_TABLE:Ethernet'):
+            dbCache = self.etherTable
+            if_name = actualKey[11:]
+        elif actualKey.startswith('LAG_TABLE:PortChannel'):
+            dbCache = self.portChannelTable
+            if_name = actualKey[10:]
+        elif actualKey.startswith('eth'):
+            dbCache = self.mgmtDict
+            if_name = actualKey
+        else:
+            dbCache = None
+
+        if dbCache is None:
+           mibs.logger.warning("No table found in cache for DB entry " + changedKey)
+           return None
+
+        if actualKey not in dbCache:
+            genTrap = True
+            dbCache[actualKey]=dict()
+            dbCache[actualKey]['oper_status'] = oper_status
+            dbCache[actualKey]['admin_status'] = admin_status
+        else:
+            if dbCache[actualKey]['oper_status'] != oper_status or dbCache[actualKey]['admin_status'] != admin_status:
+                # Update Cache
+                dbCache[actualKey]['oper_status'] = oper_status
+                dbCache[actualKey]['admin_status'] = admin_status
+                genTrap = True
+
+        # Generate Trap if required
+        if genTrap:
+           if oper_status == 'up':
+               returnDict["TrapOid"] = ObjectIdentifier(10, 0, 0, 0, (1, 3, 6, 1, 6, 3, 1, 1, 5, 4))
+           elif oper_status == 'down':
+               returnDict["TrapOid"] = ObjectIdentifier(10, 0, 0, 0, (1, 3, 6, 1, 6, 3, 1, 1, 5, 3))
+           else:
+               mibs.logger.warning("Incorrect entry in DB for oper_status, No Trap generated")
+               return None
+           # Fill VarBinds
+           # For if_index
+           if_index_value = get_index_from_str(if_name)
+           if_index_oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 1, if_index_value))
+           if_index_vb = ValueRepresentation(ValueType.INTEGER, 0, if_index_oid, if_index_value)
+           varBindsList.append(if_index_vb)
+
+           # For admin status 
+           admin_status_oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 7, if_index_value))
+           admin_status_value = status_map[admin_status]
+           admin_status_vb = ValueRepresentation(ValueType.INTEGER, 0, admin_status_oid, admin_status_value)
+           varBindsList.append(admin_status_vb)
+
+           # For oper status 
+           oper_status_oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 8, if_index_value))
+           oper_status_value = status_map[oper_status]
+           oper_status_vb = ValueRepresentation(ValueType.INTEGER, 0, oper_status_oid, oper_status_value)
+           varBindsList.append(oper_status_vb)
+
+           returnDict["varBinds"] = varBindsList
+           return returnDict
+
+        else:
+            mibs.logger.debug("No change in DB entry, therefore Trap is not generated")
+            return None
+
