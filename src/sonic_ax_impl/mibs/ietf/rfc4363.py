@@ -108,7 +108,7 @@ class FdbUpdater(MIBUpdater):
             try:
                 ent = Namespace.dbs_get_all(self.db_conn, mibs.ASIC_DB, s, blocking=True)
             except Exception as ex:
-                mibs.logger.warning("Exception connecting to ASIC_DB '{}'".format(ex)))
+                mibs.logger.warning("Exception connecting to ASIC_DB '{}'".format(ex))
                 continue
 
             # Example output: oid:0x3a000000000608
@@ -127,7 +127,7 @@ class FdbUpdater(MIBUpdater):
             try:
                 self.vlanmac_ifindex_map[vlanmac] = mibs.get_index_from_str(self.if_id_map[port_id])
             except Exception as ex:
-                mibs.logger.warning("Exception getting vlanmac to ifindex '{}'".format(ex)))
+                mibs.logger.warning("Exception getting vlanmac to ifindex '{}'".format(ex))
                 continue
 
             self.vlanmac_ifindex_list.append(vlanmac)
@@ -142,7 +142,7 @@ class FdbUpdater(MIBUpdater):
                         self.vlan_dynamic_count_map[vlanid] = 1
                 self.vlan_id_list.append(vlanid)
             except Exception as ex:
-                mibs.logger.warning("Exception getting vlanid '{}'".format(ex)))
+                mibs.logger.warning("Exception getting vlanid '{}'".format(ex))
                 continue
 
         self.cache_time = time.time()
