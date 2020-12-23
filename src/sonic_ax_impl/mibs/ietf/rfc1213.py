@@ -2,7 +2,6 @@ import time
 import re
 import ipaddress
 import python_arptable
-import os
 from enum import unique, Enum
 from bisect import bisect_right
 
