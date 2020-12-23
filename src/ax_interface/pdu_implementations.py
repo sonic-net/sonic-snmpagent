@@ -362,15 +362,26 @@ class CleanupSetPDU(PDU):
         # header only.
 
 
-# class NotifyPDU(ContextOptionalPDU):
-#     """
-#         https://tools.ietf.org/html/rfc2741#section-6.2.10
-#         """
-#     header_type_ = PduTypes.NOTIFY
-# TODO: Impl
+class NotifyPDU(ContextOptionalPDU):
+    """
+        https://tools.ietf.org/html/rfc2741#section-6.2.10
+    """
+    header_type_ = PduTypes.NOTIFY
 
+    def __init__(self, header=None, context=None, payload=None, varBinds=[]):
+        super().__init__(header=header, context=context, payload=payload)
 
+        self.varBinds = varBinds
+        # Reducing the header length as per RFC 2741
+        # https://tools.ietf.org/html/rfc2741#section-6.1
+        payload_len = len(self.encode()) - constants.AGENTX_HEADER_LENGTH
+        self.header = self.header._replace(payload_length=payload_len)
 
+    def encode(self):
+        ret = super().encode()
+        for value in self.varBinds:
+            ret += value.to_bytes(self.header.endianness)
+        return ret
 
 class PingPDU(ContextOptionalPDU):
     """

@@ -22,6 +22,7 @@ from sonic_ax_impl.main import SonicMIB
 class TestSonicMIB(TestCase):
     @classmethod
     def setUpClass(cls):
+        rfc4363.CacheRefreshInterval.fdbUpdater = 0.0
         cls.lut = MIBTable(SonicMIB)
         for updater in cls.lut.updater_instances:
             updater.update_data()

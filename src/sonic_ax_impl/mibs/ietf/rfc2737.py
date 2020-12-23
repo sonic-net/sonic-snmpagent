@@ -765,7 +765,7 @@ class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
 
     def reinit_data(self):
         # update interface maps
-        _, self.if_alias_map, _, _ = \
+        _, self.if_alias_map, _, _, _ = \
             Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, Namespace.init_namespace_dbs())
         PhysicalEntityCacheUpdater.reinit_data(self)
 

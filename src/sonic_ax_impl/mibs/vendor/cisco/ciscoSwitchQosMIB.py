@@ -74,7 +74,7 @@ class QueueStatUpdater(MIBUpdater):
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \
-        self.oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
+        self.oid_name_map,_ = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
 
         for sai_id_key in self.if_id_map:
             namespace, sai_id = mibs.split_sai_id_key(sai_id_key)

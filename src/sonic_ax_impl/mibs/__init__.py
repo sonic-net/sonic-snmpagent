@@ -8,7 +8,9 @@ from swsssdk import port_util
 from swsssdk.port_util import get_index_from_str
 from ax_interface.mib import MIBUpdater
 from ax_interface.util import oid2tuple
+from ax_interface.trap import Trap
 from sonic_ax_impl import logger
+from ax_interface.util import mac_decimals
 
 COUNTERS_PORT_NAME_MAP = 'COUNTERS_PORT_NAME_MAP'
 COUNTERS_QUEUE_NAME_MAP = 'COUNTERS_QUEUE_NAME_MAP'
@@ -21,6 +23,7 @@ COUNTERS_DB = 'COUNTERS_DB'
 CONFIG_DB = 'CONFIG_DB'
 STATE_DB = 'STATE_DB'
 SNMP_OVERLAY_DB = 'SNMP_OVERLAY_DB'
+FLEX_COUNTER_DB = 'FLEX_COUNTER_DB'
 
 TABLE_NAME_SEPARATOR_COLON = ':'
 TABLE_NAME_SEPARATOR_VBAR = '|'
@@ -266,7 +269,7 @@ def init_sync_d_interface_tables(db_conn):
 
     # { if_name (SONiC) -> sai_id }
     # ex: { "Ethernet76" : "1000000000023" }
-    if_name_map_util, if_id_map_util = port_util.get_interface_oid_map(db_conn)
+    if_name_map_util, if_id_map_all = port_util.get_interface_oid_map(db_conn)
     for if_name, sai_id in if_name_map_util.items():
         if_name_str = if_name
         if (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name_str) or \
@@ -276,12 +279,13 @@ def init_sync_d_interface_tables(db_conn):
     # namespace to get a unique key. Assuming that ':' is not present in namespace
     # string or in sai id.
     # sai_id_key = namespace : sai_id
-    for sai_id, if_name in if_id_map_util.items():
+    for sai_id, if_name in if_id_map_all.items():
         if (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name) or \
                 re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name)):
             if_id_map[get_sai_id_key(db_conn.namespace, sai_id)] = if_name
     logger.debug("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
     logger.debug("Interface name map:\n" + pprint.pformat(if_id_map, indent=2))
+    logger.debug("Interface name map including portchannel:\n" + pprint.pformat(if_id_map_all, indent=2))
 
     # { OID -> if_name (SONiC) }
     oid_name_map = {get_index_from_str(if_name): if_name for if_name in if_name_map
@@ -308,12 +312,17 @@ def init_sync_d_interface_tables(db_conn):
     if_alias_map = dict()
 
     for if_name in if_name_map:
-        if_entry = db_conn.get_all(APPL_DB, if_entry_table(if_name), blocking=True)
-        if_alias_map[if_name] = if_entry.get('alias', if_name)
+        match_if_name = re.match(port_util.SONIC_PORTCHANNEL_RE_PATTERN, if_name)
+        #filling portchannel name as alias for po interfaces since it is not in APP_DB and it is part of COUNTERS_PORT_NAME_MAP table in COUNTER_DB
+        if match_if_name is not None:
+            if_alias_map[if_name] = if_name
+        else:
+            if_entry = db_conn.get_all(APPL_DB, if_entry_table(if_name), blocking=True)
+            if_alias_map[if_name] = if_entry.get('alias', if_name)
 
     logger.debug("Chassis name map:\n" + pprint.pformat(if_alias_map, indent=2))
 
-    return if_name_map, if_alias_map, if_id_map, oid_name_map
+    return if_name_map, if_alias_map, if_id_map, oid_name_map, if_id_map_all
 
 
 def init_sync_d_rif_tables(db_conn):
@@ -457,6 +466,29 @@ def init_sync_d_queue_tables(db_conn):
 
     return port_queues_map, queue_stat_map, port_queue_list_map
 
+def get_config_device_metadata(db_conn):
+    """
+    :param db_conn: Sonic DB connector
+    :return: device metadata
+    """
+
+    DEVICE_METADATA = "DEVICE_METADATA|localhost"
+    db_conn.connect(db_conn.CONFIG_DB)
+
+    device_metadata = db_conn.get_all(CONFIG_DB, DEVICE_METADATA)
+    return device_metadata
+
+def get_interface_naming_mode(db_conn):
+    """
+    :param db_conn: Sonic DB connector
+    :return: device metadata
+    """
+
+    device_metadata = get_config_device_metadata(db_conn)
+    if device_metadata and 'intf_naming_mode' in device_metadata:
+        return device_metadata['intf_naming_mode']
+    return None
+
 def get_device_metadata(db_conn):
     """
     :param db_conn: Sonic DB connector
@@ -469,6 +501,40 @@ def get_device_metadata(db_conn):
     device_metadata = db_conn.get_all(db_conn.STATE_DB, DEVICE_METADATA)
     return device_metadata
 
+def get_transceiver_sub_id(ifindex):
+    """
+    Returns sub OID for transceiver. Sub OID is calculated as folows:
+    +------------+------------+
+    |Interface   |Index       |
+    +------------+------------+
+    |Ethernet[X] |X * 1000    |
+    +------------+------------+
+    ()
+    :param ifindex: interface index
+    :return: sub OID of a port calculated as sub OID = {{index}} * 1000
+    """
+
+    return (ifindex * IFINDEX_SUB_ID_MULTIPLIER, )
+
+def get_transceiver_sensor_sub_id(ifindex, sensor):
+    """
+    Returns sub OID for transceiver sensor. Sub OID is calculated as folows:
+    +-------------------------------------+------------------------------+
+    |Sensor                               |Index                         |
+    +-------------------------------------+------------------------------+
+    |RX Power for Ethernet[X]/[LANEID]    |X * 1000 + LANEID * 10 + 1    |
+    |TX Bias for Ethernet[X]/[LANEID]     |X * 1000 + LANEID * 10 + 2    |
+    |Temperature for Ethernet[X]          |X * 1000 + 1                  |
+    |Voltage for Ethernet[X]/[LANEID]     |X * 1000 + 2                  |
+    +-------------------------------------+------------------------------+
+    ()
+    :param ifindex: interface index
+    :param sensor: sensor key
+    :return: sub OID = {{index}} * 1000 + {{lane}} * 10 + sensor id
+    """
+
+    transceiver_oid, = get_transceiver_sub_id(ifindex)
+    return (transceiver_oid + SENSOR_PART_ID_MAP[sensor], )
 
 def get_redis_pubsub(db_conn, db_name, pattern):
     redis_client = db_conn.get_redis_client(db_name)
@@ -528,6 +594,27 @@ class RedisOidTreeUpdater(MIBUpdater):
         if oid not in self.oid_map:
             return None
         return self.oid_map[oid]
+
+class interfaceNamingChangeNotify(Trap):
+    intf_name_mode_std = None
+    def __init__(self):
+        super().__init__(dbKeys=["__keyspace@4__:DEVICE_METADATA|localhost"])
+        interfaceNamingChangeNotify.intf_name_mode_std = None
+        self.db_conn = init_db()
+
+    def trap_process(self, dbMessage, changedKey):
+        db_num = re.match(r'__keyspace@(\d+)__:',changedKey).group(1)
+        if db_num != '4':
+            return None
+        key = changedKey.split(':')
+        if 'DEVICE_METADATA|localhost' in key:
+            metadata = get_config_device_metadata(self.db_conn)
+            if metadata and 'intf_naming_mode' in metadata:
+                interfaceNamingChangeNotify.intf_name_mode_std= metadata['intf_naming_mode']
+            else:
+                interfaceNamingChangeNotify.intf_name_mode_std= None
+        return None
+
 
 class Namespace:
     @staticmethod
