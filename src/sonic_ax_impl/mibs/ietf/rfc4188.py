@@ -71,7 +71,7 @@ class Dot1dBaseUpdater(MIBUpdater):
         if sub_id:
             if sub_id in self.dot1dbase_port_list:
                return sub_id[0]
-        return 
+        return
 
     def get_dot1dbase_port_ifindex(self, sub_id):
         if sub_id:

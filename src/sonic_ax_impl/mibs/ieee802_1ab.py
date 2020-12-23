@@ -530,9 +530,6 @@ class LLDPRemManAddrUpdater(MIBUpdater):
                 elif subtype == ManAddrConst.man_addr_subtype_ipv6:
                     addr_subtype_sub_oid = 6
                     mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i, 16) if i else 0 for i in mgmt_ip_str.split(':')])
-                    ip_int = int(ipaddress.ip_address(mgmt_ip))
-                    ip_b = ip_int.to_bytes(16, byteorder='big')
-                    mgmt_ip_sub_oid = (16, *[b for b in ip_b])
                 else:
                     logger.warning("Invalid management IP {}".format(mgmt_ip))
                     return
