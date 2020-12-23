@@ -1,5 +1,6 @@
 import ipaddress
 import python_arptable
+import socket
 from enum import unique, Enum
 from bisect import bisect_right
 
@@ -672,15 +673,14 @@ class sysNameUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
         self.db_conn = mibs.init_db()
-        self.hostname = None
+        self.hostname = socket.gethostname()
 
     def reinit_data(self):
-        self.hostname = None
         self.db_conn.connect(self.db_conn.CONFIG_DB)
         device_metadata = self.db_conn.get_all(self.db_conn.CONFIG_DB, "DEVICE_METADATA|localhost")
 
         if device_metadata is not None and 'hostname' in device_metadata:
-             self.hostname = str(device_metadata['hostname'])
+             self.hostname = device_metadata['hostname']
 
     def update_data(self):
         return
