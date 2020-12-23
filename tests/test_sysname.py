@@ -16,6 +16,9 @@ class TestGetNextPDU(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.lut = MIBTable(rfc1213.SysNameMIB)
+        for updater in cls.lut.updater_instances:
+            updater.reinit_data()
+            updater.update_data()
 
     def test_getpdu_sysname(self):
         oid = ObjectIdentifier(9, 0, 0, 0, (1, 3, 6, 1, 2, 1, 1, 5, 0))
