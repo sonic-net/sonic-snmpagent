@@ -43,7 +43,8 @@ def install_fragments():
     local_filepath = os.path.dirname(os.path.abspath(__file__))
     pass_script = os.path.join(local_filepath, 'bin/sysDescr_pass.py')
     install_file(pass_script, '/usr/share/snmp', executable=True)
-
+    pass_script = os.path.join(local_filepath, 'bin/sysObjectId_pass.py')
+    install_file(pass_script, '/usr/share/snmp', executable=True)
 
 # Mapping logging log level to SWSS log level
 # ref: https://docs.python.org/3/library/logging.html#logging-levels

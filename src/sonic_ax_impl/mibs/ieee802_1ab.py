@@ -112,8 +112,13 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
         # establish connection to application database.
         Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.loc_chassis_data = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
-        self.loc_chassis_data['lldp_loc_sys_cap_supported'] = parse_sys_capability(self.loc_chassis_data['lldp_loc_sys_cap_supported'])
-        self.loc_chassis_data['lldp_loc_sys_cap_enabled'] = parse_sys_capability(self.loc_chassis_data['lldp_loc_sys_cap_enabled'])
+        if self.loc_chassis_data:
+           if 'lldp_loc_sys_cap_supported' in self.loc_chassis_data:
+              self.loc_chassis_data['lldp_loc_sys_cap_supported'] = parse_sys_capability(self.loc_chassis_data['lldp_loc_sys_cap_supported'])
+
+           if 'lldp_loc_sys_cap_enabled' in self.loc_chassis_data:
+              self.loc_chassis_data['lldp_loc_sys_cap_enabled'] = parse_sys_capability(self.loc_chassis_data['lldp_loc_sys_cap_enabled'])
+
     def update_data(self):
         """
         Avoid NotImplementedError
@@ -164,7 +169,7 @@ class LocPortUpdater(MIBUpdater):
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \
-        self.oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
+        self.oid_name_map,_ = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
 
         self.mgmt_oid_name_map, \
         self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn[0])
@@ -317,9 +322,9 @@ class LLDPLocManAddrUpdater(MIBUpdater):
                 if '.' in mgmt_ip:
                     mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i) for i in mgmt_ip.split('.')])
                     break
-            else:
-                logger.error("Could not find IPv4 address in lldp_loc_man_addr")
-                return
+                else:
+                    logger.error("Could not find IPv4 address in lldp_loc_man_addr")
+                    return
         except ValueError:
             logger.error("Invalid local mgmt IP {}".format(self.mgmt_ip_str))
             return
@@ -400,7 +405,7 @@ class LLDPRemTableUpdater(MIBUpdater):
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \
-        self.oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
+        self.oid_name_map,_ = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
 
         self.mgmt_oid_name_map, _ = mibs.init_mgmt_interface_tables(self.db_conn[0])
 
@@ -426,7 +431,9 @@ class LLDPRemTableUpdater(MIBUpdater):
         self.lldp_counters = {}
         for if_oid, if_name in self.oid_name_map.items():
             lldp_kvs = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.lldp_entry_table(if_name))
-            if not lldp_kvs:
+            if (not lldp_kvs or
+                'lldp_rem_time_mark' not in lldp_kvs or
+                'lldp_rem_index' not in lldp_kvs ):
                 continue
             try:
                 # OID index for this MIB consists of remote time mark, if_oid, remote_index.
@@ -500,7 +507,10 @@ class LLDPRemManAddrUpdater(MIBUpdater):
 
     def update_rem_if_mgmt(self, if_oid, if_name):
         lldp_kvs = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.lldp_entry_table(if_name))
-        if not lldp_kvs or 'lldp_rem_man_addr' not in lldp_kvs:
+        if (not lldp_kvs or
+            'lldp_rem_man_addr' not in lldp_kvs or
+            'lldp_rem_time_mark' not in lldp_kvs or
+            'lldp_rem_index' not in lldp_kvs ):
             # this interfaces doesn't have remote lldp data, or the peer doesn't advertise his mgmt address
             return
         try:
@@ -511,18 +521,21 @@ class LLDPRemManAddrUpdater(MIBUpdater):
                 return
             time_mark = int(lldp_kvs['lldp_rem_time_mark'])
             remote_index = int(lldp_kvs['lldp_rem_index'])
-            subtype = self.get_subtype(mgmt_ip_str)
-            ip_hex = self.get_ip_hex(mgmt_ip_str, subtype)
-            if subtype == ManAddrConst.man_addr_subtype_ipv4:
-                addr_subtype_sub_oid = 4
-                mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i) for i in mgmt_ip_str.split('.')])
-            elif subtype == ManAddrConst.man_addr_subtype_ipv6:
-                addr_subtype_sub_oid = 6
-                mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i, 16) if i else 0 for i in mgmt_ip_str.split(':')])
-            else:
-                logger.warning("Invalid management IP {}".format(mgmt_ip_str))
-                return
-            self.if_range.append((time_mark,
+            for mgmt_ip in mgmt_ip_str.split(','):
+                subtype = self.get_subtype(mgmt_ip)
+                ip_hex = self.get_ip_hex(mgmt_ip, subtype)
+                if subtype == ManAddrConst.man_addr_subtype_ipv4:
+                    addr_subtype_sub_oid = 4
+                    mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i) for i in mgmt_ip.split('.')])
+                elif subtype == ManAddrConst.man_addr_subtype_ipv6:
+                    addr_subtype_sub_oid = 6
+                    ip_int = int(ipaddress.ip_address(mgmt_ip))
+                    ip_b = ip_int.to_bytes(16, byteorder='big')
+                    mgmt_ip_sub_oid = (16, *[b for b in ip_b])
+                else:
+                    logger.warning("Invalid management IP {}".format(mgmt_ip))
+                    return
+                self.if_range.append((time_mark,
                                   if_oid,
                                   remote_index,
                                   subtype,
@@ -565,7 +578,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         """
         Subclass reinit data routine.
         """
-        _, _, _, self.oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
+        _, _, _, self.oid_name_map,_ = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
 
         self.mgmt_oid_name_map, _ = mibs.init_mgmt_interface_tables(self.db_conn[0])
 

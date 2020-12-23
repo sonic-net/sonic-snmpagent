@@ -1,10 +1,10 @@
 import asyncio
 
 from . import logger, constants, exceptions
-from .encodings import ObjectIdentifier
+from .encodings import ObjectIdentifier, ValueRepresentation
 from .pdu import PDUHeader, PDUStream
 from .pdu_implementations import RegisterPDU, ResponsePDU, OpenPDU
-
+from .trap import TrapInfra
 
 class AgentX(asyncio.Protocol):
     """
@@ -49,6 +49,7 @@ class AgentX(asyncio.Protocol):
 
     def register_subtrees(self, pdu):
         self.session_id = pdu.header.session_id
+        TrapInfra.protocol_obj = self
         logger.info("AgentX session starting with ID: {}".format(self.session_id))
 
         for idx, subtree in enumerate(self.mib_table.prefixes):
@@ -83,6 +84,7 @@ class AgentX(asyncio.Protocol):
         else:
             # TODO: some other administrative PDU
             logger.debug("admin_recv[{}]".format(pdu))
+            pass
 
     def data_received(self, data):
         """
@@ -138,7 +140,7 @@ class AgentX(asyncio.Protocol):
                     response_pdu = pdu.make_response(self.mib_table)
                     self.transport.write(response_pdu.encode())
         except exceptions.PDUUnpackError:
-            logger.exception('decode_error[{}]'.format(data))
+            logger.warning('decode_error[{}]'.format(data[:1024]))
         except exceptions.PDUPackError:
             logger.exception('encode_error[{}]'.format(data))
         except Exception:

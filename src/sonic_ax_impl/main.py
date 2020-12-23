@@ -9,10 +9,10 @@ import signal
 import sys
 
 import ax_interface
-from sonic_ax_impl.mibs import ieee802_1ab
+from sonic_ax_impl.mibs import ieee802_1ab, interfaceNamingChangeNotify
 from . import logger
-from .mibs.ietf import rfc1213, rfc2737, rfc2863, rfc3433, rfc4292, rfc4363
-from .mibs.vendor import dell, cisco
+from .mibs.ietf import rfc1213, rfc2737, rfc2863, rfc3433, rfc4292, rfc4363, rfc4188
+from .mibs.vendor import dell, cisco, broadcom
 
 # Background task update frequency ( in seconds )
 DEFAULT_UPDATE_FREQUENCY = 5
@@ -28,7 +28,12 @@ class SonicMIB(
     rfc3433.PhysicalSensorTableMIB,
     rfc2863.InterfaceMIBObjects,
     rfc4363.QBridgeMIBObjects,
+    rfc4363.Dot1qFdbMIBObjects,
+    rfc4363.Dot1qVlanCurrentMIBObjects,
+    rfc4363.Dot1qVlanStaticMIBObjects,
+    rfc4363.Dot1qPortVlanMIBObjects,
     rfc4292.IpCidrRouteTable,
+    rfc4188.Dot1dBaseMIB,
     ieee802_1ab.LLDPLocalSystemData,
     ieee802_1ab.LLDPLocalSystemData.LLDPLocPortTable,
     ieee802_1ab.LLDPLocalSystemData.LLDPLocManAddrTable,
@@ -45,6 +50,8 @@ class SonicMIB(
     If SONiC was to create custom MIBEntries, they may be specified here.
     """
 
+# Register Trap handlers
+trap_handlers = [rfc1213.linkUpDownTrap, broadcom.enterprise_trap.configChangeTrap, interfaceNamingChangeNotify]
 
 def shutdown(signame, agent):
     # FIXME: If the Agent dies, the background tasks will zombie.
@@ -58,7 +65,7 @@ def main(update_frequency=None):
 
     try:
         # initialize handler and set update frequency (or use the default)
-        agent = ax_interface.Agent(SonicMIB, update_frequency or DEFAULT_UPDATE_FREQUENCY, event_loop)
+        agent = ax_interface.Agent(SonicMIB, update_frequency or DEFAULT_UPDATE_FREQUENCY, event_loop, trap_handlers)
 
         # add "shutdown" signal handlers
         # https://docs.python.org/3.5/library/asyncio-eventloop.html#set-signal-handlers-for-sigint-and-sigterm
@@ -71,7 +78,8 @@ def main(update_frequency=None):
         event_loop.run_until_complete(agent.run_in_event_loop())
 
     except Exception:
-        logger.exception("Uncaught exception in {}".format(__name__))
+        if shutdown_task is None:
+            logger.exception("Uncaught exception in {}".format(__name__))
         sys.exit(1)
     finally:
         if shutdown_task is not None:

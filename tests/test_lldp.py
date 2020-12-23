@@ -118,6 +118,17 @@ class TestLLDPMIB(TestCase):
         self.assertEquals(ret, 'etp1')
         print(ret)
 
+    def test_local_port_num(self):
+        mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, 4)]
+        for num in range(1, 126, 4):
+            ret = mib_entry(sub_id=(1, num,))
+            self.assertEqual(ret, 4)
+
+    def test_mgmt_local_port_num(self):
+        mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, 4)]
+        ret = mib_entry(sub_id=(1, 10001,))
+        self.assertEqual(ret, 4)
+
     def test_mgmt_local_port_identification(self):
         mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 3, 7, 1, 3)]
         ret = mib_entry(sub_id=(10001,))
