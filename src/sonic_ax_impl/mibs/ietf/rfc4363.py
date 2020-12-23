@@ -144,6 +144,7 @@ class FdbUpdater(MIBUpdater):
             except Exception as ex:
                 mibs.logger.warning("Exception getting vlanid '{}'".format(ex)))
                 continue
+
         self.cache_time = time.time()
         self.vlan_id_list.sort()
         self.vlan_id_list = [(i,) for i in self.vlan_id_list]

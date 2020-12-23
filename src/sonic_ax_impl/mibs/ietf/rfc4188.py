@@ -38,8 +38,8 @@ class Dot1dBaseUpdater(MIBUpdater):
         fdb_aging_time = self.db_conn.get(mibs.CONFIG_DB, "SWITCH|switch", 'fdb_aging_time')
         if fdb_aging_time:
             self.dot1d_aging_time = int(fdb_aging_time)
-        else: 
-            self.dot1d_aging_time = 600 
+        else:
+            self.dot1d_aging_time = 600
 
         vlanmem_entries = self.db_conn.keys(mibs.CONFIG_DB, "VLAN_MEMBER|*")
         if not vlanmem_entries:
@@ -54,7 +54,7 @@ class Dot1dBaseUpdater(MIBUpdater):
         self.dot1dbase_port_list = [(i,) for i in self.dot1dbase_port_list]
         mibs.logger.debug('Port map entries : {}' .format(self.dot1dbase_port_map))
         mibs.logger.debug('Port list : {}' .format(self.dot1dbase_port_list))
-        
+
     def get_dot1dbase_bridge_addr(self):
         return self.dot1dbase_bridge_addr
 

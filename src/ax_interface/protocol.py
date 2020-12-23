@@ -1,7 +1,7 @@
 import asyncio
 
 from . import logger, constants, exceptions
-from .encodings import ObjectIdentifier
+from .encodings import ObjectIdentifier, ValueRepresentation
 from .pdu import PDUHeader, PDUStream
 from .pdu_implementations import RegisterPDU, ResponsePDU, OpenPDU
 from .trap import TrapInfra
@@ -84,6 +84,7 @@ class AgentX(asyncio.Protocol):
         else:
             # TODO: some other administrative PDU
             logger.debug("admin_recv[{}]".format(pdu))
+            pass
 
     def data_received(self, data):
         """
