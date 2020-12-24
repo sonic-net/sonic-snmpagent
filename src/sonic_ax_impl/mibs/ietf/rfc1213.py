@@ -679,8 +679,8 @@ class sysNameUpdater(MIBUpdater):
         self.db_conn.connect(self.db_conn.CONFIG_DB)
         device_metadata = self.db_conn.get_all(self.db_conn.CONFIG_DB, "DEVICE_METADATA|localhost")
 
-        if device_metadata is not None and 'hostname' in device_metadata:
-             self.hostname = device_metadata['hostname']
+        if device_metadata and device_metadata.get('hostname'):
+            self.hostname = device_metadata['hostname']
 
     def update_data(self):
         return
