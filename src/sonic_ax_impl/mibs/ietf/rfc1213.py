@@ -260,16 +260,22 @@ class InterfacesUpdater(MIBUpdater):
         for sai_id_key in self.if_id_map:
             namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
             if_idx = mibs.get_index_from_str(self.if_id_map[sai_id_key])
-            self.if_counters[if_idx] = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB, \
-                    mibs.counter_table(sai_id), blocking=True)
+            counters_db_data = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB,
+                                                                        mibs.counter_table(sai_id),
+                                                                        blocking=True)
+            self.if_counters[if_idx] = {
+                counter: int(value) for counter, value in counters_db_data.items()
+            }
 
     def update_rif_counters(self):
         rif_sai_ids = list(self.rif_port_map) + list(self.vlan_name_map)
-        self.rif_counters = \
-            {sai_id: Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB,
-                                           mibs.counter_table(mibs.split_sai_id_key(sai_id)[1]),
-                                           blocking=False)
-            for sai_id in rif_sai_ids}
+        for sai_id in rif_sai_ids:
+            counters_db_data = Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB,
+                                                     mibs.counter_table(mibs.split_sai_id_key(sai_id)[1]),
+                                                     blocking=False)
+            self.rif_counters[sai_id] = {
+                counter: int(value) for counter, value in counters_db_data.items()
+            }
 
     def get_next(self, sub_id):
         """
@@ -329,7 +335,7 @@ class InterfacesUpdater(MIBUpdater):
         try:
             counter_value = self.if_counters[oid][_table_name]
             # truncate to 32-bit counter (database implements 64-bit counters)
-            counter_value = int(counter_value) & 0x00000000ffffffff
+            counter_value = counter_value & 0x00000000ffffffff
             # done!
             return counter_value
         except KeyError as e:
@@ -348,8 +354,8 @@ class InterfacesUpdater(MIBUpdater):
                 port_idx = mibs.get_index_from_str(self.if_id_map[port_sai_id])
                 for port_counter_name, rif_counter_name in mibs.RIF_DROPS_AGGR_MAP.items():
                     self.if_counters[port_idx][port_counter_name] = \
-                    int(self.if_counters[port_idx][port_counter_name]) + \
-                    int(self.rif_counters[rif_sai_id][rif_counter_name])
+                    self.if_counters[port_idx][port_counter_name] + \
+                    self.rif_counters[rif_sai_id][rif_counter_name]
 
         for vlan_sai_id, vlan_name in self.vlan_name_map.items():
             for port_counter_name, rif_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
@@ -358,7 +364,7 @@ class InterfacesUpdater(MIBUpdater):
                 if rif_counter_name in vlan_rif_counters:
                     self.if_counters.setdefault(vlan_idx, {})
                     self.if_counters[vlan_idx][port_counter_name] = \
-                    int(vlan_rif_counters[rif_counter_name])
+                        vlan_rif_counters[rif_counter_name]
 
 
     def get_counter(self, sub_id, table_name):
@@ -386,7 +392,7 @@ class InterfacesUpdater(MIBUpdater):
                 table_name = getattr(table_name, 'name', table_name)
                 if table_name in mibs.RIF_DROPS_AGGR_MAP:
                     rif_table_name = mibs.RIF_DROPS_AGGR_MAP[table_name]
-                    counter_value += int(self.rif_counters[sai_lag_rif_id].get(rif_table_name, 0))
+                    counter_value += self.rif_counters[sai_lag_rif_id].get(rif_table_name, 0)
             # truncate to 32-bit counter
             return counter_value & 0x00000000ffffffff
         else:
