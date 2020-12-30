@@ -693,9 +693,6 @@ class sysNameUpdater(MIBUpdater):
 
 
 class SysNameMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.1.5'):
-    """
-
-    """
     updater = sysNameUpdater()
 
     sysName = MIBEntry('0', ValueType.OCTET_STRING, updater.get_sys_name)
