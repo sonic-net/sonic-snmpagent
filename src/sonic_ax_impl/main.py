@@ -24,6 +24,7 @@ shutdown_task = None
 class SonicMIB(
     rfc1213.InterfacesMIB,
     rfc1213.IpMib,
+    rfc1213.SysNameMIB,
     rfc2737.PhysicalTableMIB,
     rfc3433.PhysicalSensorTableMIB,
     rfc2863.InterfaceMIBObjects,
