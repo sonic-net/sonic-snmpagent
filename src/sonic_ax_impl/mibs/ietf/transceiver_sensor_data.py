@@ -7,17 +7,6 @@ from .physical_entity_sub_oid_generator import SENSOR_TYPE_PORT_TX_BIAS
 from .physical_entity_sub_oid_generator import SENSOR_TYPE_VOLTAGE
 
 
-def transceiver_sensor_data():
-    """
-    Decorator for auto registering transceiver sensor data type
-    """
-    def wrapper(object_type):
-        TransceiverSensorData.register(object_type)
-        return object_type
-
-    return wrapper
-
-
 class TransceiverSensorData:
     """
     Base transceiver sensor data class. Responsible for:
@@ -25,12 +14,49 @@ class TransceiverSensorData:
         2. Create concrete sensor data instances
         3. Provide common logic for concrete sensor data class
     """
-    concrete_type_list = []
-    sensor_interface = None
 
-    def __init__(self, key, value, match_result):
+    sensor_attr_dict = {
+        'temperature': {
+            'pattern': 'temperature',
+            'name': 'Temperature',
+            'oid_offset_base': SENSOR_TYPE_TEMP,
+            'sort_factor': 0,
+            'lane_based_sensor': False
+        },
+        'voltage': {
+            'pattern': 'voltage',
+            'name': 'Voltage',
+            'oid_offset_base': SENSOR_TYPE_VOLTAGE,
+            'sort_factor': 9000,
+            'lane_based_sensor': False
+        },
+        'rxpower': {
+            'pattern': r'rx(\d+)power',
+            'name': 'RX Power',
+            'oid_offset_base': SENSOR_TYPE_PORT_RX_POWER,
+            'sort_factor': 2000,
+            'lane_based_sensor': True
+        },
+        'txpower': {
+            'pattern': r'tx(\d+)power',
+            'name': 'TX Power',
+            'oid_offset_base': SENSOR_TYPE_PORT_TX_POWER,
+            'sort_factor': 1000,
+            'lane_based_sensor': True
+        },
+        'txbias': {
+            'pattern': r'tx(\d+)bias',
+            'name': 'TX Bias',
+            'oid_offset_base': SENSOR_TYPE_PORT_TX_BIAS,
+            'sort_factor': 3000,
+            'lane_based_sensor': True
+        }
+    }
+
+    def __init__(self, key, value, sensor_attrs, match_result):
         self._key = key
         self._value = value
+        self._sensor_attrs = sensor_attrs
         self._match_result = match_result
 
     @classmethod
@@ -42,12 +68,12 @@ class TransceiverSensorData:
         """
         sensor_data_list = []
         for name, value in sensor_data_dict.items():
-            for concrete_type in cls.concrete_type_list:
-                match_result = re.match(concrete_type.get_pattern(), name)
+            for sensor_attrs in cls.sensor_attr_dict.values():
+                match_result = re.match(sensor_attrs['pattern'], name)
                 if match_result:
-                    sensor_data = concrete_type(name, value, match_result)
+                    sensor_data = TransceiverSensorData(name, value, sensor_attrs, match_result)
                     sensor_data_list.append(sensor_data)
-                    break
+
         return sensor_data_list
 
     @classmethod
@@ -55,19 +81,10 @@ class TransceiverSensorData:
         return sorted(sensor_data_list, key=lambda x: x.get_sort_factor())
 
     @classmethod
-    def register(cls, concrete_type):
-        """
-        Register concrete sensor data type
-        :param concrete_type: concrete sensor data class
-        :return:
-        """
-        cls.concrete_type_list.append(concrete_type)
-
-    @classmethod
     def bind_sensor_interface(cls, sensor_interface_dict):
-        for concrete_type in cls.concrete_type_list:
-            if concrete_type in sensor_interface_dict:
-                concrete_type.sensor_interface = sensor_interface_dict[concrete_type]
+        for name, sensor_attrs in cls.sensor_attr_dict.items():
+            if name in sensor_interface_dict:
+                sensor_attrs['sensor_interface'] = sensor_interface_dict[name]
 
     def get_key(self):
         """
@@ -86,128 +103,30 @@ class TransceiverSensorData:
         Get the name of this sensor. Concrete sensor data class must override
         this.
         """
-        raise NotImplementedError
+        return self._sensor_attrs['name']
 
     def get_sort_factor(self):
         """
         Get sort factor for this sensor. Concrete sensor data class must override
         this.
         """
-        raise NotImplementedError
+        return self._sensor_attrs['sort_factor'] + self.get_lane_number()
 
     def get_lane_number(self):
         """
         Get lane number of this sensor. For example, some transceivers have more than one rx power sensor, the sub index
         of rx1power is 1, the sub index of rx2power is 2.
         """
-        return int(self._match_result.group(1))
+        return int(self._match_result.group(1)) if self._sensor_attrs['lane_based_sensor'] else 0
 
     def get_oid_offset(self):
         """
         Get OID offset of this sensor.
         """
-        raise NotImplementedError
+        return self._sensor_attrs['oid_offset_base'] + self.get_lane_number()
 
-    @classmethod
-    def get_pattern(cls):
+    def get_sensor_interface(self):
         """
-        Return regular expression pattern for matching the sensor name. Concrete sensor data class must override
-        this.
+        Get sensor interface of this sensor. Used by rfc3433.
         """
-        raise NotImplementedError
-
-
-@transceiver_sensor_data()
-class TransceiverTempSensorData(TransceiverSensorData):
-    SORT_FACTOR = 0
-
-    @classmethod
-    def get_pattern(cls):
-        return 'temperature'
-
-    def get_name(self):
-        return 'Temperature'
-
-    def get_sort_factor(self):
-        return TransceiverTempSensorData.SORT_FACTOR
-
-    def get_lane_number(self):
-        return 0
-
-    def get_oid_offset(self):
-        return SENSOR_TYPE_TEMP
-
-
-@transceiver_sensor_data()
-class TransceiverVoltageSensorData(TransceiverSensorData):
-    SORT_FACTOR = 9000
-
-    @classmethod
-    def get_pattern(cls):
-        return 'voltage'
-
-    def get_name(self):
-        return 'Voltage'
-
-    def get_sort_factor(self):
-        return TransceiverVoltageSensorData.SORT_FACTOR
-
-    def get_lane_number(self):
-        return 0
-
-    def get_oid_offset(self):
-        return SENSOR_TYPE_VOLTAGE
-
-
-@transceiver_sensor_data()
-class TransceiverRxPowerSensorData(TransceiverSensorData):
-    SORT_FACTOR = 2000
-
-    @classmethod
-    def get_pattern(cls):
-        return 'rx(\d+)power'
-
-    def get_name(self):
-        return 'RX Power'
-
-    def get_sort_factor(self):
-        return TransceiverRxPowerSensorData.SORT_FACTOR + self.get_lane_number()
-
-    def get_oid_offset(self):
-        return SENSOR_TYPE_PORT_RX_POWER + self.get_lane_number()
-
-
-@transceiver_sensor_data()
-class TransceiverTxPowerSensorData(TransceiverSensorData):
-    SORT_FACTOR = 1000
-
-    @classmethod
-    def get_pattern(cls):
-        return 'tx(\d+)power'
-
-    def get_name(self):
-        return 'TX Power'
-
-    def get_sort_factor(self):
-        return TransceiverTxPowerSensorData.SORT_FACTOR + self.get_lane_number()
-
-    def get_oid_offset(self):
-        return SENSOR_TYPE_PORT_TX_POWER + self.get_lane_number()
-
-
-@transceiver_sensor_data()
-class TransceiverTxBiasSensorData(TransceiverSensorData):
-    SORT_FACTOR = 3000
-
-    @classmethod
-    def get_pattern(cls):
-        return 'tx(\d+)bias'
-
-    def get_name(self):
-        return 'TX Bias'
-
-    def get_sort_factor(self):
-        return TransceiverTxBiasSensorData.SORT_FACTOR + self.get_lane_number()
-
-    def get_oid_offset(self):
-        return SENSOR_TYPE_PORT_TX_BIAS + self.get_lane_number()
+        return self._sensor_attrs['sensor_interface']
