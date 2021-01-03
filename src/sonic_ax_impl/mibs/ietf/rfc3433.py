@@ -11,6 +11,8 @@ from sonic_ax_impl import mibs
 from sonic_ax_impl.mibs import Namespace
 
 from .physical_entity_sub_oid_generator import get_transceiver_sensor_sub_id
+from .transceiver_sensor_data import TransceiverSensorData
+
 
 @unique
 class EntitySensorDataType(int, Enum):
@@ -208,34 +210,13 @@ class XcvrTxPowerSensor(SensorInterface):
     CONVERTER = Converters.CONV_dBm_mW
 
 
-# mapping between DB key and Sensor object
-TRANSCEIVER_SENSOR_MAP = {
-    "temperature": XcvrTempSensor,
-    "voltage":     XcvrVoltageSensor,
-    "rx1power":    XcvrRxPowerSensor,
-    "rx2power":    XcvrRxPowerSensor,
-    "rx3power":    XcvrRxPowerSensor,
-    "rx4power":    XcvrRxPowerSensor,
-    "tx1bias":     XcvrTxBiasSensor,
-    "tx2bias":     XcvrTxBiasSensor,
-    "tx3bias":     XcvrTxBiasSensor,
-    "tx4bias":     XcvrTxBiasSensor,
-    "tx1power":    XcvrTxPowerSensor,
-    "tx2power":    XcvrTxPowerSensor,
-    "tx3power":    XcvrTxPowerSensor,
-    "tx4power":    XcvrTxPowerSensor,
-}
-
-
-def get_transceiver_sensor(sensor_key):
-    """
-    Gets transceiver sensor object
-    :param sensor_key: Sensor key from XcvrDomDB
-    :param ifindex: Interface index associated with transceiver
-    :return: Sensor object.
-    """
-
-    return TRANSCEIVER_SENSOR_MAP[sensor_key]
+TransceiverSensorData.bind_sensor_interface({
+    'temperature': XcvrTempSensor,
+    'voltage'    : XcvrVoltageSensor,
+    'rxpower'    : XcvrRxPowerSensor,
+    'txpower'    : XcvrTxPowerSensor,
+    'txbias'     : XcvrTxBiasSensor
+})
 
 
 class PhysicalSensorTableMIBUpdater(MIBUpdater):
@@ -313,14 +294,11 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
             if not transceiver_dom_entry_data:
                 continue
 
-            for sensor_key in transceiver_dom_entry_data:
-                if sensor_key not in TRANSCEIVER_SENSOR_MAP:
-                    continue
-
-                raw_sensor_value = transceiver_dom_entry_data.get(sensor_key)
-
-                sensor = get_transceiver_sensor(sensor_key)
-                sub_id = get_transceiver_sensor_sub_id(ifindex, sensor_key)
+            sensor_data_list = TransceiverSensorData.create_sensor_data(transceiver_dom_entry_data)
+            for sensor_data in sensor_data_list:
+                raw_sensor_value = sensor_data.get_raw_value()
+                sensor = sensor_data.get_sensor_interface()
+                sub_id = get_transceiver_sensor_sub_id(ifindex, sensor_data.get_oid_offset())
 
                 try:
                     mib_values = sensor.mib_values(raw_sensor_value)

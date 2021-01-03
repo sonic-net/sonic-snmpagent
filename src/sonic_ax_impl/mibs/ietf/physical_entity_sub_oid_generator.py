@@ -80,24 +80,6 @@ SENSOR_TYPE_PORT_TX_BIAS = 4 * SENSOR_TYPE_MULTIPLE
 CHASSIS_SUB_ID = 1
 CHASSIS_MGMT_SUB_ID = MODULE_TYPE_MGMT
 
-# This is used in both rfc2737 and rfc3433
-XCVR_SENSOR_PART_ID_MAP = {
-    "temperature":  SENSOR_TYPE_TEMP,
-    "tx1power":     SENSOR_TYPE_PORT_TX_POWER + 1,
-    "tx2power":     SENSOR_TYPE_PORT_TX_POWER + 2,
-    "tx3power":     SENSOR_TYPE_PORT_TX_POWER + 3,
-    "tx4power":     SENSOR_TYPE_PORT_TX_POWER + 4,
-    "rx1power":     SENSOR_TYPE_PORT_RX_POWER + 1,
-    "rx2power":     SENSOR_TYPE_PORT_RX_POWER + 2,
-    "rx3power":     SENSOR_TYPE_PORT_RX_POWER + 3,
-    "rx4power":     SENSOR_TYPE_PORT_RX_POWER + 4,
-    "tx1bias":      SENSOR_TYPE_PORT_TX_BIAS + 1,
-    "tx2bias":      SENSOR_TYPE_PORT_TX_BIAS + 2,
-    "tx3bias":      SENSOR_TYPE_PORT_TX_BIAS + 3,
-    "tx4bias":      SENSOR_TYPE_PORT_TX_BIAS + 4,
-    "voltage":      SENSOR_TYPE_VOLTAGE,
-}
-
 PSU_SENSOR_PART_ID_MAP = {
     'temperature': SENSOR_TYPE_TEMP,
     'power': SENSOR_TYPE_POWER,
@@ -175,14 +157,14 @@ def get_transceiver_sub_id(ifindex):
     """
     return (MODULE_TYPE_PORT + ifindex * PORT_IFINDEX_MULTIPLE, )
 
-def get_transceiver_sensor_sub_id(ifindex, sensor):
+def get_transceiver_sensor_sub_id(ifindex, offset):
     """
     Returns sub OID for transceiver sensor. Sub OID is calculated as folows:
-    sub OID = transceiver_oid + XCVR_SENSOR_PART_ID_MAP[sensor]
+    sub OID = transceiver_oid + offset
     :param ifindex: interface index
-    :param sensor: sensor key
+    :param offset: sensor OID offset
     :return: sub OID = {{index}} * 1000 + {{lane}} * 10 + sensor id
     """
 
     transceiver_oid, = get_transceiver_sub_id(ifindex)
-    return (transceiver_oid + XCVR_SENSOR_PART_ID_MAP[sensor],)
+    return (transceiver_oid + offset,)

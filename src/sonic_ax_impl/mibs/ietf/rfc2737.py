@@ -21,6 +21,7 @@ from .physical_entity_sub_oid_generator import get_psu_sub_id
 from .physical_entity_sub_oid_generator import get_psu_sensor_sub_id
 from .physical_entity_sub_oid_generator import get_transceiver_sub_id
 from .physical_entity_sub_oid_generator import get_transceiver_sensor_sub_id
+from .transceiver_sensor_data import TransceiverSensorData
 
 
 @unique
@@ -126,43 +127,7 @@ PSU_SENSOR_POSITION_MAP = {
     'voltage'    : 4
 }
 
-# Map used to generate transceiver sensor description
-XCVR_SENSOR_NAME_MAP = {
-    "temperature" : "Temperature",
-    "voltage"     : "Voltage",
-    "rx1power"    : "RX Power",
-    "rx2power"    : "RX Power",
-    "rx3power"    : "RX Power",
-    "rx4power"    : "RX Power",
-    "tx1bias"     : "TX Bias",
-    "tx2bias"     : "TX Bias",
-    "tx3bias"     : "TX Bias",
-    "tx4bias"     : "TX Bias",
-    "tx1power"    : "TX Power",
-    "tx2power"    : "TX Power",
-    "tx3power"    : "TX Power",
-    "tx4power"    : "TX Power",
-}
-
-XCVR_SENSOR_INDEX_MAP = {
-    "temperature" : 1,
-    "tx1power"    : 2,
-    "tx2power"    : 3,
-    "tx3power"    : 4,
-    "tx4power"    : 5,
-    "rx1power"    : 6,
-    "rx2power"    : 7,
-    "rx3power"    : 8,
-    "rx4power"    : 9,
-    "tx1bias"     : 10,
-    "tx2bias"     : 11,
-    "tx3bias"     : 12,
-    "tx4bias"     : 13,
-    "voltage"     : 14,
-}
-
 NOT_AVAILABLE = 'N/A'
-QSFP_LANES = (1, 2, 3, 4)
 
 def is_null_str(value):
     """
@@ -195,29 +160,20 @@ def get_transceiver_description(sfp_type, if_alias):
 
     return "{} for {}".format(sfp_type, if_alias)
 
-def get_transceiver_sensor_description(sensor, if_alias):
+
+def get_transceiver_sensor_description(name, lane_number, if_alias):
     """
-    :param sensor: sensor key name
+    :param name: sensor name
+    :param lane_number: lane number of this sensor
     :param if_alias: interface alias
     :return: description string about sensor
     """
-
-    # assume sensors that is per channel in transceiver port
-    # has digit equals to channel number in the sensor's key name in DB
-    # e.g. rx3power (lane 3)
-    lane_number = list(filter(lambda c: c.isdigit(), sensor))
-
-    if len(lane_number) == 0:
+    if lane_number == 0:
         port_name = if_alias
-    elif len(lane_number) == 1 and int(lane_number[0]) in QSFP_LANES:
-        port_name = "{}/{}".format(if_alias, lane_number[0])
     else:
-        mibs.logger.warning("Tried to parse lane number from sensor name - {} ".format(sensor)
-                + "but parsed value is not a valid QSFP lane number")
-        # continue as with non per channel sensor
-        port_name = if_alias
+        port_name = "{}/{}".format(if_alias, lane_number)
 
-    return "DOM {} Sensor for {}".format(XCVR_SENSOR_NAME_MAP[sensor], port_name)
+    return "DOM {} Sensor for {}".format(name, port_name)
 
 
 class Callback(object):
@@ -845,19 +801,17 @@ class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
         if not transceiver_dom_entry:
             return
 
-        # go over transceiver sensors
-        for sensor in transceiver_dom_entry:
-            if sensor not in XCVR_SENSOR_NAME_MAP:
-                continue
-            sensor_sub_id = get_transceiver_sensor_sub_id(ifindex, sensor)
+        sensor_data_list = TransceiverSensorData.create_sensor_data(transceiver_dom_entry)
+        sensor_data_list = TransceiverSensorData.sort_sensor_data(sensor_data_list)
+        for index, sensor_data in enumerate(sensor_data_list):
+            sensor_sub_id = get_transceiver_sensor_sub_id(ifindex, sensor_data.get_oid_offset())
             self._add_entity_related_oid(interface, sensor_sub_id)
-            sensor_description = get_transceiver_sensor_description(sensor, ifalias)
-
             self.mib_updater.set_phy_class(sensor_sub_id, PhysicalClass.SENSOR)
+            sensor_description = get_transceiver_sensor_description(sensor_data.get_name(), sensor_data.get_lane_number(), ifalias)
             self.mib_updater.set_phy_descr(sensor_sub_id, sensor_description)
             self.mib_updater.set_phy_name(sensor_sub_id, sensor_description)
             self.mib_updater.set_phy_contained_in(sensor_sub_id, sub_id)
-            self.mib_updater.set_phy_parent_relative_pos(sensor_sub_id, XCVR_SENSOR_INDEX_MAP[sensor])
+            self.mib_updater.set_phy_parent_relative_pos(sensor_sub_id, index + 1)
             self.mib_updater.set_phy_fru(sensor_sub_id, False)
             # add to available OIDs list
             self.mib_updater.add_sub_id(sensor_sub_id)
