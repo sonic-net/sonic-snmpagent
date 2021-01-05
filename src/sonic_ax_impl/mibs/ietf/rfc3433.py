@@ -11,11 +11,7 @@ from sonic_ax_impl import mibs
 from sonic_ax_impl.mibs import Namespace
 
 from .transceiver_sensor_data import TransceiverSensorData
-from .transceiver_sensor_data import TransceiverTempSensorData
-from .transceiver_sensor_data import TransceiverVoltageSensorData
-from .transceiver_sensor_data import TransceiverRxPowerSensorData
-from .transceiver_sensor_data import TransceiverTxPowerSensorData
-from .transceiver_sensor_data import TransceiverTxBiasSensorData
+
 
 @unique
 class EntitySensorDataType(int, Enum):
@@ -214,11 +210,11 @@ class XcvrTxPowerSensor(SensorInterface):
 
 
 TransceiverSensorData.bind_sensor_interface({
-    TransceiverTempSensorData:    XcvrTempSensor,
-    TransceiverVoltageSensorData: XcvrVoltageSensor,
-    TransceiverRxPowerSensorData: XcvrRxPowerSensor,
-    TransceiverTxPowerSensorData: XcvrTxPowerSensor,
-    TransceiverTxBiasSensorData:  XcvrTxBiasSensor
+    'temperature': XcvrTempSensor,
+    'voltage'    : XcvrVoltageSensor,
+    'rxpower'    : XcvrRxPowerSensor,
+    'txpower'    : XcvrTxPowerSensor,
+    'txbias'     : XcvrTxBiasSensor
 })
 
 
@@ -300,7 +296,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
             sensor_data_list = TransceiverSensorData.create_sensor_data(transceiver_dom_entry_data)
             for sensor_data in sensor_data_list:
                 raw_sensor_value = sensor_data.get_raw_value()
-                sensor = sensor_data.sensor_interface
+                sensor = sensor_data.get_sensor_interface()
                 sub_id = mibs.get_transceiver_sensor_sub_id(ifindex, sensor_data.get_oid_offset())
 
                 try:
