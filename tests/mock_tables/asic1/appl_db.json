@@ -45,17 +45,13 @@
     "speed": 1000,
     "alias": "etp6"
   },
-  "PORT_TABLE:Ethernet16": {
-    "speed": 1000,
-    "alias": "etp16"
-  },
   "PORT_TABLE:Ethernet-BP8": {
     "alias": "etp7"
   },
   "PORT_TABLE:Ethernet-BP12": {
     "description": "snowflake",
     "alias": "etp8",
-    "speed": 1000
+    "speed": 1000 
   },
   "ROUTE_TABLE:0.0.0.0/0": {
     "ifname": "Ethernet8,Ethernet12",
