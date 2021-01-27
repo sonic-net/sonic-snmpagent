@@ -5,7 +5,6 @@ from sonic_ax_impl.mibs import Namespace
 from ax_interface import MIBMeta, ValueType, MIBUpdater, SubtreeMIBEntry
 from ax_interface.util import mac_decimals
 from bisect import bisect_right
-from sonic_ax_impl.mibs import Namespace
 
 class FdbUpdater(MIBUpdater):
     def __init__(self):
@@ -30,16 +29,24 @@ class FdbUpdater(MIBUpdater):
             else:
                 vlan_id = Namespace.dbs_get_vlan_id_from_bvid(self.db_conn, fdb["bvid"])
                 self.bvid_vlan_map[fdb["bvid"]] = vlan_id
+        else:
+            return None
+        if not isinstance(vlan_id, str):
+            return None
         return (int(vlan_id),) + mac_decimals(fdb["mac"])
-          
+
     def reinit_data(self):
         """
         Subclass update interface information
         """
-        self.if_name_map, \
-        self.if_alias_map, \
-        self.if_id_map, \
-        self.oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, self.db_conn)
+        (
+            self.if_name_map,
+            self.if_alias_map,
+            self.if_id_map,
+            self.oid_name_map,
+        ) = Namespace.get_sync_d_from_all_namespace(
+            mibs.init_sync_d_interface_tables, self.db_conn
+        )
 
         self.if_bpid_map = Namespace.dbs_get_bridge_port_map(self.db_conn, mibs.ASIC_DB)
         self.bvid_vlan_map.clear()
@@ -62,7 +69,7 @@ class FdbUpdater(MIBUpdater):
                 fdb = json.loads(fdb_str.split(":", maxsplit=2)[-1])
             except ValueError as e:  # includes simplejson.decoder.JSONDecodeError
                 mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': {}.".format(fdb_str, e))
-                break
+                continue
 
             ent = Namespace.dbs_get_all(self.db_conn, mibs.ASIC_DB, s, blocking=True)
             # Example output: oid:0x3a000000000608
@@ -72,6 +79,9 @@ class FdbUpdater(MIBUpdater):
             port_id = self.if_bpid_map[bridge_port_id]
 
             vlanmac = self.fdb_vlanmac(fdb)
+            if not vlanmac:
+                mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': failed in fdb_vlanmac().".format(fdb_str))
+                continue
             self.vlanmac_ifindex_map[vlanmac] = mibs.get_index_from_str(self.if_id_map[port_id])
             self.vlanmac_ifindex_list.append(vlanmac)
         self.vlanmac_ifindex_list.sort()
