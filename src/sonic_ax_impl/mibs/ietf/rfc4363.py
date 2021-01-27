@@ -69,7 +69,7 @@ class FdbUpdater(MIBUpdater):
                 fdb = json.loads(fdb_str.split(":", maxsplit=2)[-1])
             except ValueError as e:  # includes simplejson.decoder.JSONDecodeError
                 mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': {}.".format(fdb_str, e))
-                break
+                continue
 
             ent = Namespace.dbs_get_all(self.db_conn, mibs.ASIC_DB, s, blocking=True)
             # Example output: oid:0x3a000000000608
