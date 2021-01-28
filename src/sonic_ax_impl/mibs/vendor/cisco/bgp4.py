@@ -36,7 +36,7 @@ class BgpSessionUpdater(MIBUpdater):
             neigh_str = neigh_key
             neigh_str = neigh_str.split('|')[1]
             neigh_info = self.db_conn[db_index].get_all(mibs.STATE_DB, neigh_key, blocking=False)
-            if neigh_info is not None and 'state' in neigh_info:
+            if neigh_info:
                 state = neigh_info['state']
                 ip = ipaddress.ip_address(neigh_str)
                 if type(ip) is ipaddress.IPv4Address:
