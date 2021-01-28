@@ -1,8 +1,6 @@
-import socket
 from bisect import bisect_right
 from sonic_ax_impl import mibs
 from ax_interface import MIBMeta, ValueType, MIBUpdater, SubtreeMIBEntry
-from ax_interface.mib import MIBEntry
 from sonic_ax_impl.mibs import Namespace
 import ipaddress
 
@@ -22,7 +20,7 @@ class BgpSessionUpdater(MIBUpdater):
         super().__init__()
         self.db_conn = Namespace.init_namespace_dbs()
 
-        self.neigh_state_map = {} 
+        self.neigh_state_map = {}
         self.session_status_map = {}
         self.session_status_list = []
 
@@ -38,7 +36,7 @@ class BgpSessionUpdater(MIBUpdater):
             neigh_str = neigh_key
             neigh_str = neigh_str.split('|')[1]
             neigh_info = self.db_conn[db_index].get_all(mibs.STATE_DB, neigh_key, blocking=False)
-            if neigh_info is not None:
+            if neigh_info:
                 state = neigh_info['state']
                 ip = ipaddress.ip_address(neigh_str)
                 if type(ip) is ipaddress.IPv4Address:
