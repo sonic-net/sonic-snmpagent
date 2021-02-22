@@ -675,7 +675,7 @@ class PhysicalEntityCacheUpdater(object):
 
             db_entry = msg["channel"].split(":")[-1]
             data = msg['data']  # event data
-            if not isinstance(data, bytes):
+            if not isinstance(data, str):
                 continue
 
             # extract interface name
