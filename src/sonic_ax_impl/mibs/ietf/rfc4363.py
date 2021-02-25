@@ -77,6 +77,8 @@ class FdbUpdater(MIBUpdater):
             if bridge_port_id not in self.if_bpid_map:
                 continue
             port_id = self.if_bpid_map[bridge_port_id]
+            if port_id not in self.if_id_map:
+                continue
 
             vlanmac = self.fdb_vlanmac(fdb)
             if not vlanmac:
