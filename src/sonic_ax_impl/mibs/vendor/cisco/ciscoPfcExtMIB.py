@@ -94,7 +94,7 @@ class PfcUpdater(MIBUpdater):
         _counter_name = getattr(counter_name, 'name', counter_name)
 
         try:
-            counter_value = self.if_counters[oid][_counter_name] 
+            counter_value = self.if_counters[oid][_counter_name]
             counter_value = int(counter_value) & 0xffffffffffffffff
             # done!
             return counter_value
