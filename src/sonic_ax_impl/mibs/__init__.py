@@ -200,6 +200,7 @@ def init_mgmt_interface_tables(db_conn):
 
     return oid_name_map, if_alias_map
 
+# TODO: the function name include interface, but only return port by design. Fix the design or the name
 def init_sync_d_interface_tables(db_conn):
     """
     Initializes interface maps for SyncD-connected MIB(s).
