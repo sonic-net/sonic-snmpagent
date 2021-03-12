@@ -106,31 +106,31 @@ class TestLLDPMIB(TestCase):
 
 
     def test_subtype_lldp_rem_man_addr_table(self):
-        # Verfiy both valid ipv4 and ipv6 address exit
+        # Verfiy both valid ipv4 and ipv6 address exist
         for entry in range(3, 6):
             mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, entry)]
             ret = mib_entry(sub_id=(1, 1))
             self.assertIsNotNone(ret)
             print(ret)
-        # Verfiy valid ipv4 and invalid ipv6 address exit
+        # Verfiy valid ipv4 and invalid ipv6 address exist
         for entry in range(3, 6):
             mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, entry)]
             ret = mib_entry(sub_id=(1, 5))
             self.assertIsNotNone(ret)
             print(ret)
-        # Verfiy only valid ipv4 address exit
+        # Verfiy only valid ipv4 address exist
         for entry in range(3, 6):
             mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, entry)]
             ret = mib_entry(sub_id=(1, 9))
             self.assertIsNotNone(ret)
             print(ret)
-        # Verfiy only valid ipv6 address exit
+        # Verfiy only valid ipv6 address exist
         for entry in range(3, 6):
             mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, entry)]
             ret = mib_entry(sub_id=(1, 13))
             self.assertIsNotNone(ret)
             print(ret)
-        # Verfiy no mgmt address exit
+        # Verfiy no mgmt address exist
         for entry in range(3, 6):
             mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, entry)]
             ret = mib_entry(sub_id=(1, 17))
