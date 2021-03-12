@@ -494,10 +494,9 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         # establish connection to application database.
         Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.if_range = []
-        self.mgmt_ips = {}
+        self.if_with_mgmt_ips = set()
         self.oid_name_map = {}
         self.mgmt_oid_name_map = {}
-        self.mgmt_ip_str = None
         self.pubsub = [None] * len(self.db_conn)
 
     def update_rem_if_mgmt(self, if_oid, if_name):
@@ -511,28 +510,27 @@ class LLDPRemManAddrUpdater(MIBUpdater):
             if len(mgmt_ip_str) == 0:
                 # the peer advertise an emtpy mgmt address
                 return
-            time_mark = int(lldp_kvs['lldp_rem_time_mark'])
-            remote_index = int(lldp_kvs['lldp_rem_index'])
-            subtype = self.get_subtype(mgmt_ip_str)
-            ip_hex = self.get_ip_hex(mgmt_ip_str, subtype)
-            if subtype == ManAddrConst.man_addr_subtype_ipv4:
-                addr_subtype_sub_oid = 4
-                mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i) for i in mgmt_ip_str.split('.')])
-            elif subtype == ManAddrConst.man_addr_subtype_ipv6:
-                addr_subtype_sub_oid = 6
-                mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i, 16) if i else 0 for i in mgmt_ip_str.split(':')])
-            else:
-                logger.warning("Invalid management IP {}".format(mgmt_ip_str))
-                return
-            self.if_range.append((time_mark,
-                                  if_oid,
-                                  remote_index,
-                                  subtype,
-                                  *mgmt_ip_sub_oid))
+            for mgmt_ip in set(mgmt_ip_str.split(',')):
+                time_mark = int(lldp_kvs['lldp_rem_time_mark'])
+                remote_index = int(lldp_kvs['lldp_rem_index'])
+                subtype = self.get_subtype(mgmt_ip)
+                ip_hex = self.get_ip_hex(mgmt_ip, subtype)
+                if subtype == ManAddrConst.man_addr_subtype_ipv4:
+                    addr_subtype_sub_oid = 4
+                    mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i) for i in mgmt_ip.split('.')])
+                elif subtype == ManAddrConst.man_addr_subtype_ipv6:
+                    addr_subtype_sub_oid = 6
+                    mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i, 16) if i else 0 for i in mgmt_ip.split(':')])
+                else:
+                    logger.warning("Invalid management IP {}".format(mgmt_ip_str))
+                    continue
+                self.if_range.append((time_mark,
+                                      if_oid,
+                                      remote_index,
+                                      subtype,
+                                      *mgmt_ip_sub_oid))
+                self.if_with_mgmt_ips.add(if_name)
 
-            self.mgmt_ips.update({if_name: {"ip_str": mgmt_ip_str,
-                                            "addr_subtype": subtype,
-                                            "addr_hex": ip_hex}})
         except (KeyError, AttributeError) as e:
             logger.warning("Error updating remote mgmt addr: {}".format(e))
             return
@@ -577,7 +575,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
 
         self.if_range = []
-        self.mgmt_ips = {}
+        self.if_with_mgmt_ips = set()
         for if_oid, if_name in self.oid_name_map.items():
             self.update_rem_if_mgmt(if_oid, if_name)
 
@@ -594,7 +592,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         if sub_id not in self.oid_name_map:
             return None
         if_name = self.oid_name_map[sub_id]
-        if if_name not in self.mgmt_ips:
+        if if_name not in self.if_with_mgmt_ips:
             # no data for this interface
             return None
         return callable(sub_id, if_name)
@@ -623,15 +621,6 @@ class LLDPRemManAddrUpdater(MIBUpdater):
             logger.warning("Invalid mgmt IP {}".format(ip_str))
         return None
 
-    def man_addr_subtype(self, sub_id, if_name):
-        return self.mgmt_ips[if_name]['addr_subtype']
-
-    def man_addr(self, sub_id, if_name):
-        """
-        :param sub_id:
-        :return: MGMT IP in HEX
-        """
-        return self.mgmt_ips[if_name]['addr_hex']
 
     @staticmethod
     def man_addr_if_subtype(sub_id, _): return ManAddrConst.man_addr_if_subtype
