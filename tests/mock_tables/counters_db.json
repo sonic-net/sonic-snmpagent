@@ -2278,7 +2278,8 @@
     "Ethernet68": "oid:0x1000000000020"
   },
   "COUNTERS_LAG_NAME_MAP": {
-    "PortChannel01": "oid:0x1000000000023"
+    "PortChannel01": "oid:0x1000000000023",
+    "PortChannel101": "oid:0x2000000000a14"
   },
   "COUNTERS:oid:0x1000000000009": {
     "SAI_PORT_STAT_ETHER_STATS_TX_NO_ERRORS": "0",
