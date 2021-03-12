@@ -85,8 +85,10 @@ class FdbUpdater(MIBUpdater):
             port_id = self.if_bpid_map[bridge_port_id]
             if port_id in self.if_id_map:
                 port_name = self.if_id_map[port_id]
+                port_index = mibs.get_index_from_str(port_name)
             elif port_id in self.sai_lag_map:
                 port_name = self.sai_lag_map[port_id]
+                port_index = mibs.get_index(port_name)
             else:
                 continue
 
@@ -94,7 +96,7 @@ class FdbUpdater(MIBUpdater):
             if not vlanmac:
                 mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': failed in fdb_vlanmac().".format(fdb_str))
                 continue
-            self.vlanmac_ifindex_map[vlanmac] = mibs.get_index_from_str(port_name)
+            self.vlanmac_ifindex_map[vlanmac] = port_index
             self.vlanmac_ifindex_list.append(vlanmac)
         self.vlanmac_ifindex_list.sort()
 
