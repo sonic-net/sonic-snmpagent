@@ -521,7 +521,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
                     addr_subtype_sub_oid = 6
                     mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i, 16) if i else 0 for i in mgmt_ip.split(':')])
                 else:
-                    logger.warning("Invalid management IP {}".format(mgmt_ip_str))
+                    logger.warning("Invalid management IP {}".format(mgmt_ip))
                     continue
                 self.if_range.append((time_mark,
                                       if_oid,
