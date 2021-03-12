@@ -48,6 +48,10 @@ class FdbUpdater(MIBUpdater):
             mibs.init_sync_d_interface_tables, self.db_conn
         )
 
+        self.lag_name_if_name_map, \
+        self.if_name_lag_name_map, \
+        self.oid_lag_name_map, _ = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
+
         self.if_bpid_map = Namespace.dbs_get_bridge_port_map(self.db_conn, mibs.ASIC_DB)
         self.bvid_vlan_map.clear()
 

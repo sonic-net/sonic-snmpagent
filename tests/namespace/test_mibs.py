@@ -21,7 +21,7 @@ class TestGetNextPDU(TestCase):
 
         lag_name_if_name_map, \
         if_name_lag_name_map, \
-        oid_lag_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, dbs)
+        oid_lag_name_map, _ = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, dbs)
         #PortChannel in asic0 Namespace
         self.assertTrue(b"PortChannel01" in lag_name_if_name_map)
         self.assertTrue(b"Ethernet-BP0" in lag_name_if_name_map[b"PortChannel01"])
