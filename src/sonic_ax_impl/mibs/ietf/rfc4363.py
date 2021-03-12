@@ -15,6 +15,7 @@ class FdbUpdater(MIBUpdater):
         self.if_alias_map = {}
         self.if_id_map = {}
         self.oid_name_map = {}
+        self.sai_lag_map = {}
         self.vlanmac_ifindex_map = {}
         self.vlanmac_ifindex_list = []
         self.if_bpid_map = {}
@@ -50,7 +51,8 @@ class FdbUpdater(MIBUpdater):
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
-        self.oid_lag_name_map, _ = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
+        self.oid_lag_name_map,     \
+        self.sai_lag_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
 
         self.if_bpid_map = Namespace.dbs_get_bridge_port_map(self.db_conn, mibs.ASIC_DB)
         self.bvid_vlan_map.clear()
@@ -81,12 +83,18 @@ class FdbUpdater(MIBUpdater):
             if bridge_port_id not in self.if_bpid_map:
                 continue
             port_id = self.if_bpid_map[bridge_port_id]
+            if port_id in self.if_id_map:
+                port_name = self.if_id_map[port_id]
+            elif port_id in self.sai_lag_map:
+                port_name = self.sai_lag_map[port_id]
+            else:
+                continue
 
             vlanmac = self.fdb_vlanmac(fdb)
             if not vlanmac:
                 mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': failed in fdb_vlanmac().".format(fdb_str))
                 continue
-            self.vlanmac_ifindex_map[vlanmac] = mibs.get_index_from_str(self.if_id_map[port_id])
+            self.vlanmac_ifindex_map[vlanmac] = mibs.get_index_from_str(port_name)
             self.vlanmac_ifindex_list.append(vlanmac)
         self.vlanmac_ifindex_list.sort()
 
