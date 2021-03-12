@@ -304,13 +304,19 @@ def init_sync_d_lag_tables(db_conn):
     if_name_lag_name_map = {}
     # { OID -> lag_name (SONiC) }
     oid_lag_name_map = {}
+    # { lag_name (SONiC) -> lag_oid (SAI) }
+    lag_sai_map = {}
 
     db_conn.connect(APPL_DB)
 
     lag_entries = db_conn.keys(APPL_DB, "LAG_TABLE:*")
 
     if not lag_entries:
-        return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map
+        return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map
+
+    db_conn.connect(COUNTERS_DB)
+    lag_sai_map = db_conn.get_all(COUNTERS_DB, "COUNTERS_LAG_NAME_MAP")
+    lag_sai_map = {name: get_sai_id_key(db_conn.namespace, sai_id.lstrip("oid:0x")) for name, sai_id in lag_sai_map.items()}
 
     for lag_entry in lag_entries:
         lag_name = lag_entry[len("LAG_TABLE:"):]
@@ -332,7 +338,7 @@ def init_sync_d_lag_tables(db_conn):
         if idx:
             oid_lag_name_map[idx] = if_name
 
-    return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map
+    return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map
 
 def init_sync_d_queue_tables(db_conn):
     """
