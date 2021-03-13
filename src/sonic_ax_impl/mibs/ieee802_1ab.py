@@ -517,19 +517,19 @@ class LLDPRemManAddrUpdater(MIBUpdater):
                 remote_index = int(lldp_kvs['lldp_rem_index'])
                 subtype, exploded_mgmt_ip = self.get_subtype_and_exploded_ip(mgmt_ip)
 
-                # Invalid Managent IP
+                # Invalid management IP
                 if not subtype or not exploded_mgmt_ip:
                     logger.warning("Invalid management IP {}".format(mgmt_ip))
                     continue
-                # Non-Unique Managemnt IP
+                # Non-Unique management IP
                 elif exploded_mgmt_ip in mgmt_ip_set:
                     continue
-                # IPv4 Managemnt IP
+                # IPv4 management IP
                 elif subtype == ManAddrConst.man_addr_subtype_ipv4:
                     addr_subtype_sub_oid = 4
                     mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i) for i in exploded_mgmt_ip.split('.')])
                     mgmt_ip_set.add(exploded_mgmt_ip)
-                # IPv6 Managemnt IP
+                # IPv6 management IP
                 elif subtype == ManAddrConst.man_addr_subtype_ipv6:
                     addr_subtype_sub_oid = 6
                     mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i, 16) if i else 0 for i in exploded_mgmt_ip.split(':')])
