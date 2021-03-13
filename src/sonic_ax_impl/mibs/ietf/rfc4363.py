@@ -32,7 +32,7 @@ class FdbUpdater(MIBUpdater):
                 self.bvid_vlan_map[fdb["bvid"]] = vlan_id
         else:
             return None
-        if not isinstance(vlan_id, str):
+        if not isinstance(vlan_id, bytes) and not isinstance(vlan_id, str):
             return None
         return (int(vlan_id),) + mac_decimals(fdb["mac"])
 
