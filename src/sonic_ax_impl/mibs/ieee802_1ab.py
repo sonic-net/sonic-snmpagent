@@ -614,13 +614,13 @@ class LLDPRemManAddrUpdater(MIBUpdater):
     def get_subtype_and_exploded_ip(self, ip_str):
         try:
             ipaddress.IPv4Address(ip_str)
-            return ManAddrConst.man_addr_subtype_ipv4, ipaddress.ip_address(ip_str).exploded
+            return ManAddrConst.man_addr_subtype_ipv4, ip_str
         except ipaddress.AddressValueError:
             # not a valid IPv4
             pass
         try:
             ipaddress.IPv6Address(ip_str)
-            return ManAddrConst.man_addr_subtype_ipv6, ipaddress.ip_address(ip_str).exploded
+            return ManAddrConst.man_addr_subtype_ipv6, ipaddress.IPv6Address(ip_str).exploded
         except ipaddress.AddressValueError:
             # not a valid IPv6
             logger.warning("Invalid mgmt IP {}".format(ip_str))
