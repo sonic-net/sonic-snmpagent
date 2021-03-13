@@ -516,7 +516,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
                 time_mark = int(lldp_kvs['lldp_rem_time_mark'])
                 remote_index = int(lldp_kvs['lldp_rem_index'])
                 subtype, exploded_mgmt_ip = self.get_subtype_and_exploded_ip(mgmt_ip)
-                if exploded_mgmt_ip in mgmt_ip_set:
+                if exploded_mgmt_ip and exploded_mgmt_ip in mgmt_ip_set:
                     continue
                 elif subtype == ManAddrConst.man_addr_subtype_ipv4:
                     addr_subtype_sub_oid = 4
