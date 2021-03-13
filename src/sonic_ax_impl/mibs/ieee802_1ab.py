@@ -510,18 +510,24 @@ class LLDPRemManAddrUpdater(MIBUpdater):
             if len(mgmt_ip_str) == 0:
                 # the peer advertise an emtpy mgmt address
                 return
-            for mgmt_ip in set(mgmt_ip_str.split(',')):
+            
+            mgmt_ip_set=set()
+            for mgmt_ip in mgmt_ip_str.split(','):
                 time_mark = int(lldp_kvs['lldp_rem_time_mark'])
                 remote_index = int(lldp_kvs['lldp_rem_index'])
-                subtype = self.get_subtype(mgmt_ip)
-                if subtype == ManAddrConst.man_addr_subtype_ipv4:
+                subtype, exploded_mgmt_ip = self.get_subtype_and_exploded_ip(mgmt_ip)
+                if exploded_mgmt_ip in mgmt_ip_set:
+                    continue
+                elif subtype == ManAddrConst.man_addr_subtype_ipv4:
                     addr_subtype_sub_oid = 4
-                    mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i) for i in mgmt_ip.split('.')])
+                    mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i) for i in exploded_mgmt_ip.split('.')])
+                    mgmt_ip_set.add(exploded_mgmt_ip)
                 elif subtype == ManAddrConst.man_addr_subtype_ipv6:
                     addr_subtype_sub_oid = 6
-                    mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i, 16) if i else 0 for i in mgmt_ip.split(':')])
+                    mgmt_ip_sub_oid = (addr_subtype_sub_oid, *[int(i, 16) if i else 0 for i in exploded_mgmt_ip.split(':')])
+                    mgmt_ip_set.add(exploded_mgmt_ip)
                 else:
-                    logger.warning("Invalid management IP {}".format(mgmt_ip))
+                    logger.warning("Invalid management IP {}".format(exploded_mgmt_ip))
                     continue
                 self.if_range.append((time_mark,
                                       if_oid,
@@ -605,20 +611,20 @@ class LLDPRemManAddrUpdater(MIBUpdater):
             hex_ip = None
         return hex_ip
 
-    def get_subtype(self, ip_str):
+    def get_subtype_and_exploded_ip(self, ip_str):
         try:
             ipaddress.IPv4Address(ip_str)
-            return ManAddrConst.man_addr_subtype_ipv4
+            return ManAddrConst.man_addr_subtype_ipv4, ipaddress.ip_address(ip_str).exploded
         except ipaddress.AddressValueError:
             # not a valid IPv4
             pass
         try:
             ipaddress.IPv6Address(ip_str)
-            return ManAddrConst.man_addr_subtype_ipv6
+            return ManAddrConst.man_addr_subtype_ipv6, ipaddress.ip_address(ip_str).exploded
         except ipaddress.AddressValueError:
             # not a valid IPv6
             logger.warning("Invalid mgmt IP {}".format(ip_str))
-        return None
+        return None, None
 
 
     @staticmethod
