@@ -604,3 +604,4 @@ class Namespace:
             vlan_obj = db_conn.keys('ASIC_DB', "ASIC_STATE:SAI_OBJECT_TYPE_VLAN:" + bvid)
             if vlan_obj is not None:
                 return port_util.get_vlan_id_from_bvid(db_conn, bvid)
+        return None
