@@ -168,35 +168,39 @@ class TestLLDPMIB(TestCase):
 
 
         # Verfiy both valid ipv4 and invalid ipv6 address exit. Ethernet5 has this config.
-        oid = ObjectIdentifier(11, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 5))
-        get_pdu = GetNextPDU(
+        oid = ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 5, 1, 1, 4, 10, 224, 25, 102))
+        get_pdu = GetPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=[oid]
         )
         response = get_pdu.make_response(self.lut)
         value0 = response.values[0]
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 5, 1, 1, 4, 10, 224, 25, 102))))
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(value0.data, 2)
 
         # Verfiy only valid ipv4 address exit. Ethernet8 has this config.
-        oid = ObjectIdentifier(11, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 9))
-        get_pdu = GetNextPDU(
+        oid = ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 9, 1, 1, 4, 10, 224, 25, 102))
+        get_pdu = GetPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=[oid]
         )
         response = get_pdu.make_response(self.lut)
         value0 = response.values[0]
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 9, 1, 1, 4, 10, 224, 25, 102))))
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(value0.data, 2)
 
         # Verfiy only valid ipv6 address exiit. Ethernet12 has this config.
-        oid = ObjectIdentifier(11, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 13))
-        get_pdu = GetNextPDU(
+        oid = ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 13, 1, 2, 16, 254, 128, 38, 138, 0, 0, 0, 0, 0, 0, 7, 255, 254, 63, 131, 76))
+        get_pdu = GetPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=[oid]
         )
         response = get_pdu.make_response(self.lut)
         value0 = response.values[0]
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543,  
+                                               13, 1, 2, 16, 254, 128, 38, 138, 0, 0, 0, 0, 0, 0, 7, 255, 254, 63, 131, 76))))
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(value0.data, 2)
 
