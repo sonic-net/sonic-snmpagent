@@ -333,7 +333,7 @@
     "lldp_rem_chassis_id_subtype": "4",
     "lldp_rem_sys_name": "switch13",
     "lldp_rem_port_id": "Ethernet24",
-    "lldp_rem_man_addr": "10.224.25.123"
+    "lldp_rem_man_addr": "10.224.25.123,2603:10e2:290:5016::"
   },
   "LLDP_ENTRY_TABLE:Ethernet96": {
     "lldp_rem_port_id_subtype": "5",

@@ -3,7 +3,7 @@ import ipaddress
 from sonic_ax_impl import mibs
 from sonic_ax_impl.mibs import Namespace
 from ax_interface import MIBMeta, ValueType, MIBUpdater, SubtreeMIBEntry
-from ax_interface.util import ip2tuple_v4
+from ax_interface.util import ip2byte_tuple
 from bisect import bisect_right
 from sonic_py_common import multi_asic
 
@@ -46,7 +46,7 @@ class RouteUpdater(MIBUpdater):
 
         ## The nexthop for loopbacks should be all zero
         for loip in self.loips:
-            sub_id = ip2tuple_v4(loip) + (255, 255, 255, 255) + (self.tos,) + (0, 0, 0, 0)
+            sub_id = ip2byte_tuple(loip) + (255, 255, 255, 255) + (self.tos,) + (0, 0, 0, 0)
             self.route_dest_list.append(sub_id)
             self.route_dest_map[sub_id] = self.loips[loip].packed
 
@@ -84,7 +84,7 @@ class RouteUpdater(MIBUpdater):
                     port_table[ifn][multi_asic.PORT_ROLE] == multi_asic.INTERNAL_PORT):
                     continue
 
-                sub_id = ip2tuple_v4(ipn.network_address) + ip2tuple_v4(ipn.netmask) + (self.tos,) + ip2tuple_v4(nh)
+                sub_id = ip2byte_tuple(ipn.network_address) + ip2byte_tuple(ipn.netmask) + (self.tos,) + ip2byte_tuple(nh)
                 self.route_dest_list.append(sub_id)
                 self.route_dest_map[sub_id] = ipn.network_address.packed
 
