@@ -15,6 +15,7 @@ class FdbUpdater(MIBUpdater):
         self.if_alias_map = {}
         self.if_id_map = {}
         self.oid_name_map = {}
+        self.sai_lag_map = {}
         self.vlanmac_ifindex_map = {}
         self.vlanmac_ifindex_list = []
         self.if_bpid_map = {}
@@ -28,6 +29,8 @@ class FdbUpdater(MIBUpdater):
                 vlan_id = self.bvid_vlan_map[fdb["bvid"]]
             else:
                 vlan_id = Namespace.dbs_get_vlan_id_from_bvid(self.db_conn, fdb["bvid"])
+                if isinstance(vlan_id, bytes):
+                    vlan_id = vlan_id.decode()
                 self.bvid_vlan_map[fdb["bvid"]] = vlan_id
         else:
             return None
@@ -47,6 +50,11 @@ class FdbUpdater(MIBUpdater):
         ) = Namespace.get_sync_d_from_all_namespace(
             mibs.init_sync_d_interface_tables, self.db_conn
         )
+
+        self.lag_name_if_name_map, \
+        self.if_name_lag_name_map, \
+        self.oid_lag_name_map,     \
+        self.sai_lag_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
 
         self.if_bpid_map = Namespace.dbs_get_bridge_port_map(self.db_conn, mibs.ASIC_DB)
         self.bvid_vlan_map.clear()
@@ -77,12 +85,20 @@ class FdbUpdater(MIBUpdater):
             if bridge_port_id not in self.if_bpid_map:
                 continue
             port_id = self.if_bpid_map[bridge_port_id]
+            if port_id in self.if_id_map:
+                port_name = self.if_id_map[port_id]
+                port_index = mibs.get_index_from_str(port_name)
+            elif port_id in self.sai_lag_map:
+                port_name = self.sai_lag_map[port_id]
+                port_index = mibs.get_index_from_str(port_name)
+            else:
+                continue
 
             vlanmac = self.fdb_vlanmac(fdb)
             if not vlanmac:
                 mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': failed in fdb_vlanmac().".format(fdb_str))
                 continue
-            self.vlanmac_ifindex_map[vlanmac] = mibs.get_index_from_str(self.if_id_map[port_id])
+            self.vlanmac_ifindex_map[vlanmac] = port_index
             self.vlanmac_ifindex_list.append(vlanmac)
         self.vlanmac_ifindex_list.sort()
 
