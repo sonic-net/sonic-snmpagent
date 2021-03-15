@@ -8,7 +8,7 @@ from sonic_ax_impl import mibs
 from sonic_ax_impl.mibs import Namespace
 from ax_interface.mib import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
 from ax_interface.encodings import ObjectIdentifier
-from ax_interface.util import mac_decimals, ip2tuple_v4
+from ax_interface.util import mac_decimals, ip2byte_tuple
 
 @unique
 class DbTables(int, Enum):
@@ -99,7 +99,7 @@ class ArpUpdater(MIBUpdater):
         # if MAC is all zero
         #if not any(mac): continue
 
-        iptuple = ip2tuple_v4(ip)
+        iptuple = ip2byte_tuple(ip)
 
         subid = (if_index,) + iptuple
         self.arp_dest_map[subid] = machex
@@ -154,7 +154,7 @@ class NextHopUpdater(MIBUpdater):
                 nexthops = ent["nexthop"]
                 for nh in nexthops.split(','):
                     # TODO: if ipn contains IP range, create more sub_id here
-                    sub_id = ip2tuple_v4(ipn.network_address)
+                    sub_id = ip2byte_tuple(ipn.network_address)
                     self.route_list.append(sub_id)
                     self.nexthop_map[sub_id] = ipaddress.ip_address(nh).packed
                     break # Just need the first nexthop

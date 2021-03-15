@@ -124,11 +124,96 @@ class TestLLDPMIB(TestCase):
 
 
     def test_subtype_lldp_rem_man_addr_table(self):
+
+        # Get the first entry of walk. We will get IPv4 Address associated with Ethernet0 Port
+        # Verfiy both valid ipv4 and ipv6 address exist
         for entry in range(3, 6):
-            mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, entry)]
-            ret = mib_entry(sub_id=(1, 1))
-            self.assertIsNotNone(ret)
-            print(ret)
+            oid = ObjectIdentifier(11, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, entry))
+            get_pdu = GetNextPDU(
+                header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+                oids=[oid]
+            )
+            response = get_pdu.make_response(self.lut)
+            value0 = response.values[0]
+            self.assertEqual(str(value0.name), str(ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, entry, 0, 1, 1, 1, 4, 10, 224, 25, 123))))
+            if entry == 3:
+                self.assertEqual(value0.type_, ValueType.INTEGER)
+                self.assertEqual(value0.data, 2)
+            elif entry == 4:
+                self.assertEqual(value0.type_, ValueType.INTEGER)
+                self.assertEqual(value0.data, 0)
+            else:
+                self.assertEqual(value0.type_, ValueType.OBJECT_IDENTIFIER)
+                self.assertEqual(str(value0.data), str(ObjectIdentifier(5, 2, 0, 0, (1, 2, 2, 1, 1))))
+
+            # Get next on above to get IPv6 Entry. We will get IPv6 Address associated with Ethernet0 Port
+            oid = ObjectIdentifier(16, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, entry, 0, 1, 1, 1, 16))
+            get_pdu = GetNextPDU(
+                header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+                oids=[oid]
+            )
+            response = get_pdu.make_response(self.lut)
+            value0 = response.values[0]
+            self.assertEqual(str(value0.name), str(ObjectIdentifier(20, 0, 1, 0, 
+                                                   (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, entry, 0, 1, 1, 2, 16, 38, 3, 16, 226, 2, 144, 80, 22, 0, 0, 0, 0, 0, 0, 0, 0))))
+            if entry == 3:
+                self.assertEqual(value0.type_, ValueType.INTEGER)
+                self.assertEqual(value0.data, 2)
+            elif entry == 4:
+                self.assertEqual(value0.type_, ValueType.INTEGER)
+                self.assertEqual(value0.data, 0)
+            else:
+                self.assertEqual(value0.type_, ValueType.OBJECT_IDENTIFIER)
+                self.assertEqual(str(value0.data), str(ObjectIdentifier(5, 2, 0, 0, (1, 2, 2, 1, 1))))
+
+
+        # Verfiy both valid ipv4 and invalid ipv6 address exist. Ethernet5 has this config.
+        oid = ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 5, 1, 1, 4, 10, 224, 25, 102))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+        response = get_pdu.make_response(self.lut)
+        value0 = response.values[0]
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 5, 1, 1, 4, 10, 224, 25, 102))))
+        self.assertEqual(value0.type_, ValueType.INTEGER)
+        self.assertEqual(value0.data, 2)
+
+        # Verfiy only valid ipv4 address exist. Ethernet8 has this config.
+        oid = ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 9, 1, 1, 4, 10, 224, 25, 102))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+        response = get_pdu.make_response(self.lut)
+        value0 = response.values[0]
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 9, 1, 1, 4, 10, 224, 25, 102))))
+        self.assertEqual(value0.type_, ValueType.INTEGER)
+        self.assertEqual(value0.data, 2)
+
+        # Verfiy only valid ipv6 address exist. Ethernet12 has this config.
+        oid = ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 13, 1, 2, 16, 254, 128, 38, 138, 0, 0, 0, 0, 0, 0, 7, 255, 254, 63, 131, 76))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+        response = get_pdu.make_response(self.lut)
+        value0 = response.values[0]
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543,  
+                                               13, 1, 2, 16, 254, 128, 38, 138, 0, 0, 0, 0, 0, 0, 7, 255, 254, 63, 131, 76))))
+        self.assertEqual(value0.type_, ValueType.INTEGER)
+        self.assertEqual(value0.data, 2)
+
+        # Verfiy no mgmt address exit. Ethernet16 has this config.
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18545, 17))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+        response = get_pdu.make_response(self.lut)
+        value0 = response.values[0]
+        # Should result End of Mib View
+        self.assertEqual(value0.type_, ValueType.END_OF_MIB_VIEW)
 
     def test_local_port_identification(self):
         mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 3, 7, 1, 3)]

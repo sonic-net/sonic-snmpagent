@@ -11,7 +11,7 @@
     "lldp_rem_chassis_id_subtype": "4",
     "lldp_rem_sys_name": "switch13",
     "lldp_rem_port_id": "Ethernet1",
-    "lldp_rem_man_addr": "10.224.25.100"
+    "lldp_rem_man_addr": "10.224.25.100,2603:10e2:290:5016::"
   },
   "LLDP_ENTRY_TABLE:Ethernet4": {
     "lldp_rem_port_id_subtype": "5",
@@ -25,7 +25,7 @@
     "lldp_rem_chassis_id_subtype": "4",
     "lldp_rem_sys_name": "switch13",
     "lldp_rem_port_id": "Ethernet2",
-    "lldp_rem_man_addr": "fe80::268a:7ff:fe3f:834c"
+    "lldp_rem_man_addr": "fe80::268a::7ff:fe3f:834c,10.224.25.101"
   },
   "LLDP_ENTRY_TABLE:Ethernet8": {
     "lldp_rem_port_id_subtype": "5",
@@ -53,7 +53,7 @@
     "lldp_rem_chassis_id_subtype": "4",
     "lldp_rem_sys_name": "switch13",
     "lldp_rem_port_id": "Ethernet4",
-    "lldp_rem_man_addr": "10.224.25.103"
+    "lldp_rem_man_addr": "fe80:268a::7ff:fe3f:834c"
   },
   "LLDP_ENTRY_TABLE:Ethernet16": {
     "lldp_rem_port_id_subtype": "5",
@@ -67,7 +67,7 @@
     "lldp_rem_chassis_id_subtype": "4",
     "lldp_rem_sys_name": "switch13",
     "lldp_rem_port_id": "Ethernet5",
-    "lldp_rem_man_addr": "10.224.25.104"
+    "lldp_rem_man_addr": ""
   },
   "LLDP_ENTRY_TABLE:Ethernet20": {
     "lldp_rem_port_id_subtype": "5",
@@ -333,7 +333,7 @@
     "lldp_rem_chassis_id_subtype": "4",
     "lldp_rem_sys_name": "switch13",
     "lldp_rem_port_id": "Ethernet24",
-    "lldp_rem_man_addr": "10.224.25.123"
+    "lldp_rem_man_addr": "10.224.25.123,2603:10e2:290:5016::"
   },
   "LLDP_ENTRY_TABLE:Ethernet96": {
     "lldp_rem_port_id_subtype": "5",

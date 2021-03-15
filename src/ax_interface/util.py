@@ -1,3 +1,4 @@
+import ipaddress
 import re
 
 from ax_interface import constants
@@ -98,10 +99,12 @@ def mac_decimals(mac):
     """
     return tuple(int(h, 16) for h in mac.split(":"))
 
-def ip2tuple_v4(ip):
+def ip2byte_tuple(ip):
     """
-    >>> ip2tuple_v4("192.168.1.253")
+    >>> ip2byte_tuple("192.168.1.253")
     (192, 168, 1, 253)
+    >>> ip2byte_tuple("2001:db8::3")
+    (32, 1, 13, 184, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3)
     """
-    return tuple(int(bs) for bs in str(ip).split('.'))
+    return tuple(i for i in ipaddress.ip_address(ip).packed)
 
