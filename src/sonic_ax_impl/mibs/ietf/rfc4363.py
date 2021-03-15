@@ -88,7 +88,7 @@ class FdbUpdater(MIBUpdater):
                 port_index = mibs.get_index_from_str(port_name)
             elif port_id in self.sai_lag_map:
                 port_name = self.sai_lag_map[port_id]
-                port_index = mibs.get_index(port_name)
+                port_index = mibs.get_index_from_str(port_name)
             else:
                 continue
 
