@@ -126,7 +126,7 @@ class TestLLDPMIB(TestCase):
     def test_subtype_lldp_rem_man_addr_table(self):
 
         # Get the first entry of walk. We will get IPv4 Address associated with Ethernet0 Port
-        # Verfiy both valid ipv4 and ipv6 address exit
+        # Verfiy both valid ipv4 and ipv6 address exist
         for entry in range(3, 6):
             oid = ObjectIdentifier(11, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, entry))
             get_pdu = GetNextPDU(
@@ -167,7 +167,7 @@ class TestLLDPMIB(TestCase):
                 self.assertEqual(str(value0.data), str(ObjectIdentifier(5, 2, 0, 0, (1, 2, 2, 1, 1))))
 
 
-        # Verfiy both valid ipv4 and invalid ipv6 address exit. Ethernet5 has this config.
+        # Verfiy both valid ipv4 and invalid ipv6 address exist. Ethernet5 has this config.
         oid = ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 5, 1, 1, 4, 10, 224, 25, 102))
         get_pdu = GetPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
@@ -179,7 +179,7 @@ class TestLLDPMIB(TestCase):
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(value0.data, 2)
 
-        # Verfiy only valid ipv4 address exit. Ethernet8 has this config.
+        # Verfiy only valid ipv4 address exist. Ethernet8 has this config.
         oid = ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 9, 1, 1, 4, 10, 224, 25, 102))
         get_pdu = GetPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
@@ -191,7 +191,7 @@ class TestLLDPMIB(TestCase):
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(value0.data, 2)
 
-        # Verfiy only valid ipv6 address exiit. Ethernet12 has this config.
+        # Verfiy only valid ipv6 address exist. Ethernet12 has this config.
         oid = ObjectIdentifier(20, 0, 0, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 2, 1, 3, 18543, 13, 1, 2, 16, 254, 128, 38, 138, 0, 0, 0, 0, 0, 0, 7, 255, 254, 63, 131, 76))
         get_pdu = GetPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
