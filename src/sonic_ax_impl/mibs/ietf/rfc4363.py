@@ -29,10 +29,12 @@ class FdbUpdater(MIBUpdater):
                 vlan_id = self.bvid_vlan_map[fdb["bvid"]]
             else:
                 vlan_id = Namespace.dbs_get_vlan_id_from_bvid(self.db_conn, fdb["bvid"])
+                if isinstance(vlan_id, bytes):
+                    vlan_id = vlan_id.decode()
                 self.bvid_vlan_map[fdb["bvid"]] = vlan_id
         else:
             return None
-        if not isinstance(vlan_id, bytes) and not isinstance(vlan_id, str):
+        if not isinstance(vlan_id, str):
             return None
         return (int(vlan_id),) + mac_decimals(fdb["mac"])
 
