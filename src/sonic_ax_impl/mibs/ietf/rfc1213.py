@@ -266,7 +266,7 @@ class InterfacesUpdater(MIBUpdater):
         :return: the 0-based interface ID.
         """
         if sub_id:
-            return self.get_oid(sub_id) - 1
+            return self.get_oid(sub_id)
 
     def interface_description(self, sub_id):
         """
