@@ -204,6 +204,26 @@ class TestSonicMIB(TestCase):
 
         self._check_getpdu(sub_id, expected_mib)
 
+    def test_getpdu_xcvr_info_port_disable(self):
+        sub_id = get_transceiver_sub_id(2)[0]
+
+        expected_mib = {
+            2: (ValueType.OCTET_STRING, "QSFP-DD"),
+            4: (ValueType.INTEGER, CHASSIS_SUB_ID),
+            5: (ValueType.INTEGER, PhysicalClass.PORT),
+            6: (ValueType.INTEGER, -1),
+            7: (ValueType.OCTET_STRING, "Ethernet1"),
+            8: (ValueType.OCTET_STRING, "A1"),
+            9: (ValueType.OCTET_STRING, ""), # skip
+            10: (ValueType.OCTET_STRING, ""), # skip
+            11: (ValueType.OCTET_STRING, "SERIAL_NUM"),
+            12: (ValueType.OCTET_STRING, "VENDOR_NAME"),
+            13: (ValueType.OCTET_STRING, "MODEL_NAME"),
+            16: (ValueType.INTEGER, 1)
+        }
+
+        self._check_getpdu(sub_id, expected_mib)
+
     def test_getpdu_xcvr_dom(self):
         expected_mib = {
             get_transceiver_sensor_sub_id(1, SENSOR_TYPE_TEMP)[0]: "DOM Temperature Sensor for etp1",
