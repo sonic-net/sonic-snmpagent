@@ -20,20 +20,19 @@ from ax_interface.pdu import PDU, PDUHeader
 from ax_interface.mib import MIBTable
 from sonic_ax_impl.mibs.ietf import rfc1213
 from sonic_ax_impl import mibs
-import tests.mock_tables.mock_mgmt_oper_status
 from mock import patch
 
-@patch('sonic_ax_impl.mibs.ietf.rfc1213.InterfacesUpdater.if_operstate_file', mgmt_iface_status)
 class TestGetNextPDU(TestCase):
     @classmethod
     def setUpClass(cls):
         tests.mock_tables.dbconnector.load_namespace_config()
         importlib.reload(rfc1213)
         cls.lut = MIBTable(rfc1213.InterfacesMIB)
-        for updater in cls.lut.updater_instances:
-           updater.update_data()
-           updater.reinit_data()
-           updater.update_data()
+        with mock.patch('sonic_ax_impl.mibs.ietf.rfc1213.InterfacesUpdater.if_operstate_file', mgmt_iface_status):
+           for updater in cls.lut.updater_instances:
+               updater.update_data()
+               updater.reinit_data()
+               updater.update_data()
 
     def test_getnextpdu_noneifindex(self):
         # oid.include = 1

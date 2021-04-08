@@ -205,6 +205,7 @@ class InterfacesUpdater(MIBUpdater):
         self.if_id_map = {}
         self.oid_name_map = {}
         self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
+        self.mgmt_oper_status = {}
 
     def reinit_data(self):
         """
@@ -241,6 +242,14 @@ class InterfacesUpdater(MIBUpdater):
                                list(self.oid_lag_name_map.keys()) +
                                list(self.mgmt_oid_name_map.keys()))
         self.if_range = [(i,) for i in self.if_range]
+        """
+        For multi-asic platform, operstatus of 
+        management iface is not stored in state db,
+        Retrieve oper status from sys/class/net
+        """
+        if len(self.db_conn) > 1:
+            for mgmt_oid,if_name in self.mgmt_oid_name_map.items():
+                self.mgmt_oper_status[mgmt_oid] = self._get_mgmt_oper_status(if_name)
 
     def get_next(self, sub_id):
         """
@@ -370,7 +379,6 @@ class InterfacesUpdater(MIBUpdater):
         status = "unknown"
         if_operstate_file = self.if_operstate_file.format(if_name)
         if os.path.exists(if_operstate_file):
-            return "up"
             file = open(if_operstate_file, "r")
             if file is not None:
                 status = file.readline().strip()
@@ -395,8 +403,11 @@ class InterfacesUpdater(MIBUpdater):
             Retrieve oper status from sys/class/net
             """
             if len(self.db_conn) > 1:
-                state = self._get_mgmt_oper_status(mgmt_if_name)
-                return {"oper_status":state}
+                if oid in self.mgmt_oper_status:
+                    state = self.mgmt_oper_status[oid]
+                    return {"oper_status":state}
+                else:
+                    return None
             else:
                 if_table = mibs.mgmt_if_entry_table_state_db(mgmt_if_name)
         else:
