@@ -3,6 +3,7 @@ import python_arptable
 import socket
 from enum import unique, Enum
 from bisect import bisect_right
+import os
 
 from sonic_ax_impl import mibs
 from sonic_ax_impl.mibs import Namespace
@@ -184,6 +185,7 @@ class IpMib(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.4'):
 class InterfacesUpdater(MIBUpdater):
 
     RFC1213_MAX_SPEED = 4294967295
+    if_operstate_file = "/sys/class/net/{}/operstate"
 
     def __init__(self):
         super().__init__()
@@ -359,6 +361,21 @@ class InterfacesUpdater(MIBUpdater):
 
         return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=True)
 
+
+    def _get_mgmt_oper_status(self, if_name):
+        """
+        :param if_name: mgmt interface name
+        :return: operation status string
+        """
+        status = "unknown"
+        if_operstate_file = self.if_operstate_file.format(if_name)
+        if os.path.exists(if_operstate_file):
+            return "up"
+            file = open(if_operstate_file, "r")
+            if file is not None:
+                status = file.readline().strip()
+        return status
+
     def _get_if_entry_state_db(self, sub_id):
         """
         :param oid: The 1-based sub-identifier query.
@@ -372,7 +389,16 @@ class InterfacesUpdater(MIBUpdater):
         db = mibs.STATE_DB
         if oid in self.mgmt_oid_name_map:
             mgmt_if_name = self.mgmt_oid_name_map[oid]
-            if_table = mibs.mgmt_if_entry_table_state_db(mgmt_if_name)
+            """
+            For multi-asic platform, operstatus of 
+            management iface is not stored in state db,
+            Retrieve oper status from sys/class/net
+            """
+            if len(self.db_conn) > 1:
+                state = self._get_mgmt_oper_status(mgmt_if_name)
+                return {"oper_status":state}
+            else:
+                if_table = mibs.mgmt_if_entry_table_state_db(mgmt_if_name)
         else:
             return None
 
