@@ -2,6 +2,7 @@ import ipaddress
 import python_arptable
 from enum import unique, Enum
 from bisect import bisect_right
+import os
 
 from sonic_ax_impl import mibs
 from sonic_ax_impl.mibs import Namespace
@@ -184,6 +185,7 @@ class IpMib(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.4'):
 class InterfacesUpdater(MIBUpdater):
 
     RFC1213_MAX_SPEED = 4294967295
+    if_operstate_file = "/sys/class/net/{}/operstate"
 
     def __init__(self):
         super().__init__()
@@ -203,6 +205,7 @@ class InterfacesUpdater(MIBUpdater):
         self.if_id_map = {}
         self.oid_name_map = {}
         self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
+        self.mgmt_oper_status = {}
 
     def reinit_data(self):
         """
@@ -239,6 +242,14 @@ class InterfacesUpdater(MIBUpdater):
                                list(self.oid_lag_name_map.keys()) +
                                list(self.mgmt_oid_name_map.keys()))
         self.if_range = [(i,) for i in self.if_range]
+        """
+        For multi-asic platform, operstatus of 
+        management iface is not stored in state db,
+        Retrieve oper status from sys/class/net
+        """
+        if len(self.db_conn) > 1:
+            for mgmt_oid,if_name in self.mgmt_oid_name_map.items():
+                self.mgmt_oper_status[mgmt_oid] = self._get_mgmt_oper_status(if_name)
 
     def get_next(self, sub_id):
         """
@@ -358,6 +369,19 @@ class InterfacesUpdater(MIBUpdater):
 
         return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=True)
 
+    def _get_mgmt_oper_status(self, if_name):
+        """
+        :param if_name: mgmt interface name
+        :return: operation status string
+        """
+        status = "unknown"
+        if_operstate_file = self.if_operstate_file.format(if_name.decode())
+        if os.path.exists(if_operstate_file):
+            file = open(if_operstate_file, "r")
+            if file is not None:
+                status = file.readline().strip()
+        return status
+
     def _get_if_entry_state_db(self, sub_id):
         """
         :param oid: The 1-based sub-identifier query.
@@ -370,8 +394,15 @@ class InterfacesUpdater(MIBUpdater):
         if_table = ""
         db = mibs.STATE_DB
         if oid in self.mgmt_oid_name_map:
-            mgmt_if_name = self.mgmt_oid_name_map[oid]
-            if_table = mibs.mgmt_if_entry_table_state_db(mgmt_if_name)
+            if len(self.db_conn) > 1:
+                if oid in self.mgmt_oper_status:
+                    state = self.mgmt_oper_status[oid]
+                    return {b"oper_status":state.encode()}
+                else:
+                    return None
+            else:
+                mgmt_if_name = self.mgmt_oid_name_map[oid]
+                if_table = mibs.mgmt_if_entry_table_state_db(mgmt_if_name)
         else:
             return None
 
