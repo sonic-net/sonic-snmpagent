@@ -315,8 +315,8 @@ class TestSonicMIB(TestCase):
         expected_values = [
             rfc3433.EntitySensorDataType.CELSIUS,
             rfc3433.EntitySensorDataScale.UNITS,
-            1, # precision
-            205, # expected sensor value
+            3, # precision
+            20500, # expected sensor value
             rfc3433.EntitySensorStatus.OK
         ]
 

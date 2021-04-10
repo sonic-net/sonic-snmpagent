@@ -17,10 +17,7 @@ from .physical_entity_sub_oid_generator import get_fan_tachometers_sub_id
 from .physical_entity_sub_oid_generator import get_psu_sub_id
 from .physical_entity_sub_oid_generator import get_psu_sensor_sub_id
 from .physical_entity_sub_oid_generator import get_chassis_thermal_sub_id
-from .transceiver_sensor_data import TransceiverSensorData
-from .psu_sensor_data import PSUSensorData
-from .fan_sensor_data import FANSensorData
-from .thermal_sensor_data import ThermalSensorData
+from .sensor_data import ThermalSensorData, FANSensorData, PSUSensorData, TransceiverSensorData
 
 NOT_AVAILABLE = 'N/A'
 
@@ -330,7 +327,7 @@ class ThermalSensor(SensorInterface):
 
     TYPE = EntitySensorDataType.CELSIUS
     SCALE = EntitySensorDataScale.UNITS
-    PRECISION = 1
+    PRECISION = 3
 
 
 ThermalSensorData.bind_sensor_interface({
