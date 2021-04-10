@@ -157,9 +157,12 @@ def get_transceiver_description(sfp_type, if_alias):
     :param if_alias: Port alias name
     :return: Transceiver decsription
     """
+    if not if_alias:
+        description = "{}".format(sfp_type)
+    else:
+        description = "{} for {}".format(sfp_type, if_alias)
 
-    return "{} for {}".format(sfp_type, if_alias)
-
+    return description
 
 def get_transceiver_sensor_description(name, lane_number, if_alias):
     """
