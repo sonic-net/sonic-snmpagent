@@ -21,8 +21,7 @@ from .physical_entity_sub_oid_generator import get_psu_sub_id
 from .physical_entity_sub_oid_generator import get_psu_sensor_sub_id
 from .physical_entity_sub_oid_generator import get_transceiver_sub_id
 from .physical_entity_sub_oid_generator import get_transceiver_sensor_sub_id
-from .transceiver_sensor_data import TransceiverSensorData
-
+from .sensor_data import TransceiverSensorData
 
 @unique
 class PhysicalClass(int, Enum):
