@@ -48,7 +48,7 @@ class TestSonicMIB(TestCase):
         return [ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 99, 1, 1, 1, i, sub_id))
                 for i in range(1, 5)]
 
-    def _test_getpdu_xcvr_sensor(self, sub_id, expected_values):
+    def _test_getpdu_sensor(self, sub_id, expected_values):
         """
         Test case for correctness of transceiver sensor MIB values
         :param sub_id: sub OID of the sensor
@@ -75,7 +75,7 @@ class TestSonicMIB(TestCase):
 
     def test_getpdu_xcvr_temperature_sensor(self):
         """
-        Test case for correct transceiver temperature sensor MIB values
+        Test case for correctness of transceiver temperature sensor MIB values
         """
         expected_values = [
             rfc3433.EntitySensorDataType.CELSIUS,
@@ -85,12 +85,12 @@ class TestSonicMIB(TestCase):
             rfc3433.EntitySensorStatus.OK
         ]
 
-        self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_TEMP)[0], expected_values)
+        self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_TEMP)[0], expected_values)
 
 
     def test_getpdu_xcvr_temperature_sensor_asic1(self):
         """
-        Test case for correct transceiver temperature sensor MIB values
+        Test case for correctness of transceiver temperature sensor MIB values
         """
         print(rfc3433.PhysicalSensorTableMIB.updater.sub_ids)
         expected_values = [
@@ -101,11 +101,11 @@ class TestSonicMIB(TestCase):
             rfc3433.EntitySensorStatus.OK
         ]
 
-        self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX_ASIC1, SENSOR_TYPE_TEMP)[0], expected_values)
+        self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX_ASIC1, SENSOR_TYPE_TEMP)[0], expected_values)
 
     def test_getpdu_xcvr_voltage_sensor(self):
         """
-        Test case for correct transceiver voltage sensor MIB values
+        Test case for correctness of transceiver voltage sensor MIB values
         """
 
         expected_values = [
@@ -116,12 +116,12 @@ class TestSonicMIB(TestCase):
             rfc3433.EntitySensorStatus.OK
         ]
 
-        self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_VOLTAGE)[0], expected_values)
+        self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_VOLTAGE)[0], expected_values)
 
 
     def test_getpdu_xcvr_voltage_sensor_asic1(self):
         """
-        Test case for correct transceiver voltage sensor MIB values
+        Test case for correctness of transceiver voltage sensor MIB values
         """
 
         expected_values = [
@@ -132,11 +132,11 @@ class TestSonicMIB(TestCase):
             rfc3433.EntitySensorStatus.OK
         ]
 
-        self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX_ASIC1, SENSOR_TYPE_VOLTAGE)[0], expected_values)
+        self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX_ASIC1, SENSOR_TYPE_VOLTAGE)[0], expected_values)
 
     def test_getpdu_xcvr_rx_power_sensor_minus_infinity(self):
         """
-        Test case for correct transceiver rx power sensor MIB values
+        Test case for correctness of transceiver rx power sensor MIB values
         in case when rx power == -inf
         """
 
@@ -148,11 +148,11 @@ class TestSonicMIB(TestCase):
             rfc3433.EntitySensorStatus.OK
         ]
 
-        self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, 1 + SENSOR_TYPE_PORT_RX_POWER)[0], expected_values)
+        self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, 1 + SENSOR_TYPE_PORT_RX_POWER)[0], expected_values)
 
     def test_getpdu_xcvr_rx_power_sensor(self):
         """
-        Test case for correct transceiver rx power sensor MIB values
+        Test case for correctness of transceiver rx power sensor MIB values
         """
 
         expected_values = [
@@ -165,11 +165,11 @@ class TestSonicMIB(TestCase):
 
         # test for each channel except first, we already test above
         for channel in (2, 3, 4):
-            self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_PORT_RX_POWER + channel)[0], expected_values)
+            self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_PORT_RX_POWER + channel)[0], expected_values)
 
     def test_getpdu_xcvr_tx_power_sensor(self):
         """
-        Test case for correct transceiver rx power sensor MIB values
+        Test case for correctness of transceiver rx power sensor MIB values
         """
 
         expected_values = [
@@ -182,11 +182,11 @@ class TestSonicMIB(TestCase):
 
         # test for each channel except first, we already test above
         for channel in (1, 2, 3, 4):
-            self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_PORT_TX_POWER + channel)[0], expected_values)
+            self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_PORT_TX_POWER + channel)[0], expected_values)
 
     def test_getpdu_xcvr_tx_bias_sensor_unknown(self):
         """
-        Test case for correct transceiver tx bias sensor MIB values, when
+        Test case for correctness of transceiver tx bias sensor MIB values, when
         tx bias sensor is set to "UNKNOWN" in state DB
         """
 
@@ -198,11 +198,11 @@ class TestSonicMIB(TestCase):
             rfc3433.EntitySensorStatus.UNAVAILABLE
         ]
 
-        self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, 1 + SENSOR_TYPE_PORT_TX_BIAS)[0], expected_values)
+        self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, 1 + SENSOR_TYPE_PORT_TX_BIAS)[0], expected_values)
 
     def test_getpdu_xcvr_tx_bias_sensor_overflow(self):
         """
-        Test case for correct transceiver tx bias sensor MIB values
+        Test case for correctness of transceiver tx bias sensor MIB values
         when tx bias is grater than 1E9
         """
 
@@ -214,11 +214,11 @@ class TestSonicMIB(TestCase):
             rfc3433.EntitySensorStatus.OK
         ]
 
-        self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, 3 + SENSOR_TYPE_PORT_TX_BIAS)[0], expected_values)
+        self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, 3 + SENSOR_TYPE_PORT_TX_BIAS)[0], expected_values)
 
     def test_getpdu_xcvr_tx_bias_sensor(self):
         """
-        Test case for correct transceiver tx bias sensor MIB values
+        Test case for correctness of transceiver tx bias sensor MIB values
         """
 
         expected_values = [
@@ -231,5 +231,5 @@ class TestSonicMIB(TestCase):
 
         # test for each channel
         for channel in (2, 4):
-            self._test_getpdu_xcvr_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_PORT_TX_BIAS + channel)[0], expected_values)
+            self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_PORT_TX_BIAS + channel)[0], expected_values)
 
