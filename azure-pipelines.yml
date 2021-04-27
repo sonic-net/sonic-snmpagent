@@ -44,6 +44,8 @@ stages:
 
     - script: |
         set -ex
+        wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+sudo dpkg -i packages-microsoft-prod.deb
 
         sudo dpkg -i ../target/debs/buster/{libswsscommon_1.0.0_amd64.deb,python3-swsscommon_1.0.0_amd64.deb,libnl-3-200_*.deb,libnl-genl-3-200_*.deb,libnl-nf-3-200_*.deb,libnl-route-3-200_*.deb,libhiredis0.14_*.deb}
         sudo python3 -m pip install ../target/python-wheels/swsssdk*-py3-*.whl
