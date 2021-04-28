@@ -14,7 +14,7 @@ pr:
     - master
 
 variables:
-  disable.coverage.autogenerate: 'true'
+  disable.coverage.autogenerate: 'false'
 
 stages:
 - stage: Build
