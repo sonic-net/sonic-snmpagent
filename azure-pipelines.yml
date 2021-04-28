@@ -13,6 +13,9 @@ pr:
     include:
     - master
 
+variables:
+  disable.coverage.autogenerate: 'true'
+
 stages:
 - stage: Build
   jobs:
