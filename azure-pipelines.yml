@@ -67,6 +67,10 @@ stages:
         sudo python3 -m pip install dist/asyncsnmp-2.1.0-py3-none-any.whl
         python3 setup.py test
       displayName: "Unit tests"
+    - script: |
+        find .
+      displayName: "Show files"
+
 
     - task: PublishTestResults@2
       inputs:
