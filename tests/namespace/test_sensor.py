@@ -17,6 +17,12 @@ from ax_interface import ValueType
 from ax_interface.encodings import ObjectIdentifier
 from ax_interface.constants import PduTypes
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_transceiver_sub_id, get_transceiver_sensor_sub_id
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_psu_sub_id
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_psu_sensor_sub_id
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_fan_drawer_sub_id
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_fan_sub_id
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_fan_tachometers_sub_id
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_chassis_thermal_sub_id
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import SENSOR_TYPE_TEMP
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import SENSOR_TYPE_VOLTAGE
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import SENSOR_TYPE_PORT_RX_POWER
@@ -36,6 +42,11 @@ class TestSonicMIB(TestCase):
         cls.XCVR_SUB_ID = get_transceiver_sub_id(cls.IFINDEX)
         cls.XCVR_SUB_ID_ASIC1 = get_transceiver_sub_id(cls.IFINDEX_ASIC1)
         cls.XCVR_CHANNELS = (1, 2, 3, 4)
+        cls.PSU_POSITION = 2
+        cls.FAN_DRAWER_POSITION = 1
+        cls.FAN_POSITION = 1
+        cls.PSU_FAN_POSITION = 1
+        cls.THERMAL_POSITION = 1
 
         # Update MIBs
         for updater in cls.lut.updater_instances:
@@ -233,3 +244,117 @@ class TestSonicMIB(TestCase):
         for channel in (2, 4):
             self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_PORT_TX_BIAS + channel)[0], expected_values)
 
+    def test_getpdu_psu_temp_sensor(self):
+        """
+        Test case for correctness of psu temperature sensor MIB values
+        """
+
+        expected_values = [
+            rfc3433.EntitySensorDataType.CELSIUS,
+            rfc3433.EntitySensorDataScale.UNITS,
+            3, # precision
+            31100, # expected sensor value
+            rfc3433.EntitySensorStatus.OK
+        ]
+
+        psu_sub_id = get_psu_sub_id(self.PSU_POSITION)
+        self._test_getpdu_sensor(get_psu_sensor_sub_id(psu_sub_id, "temperature")[0], expected_values)
+
+    def test_getpdu_psu_voltage_sensor(self):
+        """
+        Test case for correctness of psu voltage sensor MIB values
+        """
+
+        expected_values = [
+            rfc3433.EntitySensorDataType.VOLTS_DC,
+            rfc3433.EntitySensorDataScale.UNITS,
+            3, # precision
+            13100, # expected sensor value
+            rfc3433.EntitySensorStatus.OK
+        ]
+
+        psu_sub_id = get_psu_sub_id(self.PSU_POSITION)
+        self._test_getpdu_sensor(get_psu_sensor_sub_id(psu_sub_id, "voltage")[0], expected_values)
+
+    def test_getpdu_psu_power_sensor(self):
+        """
+        Test case for correctness of psu voltage sensor MIB values
+        """
+
+        expected_values = [
+            rfc3433.EntitySensorDataType.WATTS,
+            rfc3433.EntitySensorDataScale.UNITS,
+            3, # precision
+            312600, # expected sensor value
+            rfc3433.EntitySensorStatus.OK
+        ]
+
+        psu_sub_id = get_psu_sub_id(self.PSU_POSITION)
+        self._test_getpdu_sensor(get_psu_sensor_sub_id(psu_sub_id, "power")[0], expected_values)
+
+    def test_getpdu_psu_current_sensor(self):
+        """
+        Test case for correctness of psu current sensor MIB values
+        """
+
+        expected_values = [
+            rfc3433.EntitySensorDataType.AMPERES,
+            rfc3433.EntitySensorDataScale.UNITS,
+            3, # precision
+            13400, # expected sensor value
+            rfc3433.EntitySensorStatus.OK
+        ]
+
+        psu_sub_id = get_psu_sub_id(self.PSU_POSITION)
+        self._test_getpdu_sensor(get_psu_sensor_sub_id(psu_sub_id, "current")[0], expected_values)
+
+    def test_getpdu_chassis_fan_speed_sensor(self):
+        """
+        Test case for correctness of fan speed sensor MIB values
+        """
+
+        expected_values = [
+            rfc3433.EntitySensorDataType.UNKNOWN,
+            rfc3433.EntitySensorDataScale.UNITS,
+            0, # precision
+            50, # expected sensor value
+            rfc3433.EntitySensorStatus.OK
+        ]
+
+        fan_parent_sub_id = get_fan_drawer_sub_id(self.FAN_DRAWER_POSITION)
+        fan_sub_id = get_fan_sub_id(fan_parent_sub_id, self.FAN_POSITION)
+
+        self._test_getpdu_sensor(get_fan_tachometers_sub_id(fan_sub_id)[0], expected_values)
+
+    def test_getpdu_psu_fan_speed_sensor(self):
+        """
+        Test case for correctness of psu fan speed sensor MIB values
+        """
+
+        expected_values = [
+            rfc3433.EntitySensorDataType.UNKNOWN,
+            rfc3433.EntitySensorDataScale.UNITS,
+            0, # precision
+            57, # expected sensor value
+            rfc3433.EntitySensorStatus.OK
+        ]
+
+        psu_sub_id = get_psu_sub_id(self.PSU_POSITION)
+        fan_sub_id = get_fan_sub_id(psu_sub_id, self.PSU_FAN_POSITION)
+
+        self._test_getpdu_sensor(get_fan_tachometers_sub_id(fan_sub_id)[0], expected_values)
+
+    def test_getpdu_chassis_temp_sensor(self):
+        """
+        Test case for correctness of chassis temp sensors MIB values
+        """
+
+        expected_values = [
+            rfc3433.EntitySensorDataType.CELSIUS,
+            rfc3433.EntitySensorDataScale.UNITS,
+            3, # precision
+            20500, # expected sensor value
+            rfc3433.EntitySensorStatus.OK
+        ]
+
+        self._test_getpdu_sensor(get_chassis_thermal_sub_id(self.THERMAL_POSITION)[0], expected_values)
