@@ -8,6 +8,7 @@ from bisect import bisect_right
 from swsssdk import port_util
 from ax_interface import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry
 from sonic_ax_impl import mibs
+from sonic_ax_impl.mibs import HOST_NAMESPACE_DB_IDX
 from sonic_ax_impl.mibs import Namespace
 from .physical_entity_sub_oid_generator import CHASSIS_SUB_ID
 from .physical_entity_sub_oid_generator import get_transceiver_sensor_sub_id
@@ -390,15 +391,18 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
 
         # for FAN, PSU and thermal sensors, they are in host namespace DB, to avoid iterating all namespace DBs,
         # just get data from host namespace DB, which is self.statedb[0].
-        fan_sensor_encoded = self.statedb[0].keys(self.statedb[0].STATE_DB, self.FAN_SENSOR_KEY_PATTERN)
+        fan_sensor_encoded = self.statedb[HOST_NAMESPACE_DB_IDX].keys(self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB,
+                                                                      self.FAN_SENSOR_KEY_PATTERN)
         if fan_sensor_encoded:
             self.fan_sensor = [entry for entry in fan_sensor_encoded]
 
-        psu_sensor_encoded = self.statedb[0].keys(self.statedb[0].STATE_DB, self.PSU_SENSOR_KEY_PATTERN)
+        psu_sensor_encoded = self.statedb[HOST_NAMESPACE_DB_IDX].keys(self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB,
+                                                                      self.PSU_SENSOR_KEY_PATTERN)
         if psu_sensor_encoded:
             self.psu_sensor = [entry for entry in psu_sensor_encoded]
 
-        thermal_sensor_encoded = self.statedb[0].keys(self.statedb[0].STATE_DB, self.THERMAL_SENSOR_KEY_PATTERN)
+        thermal_sensor_encoded = self.statedb[HOST_NAMESPACE_DB_IDX].keys(self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB,
+                                                                          self.THERMAL_SENSOR_KEY_PATTERN)
         if thermal_sensor_encoded:
             self.thermal_sensor = [entry for entry in thermal_sensor_encoded]
 
@@ -451,15 +455,16 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
 
         for psu_sensor_entry in self.psu_sensor:
             psu_name = psu_sensor_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
-            psu_relation_info = self.statedb[0].get_all(self.statedb[0].STATE_DB,
-                                                        mibs.physical_entity_info_table(psu_name))
+            psu_relation_info = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, mibs.physical_entity_info_table(psu_name))
             psu_position, psu_parent_name = get_db_data(psu_relation_info, PhysicalRelationInfoDB)
             if is_null_empty_str(psu_position):
                 continue
             psu_position = int(psu_position)
             psu_sub_id = get_psu_sub_id(psu_position)
 
-            psu_sensor_entry_data = self.statedb[0].get_all(self.statedb[0].STATE_DB, psu_sensor_entry)
+            psu_sensor_entry_data = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, psu_sensor_entry)
 
             if not psu_sensor_entry_data:
                 continue
@@ -494,8 +499,8 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         fan_parent_sub_id = 0
         for fan_sensor_entry in self.fan_sensor:
             fan_name = fan_sensor_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
-            fan_relation_info = self.statedb[0].get_all(self.statedb[0].STATE_DB,
-                                                        mibs.physical_entity_info_table(fan_name))
+            fan_relation_info = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, mibs.physical_entity_info_table(fan_name))
             fan_position, fan_parent_name = get_db_data(fan_relation_info, PhysicalRelationInfoDB)
             if is_null_empty_str(fan_position):
                 continue
@@ -505,8 +510,8 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
             if CHASSIS_NAME_SUB_STRING in fan_parent_name:
                 fan_parent_sub_id = (CHASSIS_SUB_ID,)
             else:
-                fan_parent_relation_info = self.statedb[0].get_all(self.statedb[0].STATE_DB,
-                                                                   mibs.physical_entity_info_table(fan_parent_name))
+                fan_parent_relation_info = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                    self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, mibs.physical_entity_info_table(fan_parent_name))
                 if fan_parent_relation_info:
                     fan_parent_position, fan_grad_parent_name = get_db_data(fan_parent_relation_info,
                                                                             PhysicalRelationInfoDB)
@@ -523,7 +528,8 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
 
             fan_sub_id = get_fan_sub_id(fan_parent_sub_id, fan_position)
 
-            fan_sensor_entry_data = self.statedb[0].get_all(self.statedb[0].STATE_DB, fan_sensor_entry)
+            fan_sensor_entry_data = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, fan_sensor_entry)
 
             if not fan_sensor_entry_data:
                 mibs.logger.error("fan_name = {} get fan_sensor_entry_data failed".format(fan_name))
@@ -558,8 +564,8 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
 
         for thermal_sensor_entry in self.thermal_sensor:
             thermal_name = thermal_sensor_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
-            thermal_relation_info = self.statedb[0].get_all(self.statedb[0].STATE_DB,
-                                                            mibs.physical_entity_info_table(thermal_name))
+            thermal_relation_info = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, mibs.physical_entity_info_table(thermal_name))
             thermal_position, thermal_parent_name = get_db_data(thermal_relation_info, PhysicalRelationInfoDB)
 
             if is_null_empty_str(thermal_parent_name) or is_null_empty_str(thermal_parent_name) or \
@@ -568,7 +574,8 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
 
             thermal_position = int(thermal_position)
 
-            thermal_sensor_entry_data = self.statedb[0].get_all(self.statedb[0].STATE_DB, thermal_sensor_entry)
+            thermal_sensor_entry_data = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, thermal_sensor_entry)
 
             if not thermal_sensor_entry_data:
                 continue
