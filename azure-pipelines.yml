@@ -57,6 +57,12 @@ stages:
 
         sudo python3 -m pip install dist/asyncsnmp-2.1.0-py3-none-any.whl
         python3 setup.py test
+        
+        # Install .NET CORE
+        wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+        sudo dpkg -i packages-microsoft-prod.deb
+        sudo apt install dotnet-runtime-3.1
+        sudo apt-get install -y dotnet-sdk-5.0
       displayName: "Unit tests"
 
     - task: PublishTestResults@2
