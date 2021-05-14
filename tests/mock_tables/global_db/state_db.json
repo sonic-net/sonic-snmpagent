@@ -1,2 +1,127 @@
 {
+  "DEVICE_METADATA|localhost": {
+    "chassis_serial_number": "SAMPLETESTSN"
+  },
+  "PSU_INFO|PSU 1": {
+    "presence": "false",
+    "status": "false",
+    "current": "15.4",
+    "power": "302.6",
+    "voltage": "15.1",
+    "temp": "30.1"
+  },
+  "PSU_INFO|PSU 2": {
+    "presence": "true",
+    "status": "true",
+    "current": "13.4",
+    "power": "312.6",
+    "voltage": "13.1",
+    "temp": "31.1",
+    "model": "PSU_MODEL",
+    "serial": "PSU_SERIAL",
+    "is_replaceable": "True"
+  },
+  "PSU_INFO|PSU 3": {
+    "presence": "true",
+    "status": "false",
+    "current": "15.5",
+    "power": "302.8",
+    "voltage": "15.5",
+    "temp": "30.8"
+  },
+  "CHASSIS_INFO|chassis 1": {
+    "psu_num": "3"
+  },
+  "TRANSCEIVER_INFO|Ethernet0": {
+    "type": "QSFP+",
+    "hardware_rev": "A1",
+    "serial": "SERIAL_NUM",
+    "manufacturer": "VENDOR_NAME",
+    "model": "MODEL_NAME",
+    "is_replaceable": "True"
+  },
+  "TRANSCEIVER_INFO|Ethernet1": {
+    "type": "QSFP-DD",
+    "hardware_rev": "A1",
+    "serial": "SERIAL_NUM",
+    "manufacturer": "VENDOR_NAME",
+    "model": "MODEL_NAME",
+    "is_replaceable": "True"
+  },
+  "TRANSCEIVER_DOM_SENSOR|Ethernet0": {
+    "temperature": 25.39,
+    "voltage": 3.37,
+    "tx1bias": "N/A",
+    "tx2bias": 4.44,
+    "tx3bias": "inf",
+    "tx4bias": 4.44,
+    "rx1power": "-inf",
+    "rx2power": -0.97,
+    "rx3power": -0.97,
+    "rx4power": -0.97,
+    "tx1power": -5.4,
+    "tx2power": -5.4,
+    "tx3power": -5.4,
+    "tx4power": -5.4
+  },
+  "MGMT_PORT_TABLE|eth0": {
+    "oper_status": "down"
+  },
+  "MGMT_PORT_TABLE|eth1": {
+    "oper_status": "up"
+  },
+  "PHYSICAL_ENTITY_INFO|PSU 1": {
+    "position_in_parent": 1,
+    "parent_name": "chassis 1"
+  },
+  "PHYSICAL_ENTITY_INFO|PSU 2": {
+    "position_in_parent": 2,
+    "parent_name": "chassis 1"
+  },
+  "PHYSICAL_ENTITY_INFO|PSU 3": {
+    "position_in_parent": 3,
+    "parent_name": "chassis 1"
+  },
+  "PHYSICAL_ENTITY_INFO|drawer1": {
+    "position_in_parent": 1,
+    "parent_name": "chassis 1"
+  },
+  "PHYSICAL_ENTITY_INFO|fan1": {
+    "position_in_parent": 1,
+    "parent_name": "drawer1"
+  },
+  "PHYSICAL_ENTITY_INFO|thermal1": {
+    "position_in_parent": 1,
+    "parent_name": "chassis 1"
+  },
+  "PHYSICAL_ENTITY_INFO|psu_2_fan_1": {
+    "position_in_parent": "1",
+    "parent_name": "PSU 2"
+  },
+  "FAN_DRAWER_INFO|drawer1": {
+    "model": "DRAWERMODEL",
+    "serial": "DRAWERSERIAL",
+    "presence": "True",
+    "is_replaceable": "True"
+  },
+  "FAN_INFO|fan1": {
+    "model": "FANMODEL",
+    "serial": "FANSERIAL",
+    "speed": "50",
+    "presence": "True",
+    "is_replaceable": "True"
+  },
+  "FAN_INFO|psu_2_fan_1": {
+    "presence": "True",
+    "status": "True",
+    "speed": "57",
+    "drawer_name": "N/A",
+    "model": "PSUFANMODEL",
+    "serial": "PSUFANSERIAL",
+    "is_replaceable": "False"
+  },
+  "TEMPERATURE_INFO|thermal1": {
+    "temperature": "20.5",
+    "is_replaceable": "False"
+  }
 }
