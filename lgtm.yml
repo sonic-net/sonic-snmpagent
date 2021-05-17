@@ -1,0 +1,25 @@
+extraction:
+  python:
+    python_setup:
+      version: "3"
+    prepare:
+      packages:
+      - libxml-simple-perl
+      - aspell
+      - aspell-en
+      - libhiredis-dev
+      - libnl-3-dev
+      - libnl-genl-3-dev
+      - libnl-route-3-dev
+      - libnl-nf-3-dev
+      - libzmq3-dev
+      - libzmq5
+      - swig3.0
+      - libpython2.7-dev
+      - libgtest-dev
+      - dh-exec
+      - doxygen
+      - graphviz
+    after_prepare:
+      - git clone https://github.com/Azure/sonic-py-swsssdk.git; pushd sonic-py-swsssdk; python3 setup.py bdist_wheel; popd
+      - pip3 install --upgrade --user sonic-py-swsssdk/dist/swsssdk-2.0.1-py3-none-any.whl
