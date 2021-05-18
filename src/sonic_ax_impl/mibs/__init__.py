@@ -25,6 +25,8 @@ SNMP_OVERLAY_DB = 'SNMP_OVERLAY_DB'
 TABLE_NAME_SEPARATOR_COLON = ':'
 TABLE_NAME_SEPARATOR_VBAR = '|'
 
+HOST_NAMESPACE_DB_IDX = 0
+
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
 
 

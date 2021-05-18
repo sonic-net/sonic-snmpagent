@@ -94,6 +94,10 @@
     "position_in_parent": 1,
     "parent_name": "chassis 1"
   },
+  "PHYSICAL_ENTITY_INFO|psu_2_fan_1": {
+    "position_in_parent": "1",
+    "parent_name": "PSU 2"
+  },
   "FAN_DRAWER_INFO|drawer1": {
     "model": "DRAWERMODEL",
     "serial": "DRAWERSERIAL",
@@ -107,6 +111,15 @@
     "presence": "True",
     "is_replaceable": "True"
   },
+  "FAN_INFO|psu_2_fan_1": {
+    "presence": "True",
+    "status": "True",
+    "speed": "57",
+    "drawer_name": "N/A",
+    "model": "PSUFANMODEL",
+    "serial": "PSUFANSERIAL",
+    "is_replaceable": "False"
+},
   "TEMPERATURE_INFO|thermal1": {
     "temperature": "20.5",
     "is_replaceable": "False"

@@ -8,10 +8,52 @@ from bisect import bisect_right
 from swsssdk import port_util
 from ax_interface import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry
 from sonic_ax_impl import mibs
+from sonic_ax_impl.mibs import HOST_NAMESPACE_DB_IDX
 from sonic_ax_impl.mibs import Namespace
-
+from .physical_entity_sub_oid_generator import CHASSIS_SUB_ID
 from .physical_entity_sub_oid_generator import get_transceiver_sensor_sub_id
-from .transceiver_sensor_data import TransceiverSensorData
+from .physical_entity_sub_oid_generator import get_fan_drawer_sub_id
+from .physical_entity_sub_oid_generator import get_fan_sub_id
+from .physical_entity_sub_oid_generator import get_fan_tachometers_sub_id
+from .physical_entity_sub_oid_generator import get_psu_sub_id
+from .physical_entity_sub_oid_generator import get_psu_sensor_sub_id
+from .physical_entity_sub_oid_generator import get_chassis_thermal_sub_id
+from .sensor_data import ThermalSensorData, FANSensorData, PSUSensorData, TransceiverSensorData
+
+NOT_AVAILABLE = 'N/A'
+CHASSIS_NAME_SUB_STRING = 'chassis'
+PSU_NAME_SUB_STRING = 'PSU'
+
+
+def is_null_empty_str(value):
+    """
+    Indicate if a string value is null
+    :param value: input string value
+    :return: True is string value is empty or equal to 'N/A' or 'None'
+    """
+    if not isinstance(value, str) or value == NOT_AVAILABLE or value == 'None' or value == '':
+        return True
+    return False
+
+
+def get_db_data(info_dict, enum_type):
+    """
+    :param info_dict: db info dict
+    :param enum_type: db field enum
+    :return: tuple of fields values defined in enum_type;
+    Empty string if field not in info_dict
+    """
+    return (info_dict.get(field.value, "")
+            for field in enum_type)
+
+
+@unique
+class PhysicalRelationInfoDB(str, Enum):
+    """
+    Physical relation info keys
+    """
+    POSITION_IN_PARENT    = 'position_in_parent'
+    PARENT_NAME           = 'parent_name'
 
 
 @unique
@@ -100,7 +142,6 @@ class SensorInterface:
     TYPE = None
     PRECISION = None
     CONVERTER = None
-
 
     @classmethod
     def mib_values(cls, raw_value):
@@ -219,12 +260,93 @@ TransceiverSensorData.bind_sensor_interface({
 })
 
 
+class PSUTempSensor(SensorInterface):
+    """
+    PSU temperature sensor.
+    """
+
+    TYPE = EntitySensorDataType.CELSIUS
+    SCALE = EntitySensorDataScale.UNITS
+    PRECISION = 3
+
+
+class PSUVoltageSensor(SensorInterface):
+    """
+    PSU voltage sensor.
+    """
+
+    TYPE = EntitySensorDataType.VOLTS_DC
+    SCALE = EntitySensorDataScale.UNITS
+    PRECISION = 3
+
+
+class PSUCurrentSensor(SensorInterface):
+    """
+    PSU current sensor.
+    """
+
+    TYPE = EntitySensorDataType.AMPERES
+    SCALE = EntitySensorDataScale.UNITS
+    PRECISION = 3
+
+
+class PSUPowerSensor(SensorInterface):
+    """
+    PSU power sensor.
+    """
+
+    TYPE = EntitySensorDataType.WATTS
+    SCALE = EntitySensorDataScale.UNITS
+    PRECISION = 3
+
+
+PSUSensorData.bind_sensor_interface({
+    'temperature': PSUTempSensor,
+    'voltage'    : PSUVoltageSensor,
+    'power'      : PSUPowerSensor,
+    'current'    : PSUCurrentSensor
+})
+
+
+class FANSpeedSensor(SensorInterface):
+    """
+    FAN speed sensor.
+    """
+
+    TYPE = EntitySensorDataType.UNKNOWN
+    SCALE = EntitySensorDataScale.UNITS
+    PRECISION = 0
+
+
+FANSensorData.bind_sensor_interface({
+    'speed': FANSpeedSensor
+})
+
+
+class ThermalSensor(SensorInterface):
+    """
+    Temperature sensor.
+    """
+
+    TYPE = EntitySensorDataType.CELSIUS
+    SCALE = EntitySensorDataScale.UNITS
+    PRECISION = 3
+
+
+ThermalSensorData.bind_sensor_interface({
+    'temperature': ThermalSensor
+})
+
+
 class PhysicalSensorTableMIBUpdater(MIBUpdater):
     """
     Updater for sensors.
     """
 
     TRANSCEIVER_DOM_KEY_PATTERN = mibs.transceiver_dom_table("*")
+    PSU_SENSOR_KEY_PATTERN = mibs.psu_info_table("*")
+    FAN_SENSOR_KEY_PATTERN = mibs.fan_info_table("*")
+    THERMAL_SENSOR_KEY_PATTERN = mibs.thermal_info_table("*")
 
     def __init__(self):
         """
@@ -239,7 +361,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         # list of available sub OIDs
         self.sub_ids = []
 
-        # sensor MIB requiered values
+        # sensor MIB required values
         self.ent_phy_sensor_type_map = {}
         self.ent_phy_sensor_scale_map = {}
         self.ent_phy_sensor_precision_map = {}
@@ -247,6 +369,9 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         self.ent_phy_sensor_oper_state_map = {}
 
         self.transceiver_dom = []
+        self.fan_sensor = []
+        self.psu_sensor = []
+        self.thermal_sensor = []
 
     def reinit_data(self):
         """
@@ -260,18 +385,28 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         self.ent_phy_sensor_value_map = {}
         self.ent_phy_sensor_oper_state_map = {}
 
-        transceiver_dom_encoded = Namespace.dbs_keys(self.statedb, mibs.STATE_DB,
-                                                    self.TRANSCEIVER_DOM_KEY_PATTERN)
+        transceiver_dom_encoded = Namespace.dbs_keys(self.statedb, mibs.STATE_DB, self.TRANSCEIVER_DOM_KEY_PATTERN)
         if transceiver_dom_encoded:
             self.transceiver_dom = [entry for entry in transceiver_dom_encoded]
 
-    def update_data(self):
-        """
-        Update sensors cache.
-        """
+        # for FAN, PSU and thermal sensors, they are in host namespace DB, to avoid iterating all namespace DBs,
+        # just get data from host namespace DB, which is self.statedb[0].
+        fan_sensor_encoded = self.statedb[HOST_NAMESPACE_DB_IDX].keys(self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB,
+                                                                      self.FAN_SENSOR_KEY_PATTERN)
+        if fan_sensor_encoded:
+            self.fan_sensor = [entry for entry in fan_sensor_encoded]
 
-        self.sub_ids = []
+        psu_sensor_encoded = self.statedb[HOST_NAMESPACE_DB_IDX].keys(self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB,
+                                                                      self.PSU_SENSOR_KEY_PATTERN)
+        if psu_sensor_encoded:
+            self.psu_sensor = [entry for entry in psu_sensor_encoded]
 
+        thermal_sensor_encoded = self.statedb[HOST_NAMESPACE_DB_IDX].keys(self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB,
+                                                                          self.THERMAL_SENSOR_KEY_PATTERN)
+        if thermal_sensor_encoded:
+            self.thermal_sensor = [entry for entry in thermal_sensor_encoded]
+
+    def update_xcvr_dom_data(self):
         if not self.transceiver_dom:
             return
 
@@ -288,8 +423,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
                 continue
 
             # get transceiver sensors from transceiver dom entry in STATE DB
-            transceiver_dom_entry_data = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB,
-                                                              transceiver_dom_entry)
+            transceiver_dom_entry_data = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB, transceiver_dom_entry)
 
             if not transceiver_dom_entry_data:
                 continue
@@ -303,18 +437,186 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
                 try:
                     mib_values = sensor.mib_values(raw_sensor_value)
                 except (ValueError, ArithmeticError):
-                    mibs.logger.error("Exception occured when converting"
+                    mibs.logger.error("Exception occurred when converting"
                                       "value for sensor {} interface {}".format(sensor, interface))
-                    # skip
                     continue
                 else:
                     self.ent_phy_sensor_type_map[sub_id], \
-                    self.ent_phy_sensor_scale_map[sub_id], \
-                    self.ent_phy_sensor_precision_map[sub_id], \
-                    self.ent_phy_sensor_value_map[sub_id], \
-                    self.ent_phy_sensor_oper_state_map[sub_id] = mib_values
+                        self.ent_phy_sensor_scale_map[sub_id], \
+                        self.ent_phy_sensor_precision_map[sub_id], \
+                        self.ent_phy_sensor_value_map[sub_id], \
+                        self.ent_phy_sensor_oper_state_map[sub_id] = mib_values
 
                     self.sub_ids.append(sub_id)
+
+    def update_psu_sensor_data(self):
+        if not self.psu_sensor:
+            return
+
+        for psu_sensor_entry in self.psu_sensor:
+            psu_name = psu_sensor_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
+            psu_relation_info = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, mibs.physical_entity_info_table(psu_name))
+            psu_position, psu_parent_name = get_db_data(psu_relation_info, PhysicalRelationInfoDB)
+            if is_null_empty_str(psu_position):
+                continue
+            psu_position = int(psu_position)
+            psu_sub_id = get_psu_sub_id(psu_position)
+
+            psu_sensor_entry_data = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, psu_sensor_entry)
+
+            if not psu_sensor_entry_data:
+                continue
+
+            sensor_data_list = PSUSensorData.create_sensor_data(psu_sensor_entry_data)
+            for sensor_data in sensor_data_list:
+                raw_sensor_value = sensor_data.get_raw_value()
+                if is_null_empty_str(raw_sensor_value):
+                    continue
+                sensor = sensor_data.get_sensor_interface()
+                sub_id = get_psu_sensor_sub_id(psu_sub_id, sensor_data.get_name().lower())
+
+                try:
+                    mib_values = sensor.mib_values(raw_sensor_value)
+                except (ValueError, ArithmeticError):
+                    mibs.logger.error("Exception occurred when converting"
+                                      "value for sensor {} PSU {}".format(sensor, psu_name))
+                    continue
+                else:
+                    self.ent_phy_sensor_type_map[sub_id], \
+                        self.ent_phy_sensor_scale_map[sub_id], \
+                        self.ent_phy_sensor_precision_map[sub_id], \
+                        self.ent_phy_sensor_value_map[sub_id], \
+                        self.ent_phy_sensor_oper_state_map[sub_id] = mib_values
+
+                    self.sub_ids.append(sub_id)
+
+    def update_fan_sensor_data(self):
+        if not self.fan_sensor:
+            return
+
+        fan_parent_sub_id = 0
+        for fan_sensor_entry in self.fan_sensor:
+            fan_name = fan_sensor_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
+            fan_relation_info = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, mibs.physical_entity_info_table(fan_name))
+            fan_position, fan_parent_name = get_db_data(fan_relation_info, PhysicalRelationInfoDB)
+            if is_null_empty_str(fan_position):
+                continue
+
+            fan_position = int(fan_position)
+
+            if CHASSIS_NAME_SUB_STRING in fan_parent_name:
+                fan_parent_sub_id = (CHASSIS_SUB_ID,)
+            else:
+                fan_parent_relation_info = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                    self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, mibs.physical_entity_info_table(fan_parent_name))
+                if fan_parent_relation_info:
+                    fan_parent_position, fan_grad_parent_name = get_db_data(fan_parent_relation_info,
+                                                                            PhysicalRelationInfoDB)
+
+                    fan_parent_position = int(fan_parent_position)
+
+                    if PSU_NAME_SUB_STRING in fan_parent_name:
+                        fan_parent_sub_id = get_psu_sub_id(fan_parent_position)
+                    else:
+                        fan_parent_sub_id = get_fan_drawer_sub_id(fan_parent_position)
+                else:
+                    mibs.logger.error("fan_name = {} get fan parent failed".format(fan_name))
+                    continue
+
+            fan_sub_id = get_fan_sub_id(fan_parent_sub_id, fan_position)
+
+            fan_sensor_entry_data = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, fan_sensor_entry)
+
+            if not fan_sensor_entry_data:
+                mibs.logger.error("fan_name = {} get fan_sensor_entry_data failed".format(fan_name))
+                continue
+
+            sensor_data_list = FANSensorData.create_sensor_data(fan_sensor_entry_data)
+            for sensor_data in sensor_data_list:
+                raw_sensor_value = sensor_data.get_raw_value()
+                if is_null_empty_str(raw_sensor_value):
+                    continue
+                sensor = sensor_data.get_sensor_interface()
+                sub_id = get_fan_tachometers_sub_id(fan_sub_id)
+
+                try:
+                    mib_values = sensor.mib_values(raw_sensor_value)
+                except (ValueError, ArithmeticError):
+                    mibs.logger.error("Exception occurred when converting"
+                                      "value for sensor {} PSU {}".format(sensor, fan_name))
+                    continue
+                else:
+                    self.ent_phy_sensor_type_map[sub_id], \
+                        self.ent_phy_sensor_scale_map[sub_id], \
+                        self.ent_phy_sensor_precision_map[sub_id], \
+                        self.ent_phy_sensor_value_map[sub_id], \
+                        self.ent_phy_sensor_oper_state_map[sub_id] = mib_values
+
+                    self.sub_ids.append(sub_id)
+
+    def update_thermal_sensor_data(self):
+        if not self.thermal_sensor:
+            return
+
+        for thermal_sensor_entry in self.thermal_sensor:
+            thermal_name = thermal_sensor_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
+            thermal_relation_info = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, mibs.physical_entity_info_table(thermal_name))
+            thermal_position, thermal_parent_name = get_db_data(thermal_relation_info, PhysicalRelationInfoDB)
+
+            if is_null_empty_str(thermal_parent_name) or is_null_empty_str(thermal_parent_name) or \
+                    CHASSIS_NAME_SUB_STRING not in thermal_parent_name.lower():
+                continue
+
+            thermal_position = int(thermal_position)
+
+            thermal_sensor_entry_data = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, thermal_sensor_entry)
+
+            if not thermal_sensor_entry_data:
+                continue
+
+            sensor_data_list = ThermalSensorData.create_sensor_data(thermal_sensor_entry_data)
+            for sensor_data in sensor_data_list:
+                raw_sensor_value = sensor_data.get_raw_value()
+                if is_null_empty_str(raw_sensor_value):
+                    continue
+                sensor = sensor_data.get_sensor_interface()
+                sub_id = get_chassis_thermal_sub_id(thermal_position)
+
+                try:
+                    mib_values = sensor.mib_values(raw_sensor_value)
+                except (ValueError, ArithmeticError):
+                    mibs.logger.error("Exception occurred when converting"
+                                      "value for sensor {} PSU {}".format(sensor, thermal_name))
+                    continue
+                else:
+                    self.ent_phy_sensor_type_map[sub_id], \
+                        self.ent_phy_sensor_scale_map[sub_id], \
+                        self.ent_phy_sensor_precision_map[sub_id], \
+                        self.ent_phy_sensor_value_map[sub_id], \
+                        self.ent_phy_sensor_oper_state_map[sub_id] = mib_values
+
+                    self.sub_ids.append(sub_id)
+
+    def update_data(self):
+        """
+        Update sensors cache.
+        """
+
+        self.sub_ids = []
+
+        self.update_xcvr_dom_data()
+        
+        self.update_psu_sensor_data()
+
+        self.update_fan_sensor_data()
+
+        self.update_thermal_sensor_data()
 
         self.sub_ids.sort()
 
