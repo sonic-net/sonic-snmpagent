@@ -2,11 +2,15 @@ import os
 import sys
 import importlib
 
+# 3 directory levels above sonic-snmpagent/tests/namespace/test_interfaces.py = sonic-snmpagent
+modules_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Insert sonic-snmpagent and sonic-snmpagent/src to path 
+sys.path.insert(0, modules_path)
+sys.path.insert(0, os.path.join(modules_path, 'src'))
+
 # noinspection PyUnresolvedReferences
 import tests.mock_tables.dbconnector
-
-modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from unittest import TestCase
 
