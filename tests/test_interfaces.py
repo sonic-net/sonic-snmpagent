@@ -16,7 +16,7 @@ from ax_interface.encodings import ObjectIdentifier
 from ax_interface.constants import PduTypes
 from ax_interface.pdu import PDU, PDUHeader
 from ax_interface.mib import MIBTable
-from sonic_ax_impl.mibs.ietf import rfc1213
+from sonic_ax_impl.mibs.ietf import rfc1213, rfc2863
 
 class TestGetNextPDU(TestCase):
     @classmethod
@@ -854,3 +854,91 @@ class TestGetNextPDU(TestCase):
         self.assertEqual(value0.type_, ValueType.COUNTER_32)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 20, 1001))))
         self.assertEqual(value0.data, 106)
+
+class TestGetNextPDU_2863(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        tests.mock_tables.dbconnector.load_namespace_config()
+        importlib.reload(rfc2863)
+        cls.lut = MIBTable(rfc2863.InterfaceMIBObjects)
+        for updater in cls.lut.updater_instances:
+           updater.update_data()
+           updater.reinit_data()
+           updater.update_data()
+
+    def test_mgmt_iface_ifMIB(self):
+        """
+        Test that mgmt port is present in the ifMIB OID path of the MIB
+        """
+        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 10000))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.OCTET_STRING)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 10001))))
+        self.assertEqual(str(value0.data), 'snowflake')
+
+    def test_mgmt_iface_description_ifMIB(self):
+        """
+        Test mgmt port description (which is simply an alias) in the ifMIB OID path of the MIB
+        """
+        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 10001))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.OCTET_STRING)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 10001))))
+        self.assertEqual(str(value0.data), 'snowflake')
+
+    def test_vlan_iface_ifMIB(self):
+        """
+        Test that vlan interface is present in the ifMIB OID path of the MIB
+        """
+        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 2999))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.OCTET_STRING)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 3000))))
+        self.assertEqual(str(value0.data), 'Vlan1000')
+
+    def test_vlan_iface_description_ifMIB(self):
+        """
+        Test vlan interface description (which is simply the name) in the ifMIB OID path of the MIB
+        """
+        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 3000))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.OCTET_STRING)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 3000))))
+        self.assertEqual(str(value0.data), 'Vlan1000')
+

@@ -4,6 +4,7 @@ from bisect import bisect_right
 from sonic_ax_impl import mibs
 from ax_interface.mib import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry, MIBEntry
 from sonic_ax_impl.mibs import Namespace
+from os import stat_result
 
 @unique
 class DbTables32(int, Enum):
@@ -49,7 +50,6 @@ class DbTables(int, Enum):
     """
     Maps database tables names to SNMP sub-identifiers.
     https://tools.ietf.org/html/rfc1213#section-6.4
-
     REDIS_TABLE_NAME = (RFC1213 OID NUMBER)
     """
 
@@ -95,7 +95,6 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.vlan_oid_name_map = {}
         self.vlan_name_map = {}
         self.rif_port_map = {}
-
         self.if_counters = {}
         self.if_range = []
         self.if_name_map = {}
@@ -117,7 +116,7 @@ class InterfaceMIBUpdater(MIBUpdater):
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
-        self.oid_lag_name_map, _ = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
+        self.oid_lag_name_map, _, _ = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
         """
         db_conn - will have db_conn to all namespace DBs and
         global db. First db in the list is global db.
@@ -153,7 +152,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
         self.oid_lag_name_map, \
-        self.lag_sai_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
+        self.lag_sai_map, _ = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
 
         self.if_range = sorted(list(self.oid_name_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
@@ -191,14 +190,16 @@ class InterfaceMIBUpdater(MIBUpdater):
             return
 
         if oid in self.oid_lag_name_map:
-            return self.oid_lag_name_map[oid]
+            result = self.oid_lag_name_map[oid]
         elif oid in self.mgmt_oid_name_map:
-            return self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
+            result = self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
         elif oid in self.vlan_oid_name_map:
-            return self.vlan_oid_name_map[oid]
+            result = self.vlan_oid_name_map[oid]
+        else:
+            result = self.if_alias_map[self.oid_name_map[oid]]
 
-        return self.if_alias_map[self.oid_name_map[oid]]
-
+        return result
+    
     def interface_alias(self, sub_id):
         """
         ifAlias specific - this is not the "Alias map".
@@ -210,7 +211,19 @@ class InterfaceMIBUpdater(MIBUpdater):
         if not entry:
             return
 
-        return entry.get("description", "")
+        result = entry.get("description", "")
+        
+        if not result:
+            #RFC2863 tables don't have descriptions for LAG, vlan & mgmt; take from RFC1213
+            oid = self.get_oid(sub_id)
+            if oid in self.oid_lag_name_map:
+                result = self.oid_lag_name_map[oid]
+            elif oid in self.mgmt_oid_name_map:
+                result = self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
+            elif oid in self.vlan_oid_name_map:
+                result = self.vlan_oid_name_map[oid]
+
+        return result
 
     def get_counter32(self, sub_id, table_name):
         oid = self.get_oid(sub_id)
