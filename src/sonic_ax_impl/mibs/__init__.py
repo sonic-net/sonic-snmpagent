@@ -41,9 +41,6 @@ RIF_DROPS_AGGR_MAP = {
     "SAI_PORT_STAT_IF_OUT_ERRORS": "SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS"
 }
 
-# IfIndex to OID multiplier for transceiver
-IFINDEX_SUB_ID_MULTIPLIER = 1000
-
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
 
 
@@ -341,17 +338,18 @@ def init_sync_d_vlan_tables(db_conn):
 
     logger.debug("Vlan oid map:\n" + pprint.pformat(vlan_name_map, indent=2))
 
-    # { OID -> sai_id }
-    oid_sai_map = {get_index_from_str(if_name): sai_id for sai_id, if_name in vlan_name_map.items()
-                   # only map the interface if it's a style understood to be a SONiC interface.
-                   if get_index_from_str(if_name) is not None}
+    oid_sai_map = {}
+    oid_name_map = {}
+    for sai_id, if_name in vlan_name_map.items():
+        port_index = get_index_from_str(if_name)
+        if not port_index:
+            continue
+        # { OID -> sai_id }
+        oid_sai_map[port_index] = sai_id
+        # { OID -> if_name (SONiC) }
+        oid_name_map[port_index] = if_name
+
     logger.debug("OID sai map:\n" + pprint.pformat(oid_sai_map, indent=2))
-
-    # { OID -> if_name (SONiC) }
-    oid_name_map = {get_index_from_str(if_name): if_name for sai_id, if_name in vlan_name_map.items()
-                   # only map the interface if it's a style understood to be a SONiC interface.
-                   if get_index_from_str(if_name) is not None}
-
     logger.debug("OID name map:\n" + pprint.pformat(oid_name_map, indent=2))
 
     return vlan_name_map, oid_sai_map, oid_name_map
