@@ -331,6 +331,9 @@ class InterfacesUpdater(MIBUpdater):
         :return: the counter for the respective sub_id/table.
         """
         # Enum.name or table_name = 'name_of_the_table'
+        # Example: 
+        # table_name = <DbTables.SAI_PORT_STAT_IF_OUT_ERRORS: 20>
+        # _table_name = 'SAI_PORT_STAT_IF_OUT_ERRORS'
         _table_name = getattr(table_name, 'name', table_name)
 
         try:
@@ -385,12 +388,37 @@ class InterfacesUpdater(MIBUpdater):
             return 0
         elif oid in self.oid_lag_name_map:
             counter_value = 0
+            # Sum the values of this counter for all ports in the LAG.
+            # Example: 
+            # table_name = <DbTables.SAI_PORT_STAT_IF_OUT_ERRORS: 20>
+            # oid = 1001
+            # self.oid_lag_name_map = {1001: 'PortChannel01', 1002: 'PortChannel02', 1003: 'PortChannel03'}
+            # self.oid_lag_name_map[oid] = 'PortChannel01'
+            # self.lag_name_if_name_map = {'PortChannel01': ['Ethernet112'], 'PortChannel02': ['Ethernet116'], 'PortChannel03': ['Ethernet120']}
+            # self.lag_name_if_name_map['PortChannel01'] = ['Ethernet112']
+            # mibs.get_index_from_str('Ethernet112') = 113 (because Ethernet N = N + 1)
+            # self._get_counter retrieves the counter per oid and table.
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
                 counter_value += self._get_counter(mibs.get_index_from_str(lag_member), table_name)
+            # Check if we need to add a router interface count.
+            # Example:
+            # self.lag_sai_map = {'PortChannel01': '2000000000006', 'PortChannel02': '2000000000005', 'PortChannel03': '2000000000004'}
+            # self.port_rif_map = {'2000000000006': '6000000000006', '2000000000005': '6000000000005', '2000000000004': '6000000000004'}
+            # self.rif_port_map = {'6000000000006': '2000000000006', '6000000000005': '2000000000005', '6000000000004': '2000000000004'}
+            # self.lag_sai_map['PortChannel01'] = '2000000000006'
+            # self.port_rif_map['2000000000006'] = '6000000000006'
             sai_lag_id = self.lag_sai_map[self.oid_lag_name_map[oid]]
             sai_lag_rif_id = self.port_rif_map[sai_lag_id]
             if sai_lag_rif_id in self.rif_port_map:
+                # Extract the 'name' part of 'table_name'.
+                # Example: 
+                # table_name = <DbTables.SAI_PORT_STAT_IF_OUT_ERRORS: 20>
+                # _table_name = 'SAI_PORT_STAT_IF_OUT_ERRORS'
                 table_name = getattr(table_name, 'name', table_name)
+                # Find rif counter table if applicable and add the count for this table.
+                # Example:
+                # mibs.RIF_DROPS_AGGR_MAP = {'SAI_PORT_STAT_IF_IN_ERRORS': 'SAI_ROUTER_INTERFACE_STAT_IN_ERROR_PACKETS', 'SAI_PORT_STAT_IF_OUT_ERRORS': 'SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS'}
+                # self.rif_counters['6000000000006'] = {'SAI_ROUTER_INTERFACE_STAT_IN_PACKETS': 6, ... 'SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS': 6, ...} 
                 if table_name in mibs.RIF_DROPS_AGGR_MAP:
                     rif_table_name = mibs.RIF_DROPS_AGGR_MAP[table_name]
                     counter_value += self.rif_counters[sai_lag_rif_id].get(rif_table_name, 0)
