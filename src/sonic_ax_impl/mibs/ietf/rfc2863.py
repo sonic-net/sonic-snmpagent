@@ -2,9 +2,8 @@ from enum import Enum, unique
 from bisect import bisect_right
 
 from sonic_ax_impl import mibs
-from ax_interface.mib import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry, MIBEntry
+from ax_interface.mib import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
 from sonic_ax_impl.mibs import Namespace
-from os import stat_result
 
 @unique
 class DbTables32(int, Enum):
