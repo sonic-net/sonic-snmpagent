@@ -865,6 +865,14 @@ class TestGetNextPDU_2863(TestCase):
            updater.update_data()
            updater.reinit_data()
            updater.update_data()
+           
+        # Also load the data for RFC1213 which we will need to check consistency
+        importlib.reload(rfc1213)
+        cls.lut_1213 = MIBTable(rfc1213.InterfacesMIB)
+        for updater in cls.lut_1213.updater_instances:
+           updater.update_data()
+           updater.reinit_data()
+           updater.update_data()
 
     def test_mgmt_iface_ifMIB(self):
         """
@@ -942,3 +950,74 @@ class TestGetNextPDU_2863(TestCase):
         self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 3000))))
         self.assertEqual(str(value0.data), 'Vlan1000')
 
+    def test_vlan_iface_1213_2863_consistent(self):
+        """
+        Test that the interface paths in RFC1213 and RFC2863 have the same leaf values.
+        """       
+        
+        # Build prefixes for vlan interface descriptions in RFC1213 and RFC2863 tables 
+        pfx_1213 = [1, 3, 6, 1, 2, 1, 2, 2, 1, 2]
+        pfx_2863 = [1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18]
+
+        # Start search for interfaces at sub_id 1, including 1
+        raw_oid_1213 = pfx_1213.copy()
+        raw_oid_1213.append(1)
+        raw_oid_2863 = pfx_2863.copy()
+        raw_oid_2863.append(1)
+        incl = 1
+        done = False
+        
+        # Compare actual OIDs found for the two RFCs with the relevant prefix
+        while not done:
+            
+            # Get next OID for each table
+            oid_1213 = ObjectIdentifier(11, 0, incl, 0, tuple(raw_oid_1213))
+            get_pdu_1213 = GetNextPDU(
+                header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+                oids=[oid_1213]
+            )
+            oid_2863 = ObjectIdentifier(11, 0, incl, 0, tuple(raw_oid_2863))
+            get_pdu_2863 = GetNextPDU(
+                header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+                oids=[oid_2863]
+            )
+            
+            # Decode the OIDs found
+            encoded_1213 = get_pdu_1213.encode()
+            response_1213 = get_pdu_1213.make_response(self.lut_1213)
+            encoded_2863 = get_pdu_2863.encode()
+            response_2863 = get_pdu_2863.make_response(self.lut)
+            value0_1213 = response_1213.values[0]
+            value0_2863 = response_2863.values[0]
+            
+            # Convert returned OIDs to lists, and extract prefixes by removing last element
+            cur_pfx_1213 = list(value0_1213.name.subids)
+            cur_pfx_2863 = list(value0_2863.name.subids)
+            cur_pfx_1213.pop()
+            cur_pfx_2863.pop()
+            
+            # Check if the returned OID have the same prefix we started with
+            # It may be abbreviated so only check the end
+            match_1213 = (cur_pfx_1213 == pfx_1213[-len(cur_pfx_1213):]) and (value0_1213.type_ == ValueType.OCTET_STRING)
+            match_2863 = (cur_pfx_2863 == pfx_2863[-len(cur_pfx_2863):]) and (value0_2863.type_ == ValueType.OCTET_STRING)
+
+            # We expect both tables to have equal numbers of OIDs
+            self.assertEqual(match_1213, match_2863)
+                        
+            # Check contents if both OIDs still match the original prefix
+            if match_1213 and match_2863:
+                last_1213 = value0_1213.name.subids[-1]
+                last_2863 = value0_2863.name.subids[-1]
+                print("Leaf OID found in RFC1213 table ", last_1213, " Leaf OID found in RFC2863 table ", last_2863)
+                self.assertEqual(last_1213, last_2863)
+
+                # Set OIDs for next round to get the next one after current
+                raw_oid_1213 = pfx_1213.copy()
+                raw_oid_1213.append(last_1213)
+                raw_oid_2863 = pfx_2863.copy()
+                raw_oid_2863.append(last_2863)
+                incl = 0
+            
+            # Otherwise we exhausted the values with this OID prefix
+            else:
+                done = True
