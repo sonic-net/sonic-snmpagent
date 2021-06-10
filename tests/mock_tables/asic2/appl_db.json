@@ -86,6 +86,16 @@
     "oper_status": "up",
     "mtu": "9216"
   },
+  "VLAN_TABLE:Vlan1000": {
+    "admin_status": "up",
+    "hostif_name": "",
+    "mtu": "9216"
+  },
+  "VLAN_TABLE:Vlan1001": {
+    "admin_status": "up",
+    "hostif_name": "",
+    "mtu": "9216"
+  },
   "INTF_TABLE:lo:10.1.0.32/32": {
     "scope": "global",
     "family": "IPv4"
