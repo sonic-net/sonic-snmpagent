@@ -44,6 +44,42 @@ class DbTables64(int, Enum):
     SAI_PORT_STAT_IF_OUT_BROADCAST_PKTS = 13
 
 
+@unique
+class DbTables(int, Enum):
+    """
+    Maps database tables names to SNMP sub-identifiers.
+    https://tools.ietf.org/html/rfc1213#section-6.4
+    REDIS_TABLE_NAME = (RFC1213 OID NUMBER)
+    """
+
+    # ifOperStatus ::= { ifEntry 8 }
+    # ifLastChange :: { ifEntry 9 }
+    # ifInOctets ::= { ifEntry 10 }
+    SAI_PORT_STAT_IF_IN_OCTETS = 10
+    # ifInUcastPkts ::= { ifEntry 11 }
+    SAI_PORT_STAT_IF_IN_UCAST_PKTS = 11
+    # ifInNUcastPkts ::= { ifEntry 12 }
+    SAI_PORT_STAT_IF_IN_NON_UCAST_PKTS = 12
+    # ifInDiscards ::= { ifEntry 13 }
+    SAI_PORT_STAT_IF_IN_DISCARDS = 13
+    # ifInErrors ::= { ifEntry 14 }
+    SAI_PORT_STAT_IF_IN_ERRORS = 14
+    # ifInUnknownProtos ::= { ifEntry 15 }
+    SAI_PORT_STAT_IF_IN_UNKNOWN_PROTOS = 15
+    # ifOutOctets  ::= { ifEntry 16 }
+    SAI_PORT_STAT_IF_OUT_OCTETS = 16
+    # ifOutUcastPkts ::= { ifEntry 17 }
+    SAI_PORT_STAT_IF_OUT_UCAST_PKTS = 17
+    # ifOutNUcastPkts ::= { ifEntry 18 }
+    SAI_PORT_STAT_IF_OUT_NON_UCAST_PKTS = 18
+    # ifOutDiscards ::= { ifEntry 19 }
+    SAI_PORT_STAT_IF_OUT_DISCARDS = 19
+    # ifOutErrors ::= { ifEntry 20 }
+    SAI_PORT_STAT_IF_OUT_ERRORS = 20
+    # ifOutQLen ::= { ifEntry 21 }
+    SAI_PORT_STAT_IF_OUT_QLEN = 21
+
+
 class InterfaceMIBUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
@@ -55,16 +91,16 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.oid_lag_name_map = {}
         self.mgmt_oid_name_map = {}
         self.mgmt_alias_map = {}
-
+        self.vlan_oid_name_map = {}
+        self.vlan_name_map = {}
+        self.rif_port_map = {}
         self.if_counters = {}
         self.if_range = []
         self.if_name_map = {}
         self.if_alias_map = {}
         self.if_id_map = {}
         self.oid_name_map = {}
-        self.lag_name_if_name_map = {}
-        self.if_name_lag_name_map = {}
-        self.oid_lag_name_map = {}
+        self.rif_counters = {}
 
         self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
 
@@ -79,7 +115,7 @@ class InterfaceMIBUpdater(MIBUpdater):
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
-        self.oid_lag_name_map, _ = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
+        self.oid_lag_name_map, _, _ = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
         """
         db_conn - will have db_conn to all namespace DBs and
         global db. First db in the list is global db.
@@ -88,9 +124,17 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.mgmt_oid_name_map, \
         self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn[0])
 
+        self.vlan_name_map, \
+        self.vlan_oid_sai_map, \
+        self.vlan_oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_vlan_tables, self.db_conn)
+
+        self.rif_port_map, \
+        self.port_rif_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_rif_tables, self.db_conn)
+
         self.if_range = sorted(list(self.oid_name_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
-                               list(self.mgmt_oid_name_map.keys()))
+                               list(self.mgmt_oid_name_map.keys()) +
+                               list(self.vlan_oid_name_map.keys()))
         self.if_range = [(i,) for i in self.if_range]
 
     def update_data(self):
@@ -103,6 +147,17 @@ class InterfaceMIBUpdater(MIBUpdater):
             if_idx = mibs.get_index_from_str(self.if_id_map[sai_id_key])
             self.if_counters[if_idx] = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB, \
                     mibs.counter_table(sai_id), blocking=True)
+
+        self.lag_name_if_name_map, \
+        self.if_name_lag_name_map, \
+        self.oid_lag_name_map, \
+        self.lag_sai_map, _ = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
+
+        self.if_range = sorted(list(self.oid_name_map.keys()) +
+                               list(self.oid_lag_name_map.keys()) +
+                               list(self.mgmt_oid_name_map.keys()) +
+                               list(self.vlan_oid_name_map.keys()))
+        self.if_range = [(i,) for i in self.if_range]
 
     def get_next(self, sub_id):
         """
@@ -134,12 +189,16 @@ class InterfaceMIBUpdater(MIBUpdater):
             return
 
         if oid in self.oid_lag_name_map:
-            return self.oid_lag_name_map[oid]
+            result = self.oid_lag_name_map[oid]
         elif oid in self.mgmt_oid_name_map:
-            return self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
+            result = self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
+        elif oid in self.vlan_oid_name_map:
+            result = self.vlan_oid_name_map[oid]
+        else:
+            result = self.if_alias_map[self.oid_name_map[oid]]
 
-        return self.if_alias_map[self.oid_name_map[oid]]
-
+        return result
+    
     def interface_alias(self, sub_id):
         """
         ifAlias specific - this is not the "Alias map".
@@ -151,7 +210,19 @@ class InterfaceMIBUpdater(MIBUpdater):
         if not entry:
             return
 
-        return entry.get("description", "")
+        result = entry.get("description", "")
+        
+        if not result:
+            #RFC2863 tables don't have descriptions for LAG, vlan & mgmt; take from RFC1213
+            oid = self.get_oid(sub_id)
+            if oid in self.oid_lag_name_map:
+                result = self.oid_lag_name_map[oid]
+            elif oid in self.mgmt_oid_name_map:
+                result = self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
+            elif oid in self.vlan_oid_name_map:
+                result = self.vlan_oid_name_map[oid]
+
+        return result
 
     def get_counter32(self, sub_id, table_name):
         oid = self.get_oid(sub_id)
@@ -217,6 +288,8 @@ class InterfaceMIBUpdater(MIBUpdater):
         elif oid in self.mgmt_oid_name_map:
             if_table = mibs.mgmt_if_entry_table(self.mgmt_oid_name_map[oid])
             db = mibs.CONFIG_DB
+        elif oid in self.vlan_oid_name_map:
+            if_table = mibs.vlan_entry_table(self.vlan_oid_name_map[oid])
         elif oid in self.oid_name_map:
             if_table = mibs.if_entry_table(self.oid_name_map[oid])
         else:
@@ -270,7 +343,7 @@ class InterfaceMIBObjects(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.31.1'):
                            DbTables32(4)),
             OidMIBEntry('1.1.4', ValueType.COUNTER_32, oidtree_updater.get_oidvalue)
         )
-
+   
     ifOutBroadcastPkts = \
         OverlayAdpaterMIBEntry(
             SubtreeMIBEntry('1.1.5', if_updater, ValueType.COUNTER_32, if_updater.get_counter32,
