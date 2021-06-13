@@ -269,7 +269,7 @@ def init_sync_d_interface_tables(db_conn):
 
     # SyncD consistency checks.
     if not oid_name_map:
-        logger.info("Config DB does not contain ports")
+        logger.debug("There are no ports in counters DB")
         return {}, {}, {}, {}
     elif len(if_id_map) < len(if_name_map) or len(oid_name_map) < len(if_name_map):
         # a length mismatch indicates a bad interface name
