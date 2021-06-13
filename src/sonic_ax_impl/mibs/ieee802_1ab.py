@@ -184,7 +184,7 @@ class LocPortUpdater(MIBUpdater):
             self.if_range.append((if_oid, ))
         self.if_range.sort()
         if not self.loc_port_data:
-            logger.info("0 - b'PORT_TABLE' is empty. No local port information could be retrieved.")
+            logger.debug("0 - b'PORT_TABLE' is empty. No local port information could be retrieved.")
 
     def _get_if_entry(self, if_name):
         if_table = ""

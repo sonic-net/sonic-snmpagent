@@ -384,7 +384,7 @@ def init_sync_d_queue_tables(db_conn):
 
     # SyncD consistency checks.
     if not port_queues_map:
-        logger.info("Counters DB does not contain ports")
+        logger.debug("Counters DB does not contain ports")
         return {}, {}, {}
     elif not queue_stat_map:
         logger.error("No queue stat counters found in the Counter DB. SyncD database is incoherent.")
