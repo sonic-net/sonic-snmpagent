@@ -3,12 +3,13 @@ import re
 import os
 
 from swsscommon.swsscommon import SonicV2Connector
-from swsssdk import SonicDBConfig
+from swsscommon.swsscommon import SonicDBConfig
 from swsssdk import port_util
 from swsssdk.port_util import get_index_from_str
 from ax_interface.mib import MIBUpdater
 from ax_interface.util import oid2tuple
 from sonic_ax_impl import logger
+from sonic_py_common import multi_asic
 
 COUNTERS_PORT_NAME_MAP = 'COUNTERS_PORT_NAME_MAP'
 COUNTERS_QUEUE_NAME_MAP = 'COUNTERS_QUEUE_NAME_MAP'
@@ -538,8 +539,15 @@ class Namespace:
     @staticmethod
     def init_namespace_dbs():
         db_conn = []
-        SonicDBConfig.load_sonic_global_db_config()
-        for namespace in SonicDBConfig.get_ns_list():
+        if multi_asic.is_multi_asic():
+            SonicDBConfig.load_sonic_global_db_config()
+
+        # Ensure that db connector of default namespace is the first element of
+        # db_conn list.
+        db_conn.append(SonicV2Connector(use_unix_socket_path=True, namespace=multi_asic.DEFAULT_NAMESPACE, decode_responses=True))
+        ns_list = list(SonicDBConfig.get_ns_list())
+        ns_list.remove(multi_asic.DEFAULT_NAMESPACE)
+        for namespace in ns_list:
             db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace, decode_responses=True)
             db_conn.append(db)
 
