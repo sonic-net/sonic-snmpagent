@@ -134,22 +134,12 @@ class SwssSyncClient(mockredis.MockRedis):
         # Find every key that matches the pattern
         return [key for key in self.redis.keys() if regex.match(key)]
 
-def _isInit():
-    return   SonicDBConfig._sonic_db_config_init
-
-def  _initialize():
-    SonicDBConfig.load_sonic_db_config(
-        sonic_db_file_path=os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), 'database_config.json'))
-
 DBInterface._subscribe_keyspace_notification = _subscribe_keyspace_notification
 mockredis.MockRedis.config_set = config_set
 redis.StrictRedis = SwssSyncClient
 SonicV2Connector.connect = connect_SonicV2Connector
 swsscommon.SonicV2Connector = SonicV2Connector
 swsscommon.SonicDBConfig = SonicDBConfig
-SonicDBConfig.isInit = _isInit
-SonicDBConfig.initialize = _initialize
 
 # pytest case collecting will import some module before monkey patch, so reload
 from importlib import reload
