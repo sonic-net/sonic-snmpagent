@@ -224,7 +224,7 @@ def init_db():
             # Load the global config file database_global.json once.
             SonicDBConfig.load_sonic_global_db_config()
         else:
-            SonicDBConfig.initialize()
+            SonicDBConfig.load_sonic_db_config()
     # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
     # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
     db_conn = SonicV2Connector(**redis_kwargs)
@@ -548,7 +548,7 @@ class Namespace:
             if multi_asic.is_multi_asic():
                 SonicDBConfig.load_sonic_global_db_config()
             else:
-                SonicDBConfig.initialize()
+                SonicDBConfig.load_sonic_db_config()
         # Ensure that db connector of default namespace is the first element of
         # db_conn list.
         db_conn.append(SonicV2Connector(use_unix_socket_path=True))
