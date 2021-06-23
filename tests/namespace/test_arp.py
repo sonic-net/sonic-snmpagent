@@ -32,7 +32,7 @@ class TestSonicMIB(TestCase):
             updater.update_data()
 
     def test_getpdu(self):
-        oid = ObjectIdentifier(20, 0, 0, 0, (1, 3, 6, 1, 2, 1, 4, 22, 1, 2, 10000, 10, 3, 146, 1))
+        oid = ObjectIdentifier(20, 0, 0, 0, (1, 3, 6, 1, 2, 1, 4, 22, 1, 2, 1000, 10, 3, 146, 1))
         get_pdu = GetPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=[oid]
@@ -51,7 +51,7 @@ class TestSonicMIB(TestCase):
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=(
-                ObjectIdentifier(20, 0, 0, 0, (1, 3, 6, 1, 2, 1, 4, 22, 1, 2, 10000, 10, 3, 146, 1)),
+                ObjectIdentifier(20, 0, 0, 0, (1, 3, 6, 1, 2, 1, 4, 22, 1, 2, 1000, 10, 3, 146, 1)),
             )
         )
 
@@ -66,7 +66,7 @@ class TestSonicMIB(TestCase):
 
     def test_getnextpdu_exactmatch(self):
         # oid.include = 1
-        oid = ObjectIdentifier(20, 0, 1, 0, (1, 3, 6, 1, 2, 1, 4, 22, 1, 2, 10000, 10, 3, 146, 1))
+        oid = ObjectIdentifier(20, 0, 1, 0, (1, 3, 6, 1, 2, 1, 4, 22, 1, 2, 1000, 10, 3, 146, 1))
         get_pdu = GetNextPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=[oid]

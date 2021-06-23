@@ -9,6 +9,7 @@ from swsssdk.port_util import get_index_from_str
 from ax_interface.mib import MIBUpdater
 from ax_interface.util import oid2tuple
 from sonic_ax_impl import logger
+from ax_interface.util import mac_decimals
 
 COUNTERS_PORT_NAME_MAP = 'COUNTERS_PORT_NAME_MAP'
 COUNTERS_QUEUE_NAME_MAP = 'COUNTERS_QUEUE_NAME_MAP'
@@ -174,6 +175,14 @@ def mgmt_if_entry_table(if_name):
 
     return 'MGMT_PORT|' + if_name
 
+def vlan_if_entry_table(vlan):
+    """
+    :param if_name: given interface to cast
+    :return: VLAN_TABLE key
+    """
+
+    return 'VLAN_TABLE:' + vlan 
+
 
 def mgmt_if_entry_table_state_db(if_name):
     """
@@ -254,6 +263,91 @@ def init_mgmt_interface_tables(db_conn):
     logger.debug("Management alias map:\n" + pprint.pformat(if_alias_map, indent=2))
 
     return oid_name_map, if_alias_map
+
+def init_vlan_interface_tables(db_conn, mac=""):
+    """
+    Initializes interface maps for vlan ports
+    :param db_conn: db connector
+    :return: tuple of vlan name to oid map and vlan name to alias map
+    """
+
+    db_conn.connect(APPL_DB)
+
+    vlan_intf_keys = db_conn.keys(APPL_DB, 'INTF_TABLE:Vlan*')
+
+    if not vlan_intf_keys:
+        logger.debug('No vlan interfaces found.' )
+        return {},{}
+
+    oid_name_map = {}
+    oid_mac_map = {}
+    for key in vlan_intf_keys:
+        vlan = key.split(':')[1]
+        index = get_index_from_str(vlan)
+        oid_name_map[index] = vlan
+        #get mac addr of vlan
+        ent = db_conn.get_all(APPL_DB, key)
+        if ent and 'mac_addr' in ent:
+            mactuple = mac_decimals(ent['mac_addr'])
+            oid_mac_map[index] = ''.join(chr(b) for b in mactuple)
+        else:
+            oid_mac_map[index] = mac
+            
+    logger.debug('vlan interface map:\n' + pprint.pformat(oid_name_map, indent=2))
+    return oid_name_map, oid_mac_map
+
+def init_mclag_interface_tables(db_conn, mac=""):
+    """
+    Initializes interface maps for vlan ports
+    :param db_conn: db connector
+    :return: tuple of vlan name to oid map and vlan name to alias map
+    """
+
+    db_conn.connect(STATE_DB)
+
+    intf_keys = db_conn.keys(STATE_DB, 'MCLAG_LOCAL_INTF_TABLE|*')
+
+    if not intf_keys:
+        logger.debug('No vlan interfaces found.' )
+        return {},{}
+
+    oid_name_map = {}
+    oid_mac_map = {}
+    for key in intf_keys:
+        name = key.split('|')[1]
+        index = get_index_from_str(name)
+        oid_name_map[index] = name 
+        #get mac addr of vlan
+        ent = db_conn.get_all(STATE_DB, key)
+        if ent and 'interface_mac' in ent:
+            mactuple = mac_decimals(ent['interface_mac'])
+            oid_mac_map[index] = ''.join(chr(b) for b in mactuple)
+        else:
+            oid_mac_map[index] = mac
+            
+    logger.debug('vlan interface map:\n' + pprint.pformat(oid_name_map, indent=2))
+    return oid_name_map, oid_mac_map
+
+def init_loopback_interface_tables(db_conn):
+    """
+    Initializes interface maps for loopback ports
+    :param db_conn: db connector
+    :return: tuple of loopback name to oid map 
+    """
+
+    db_conn.connect(CONFIG_DB)
+
+    lpbk_intf_keys = db_conn.keys(CONFIG_DB, 'LOOPBACK_INTERFACE|*')
+
+    if not lpbk_intf_keys:
+        logger.debug('No lpbk interfaces found.' )
+        return {}
+
+    lpbk_interfaces = [key.split('|')[1] for key in lpbk_intf_keys]
+    oid_name_map = {get_index_from_str(lpbk_name): lpbk_name for lpbk_name in lpbk_interfaces}
+    logger.debug('lpbk interface map:\n' + pprint.pformat(oid_name_map, indent=2))
+
+    return oid_name_map
 
 def init_sync_d_interface_tables(db_conn):
     """
@@ -433,6 +527,8 @@ def init_sync_d_queue_tables(db_conn):
         port_name, queue_index = queue_name.split(':')
         queue_index = ''.join(i for i in queue_index if i.isdigit())
         port_index = get_index_from_str(port_name)
+        if port_index is None:
+            continue
         key = queue_key(port_index, queue_index)
         port_queues_map[key] = sai_id
 
@@ -461,6 +557,29 @@ def init_sync_d_queue_tables(db_conn):
         queues.sort()
 
     return port_queues_map, queue_stat_map, port_queue_list_map
+
+def get_config_device_metadata(db_conn):
+    """
+    :param db_conn: Sonic DB connector
+    :return: device metadata
+    """
+
+    DEVICE_METADATA = "DEVICE_METADATA|localhost"
+    db_conn.connect(db_conn.CONFIG_DB)
+
+    device_metadata = db_conn.get_all(db_conn.CONFIG_DB, DEVICE_METADATA)
+    return device_metadata
+
+def get_interface_naming_mode(db_conn):
+    """
+    :param db_conn: Sonic DB connector
+    :return: device metadata
+    """
+
+    device_metadata = get_config_device_metadata(db_conn)
+    if device_metadata and 'intf_naming_mode' in device_metadata:
+        return device_metadata['intf_naming_mode']
+    return None 
 
 def get_device_metadata(db_conn):
     """
