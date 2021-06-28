@@ -551,7 +551,7 @@ class Namespace:
                 SonicDBConfig.load_sonic_db_config()
         # Ensure that db connector of default namespace is the first element of
         # db_conn list.
-        db_conn.append(SonicV2Connector(use_unix_socket_path=True))
+        db_conn.append(SonicV2Connector(use_unix_socket_path=True, namespace=multi_asic.DEFAULT_NAMESPACE))
         ns_list = list(SonicDBConfig.get_ns_list())
         ns_list.remove(multi_asic.DEFAULT_NAMESPACE)
         for namespace in ns_list:
