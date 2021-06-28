@@ -8,7 +8,6 @@ from bisect import bisect_right
 from sonic_ax_impl import mibs
 from sonic_ax_impl.mibs import Namespace
 from ax_interface.mib import MIBMeta, ValueType, MIBUpdater, MIBEntry, SubtreeMIBEntry, OverlayAdpaterMIBEntry, OidMIBEntry
-from swsssdk.port_util import get_index, get_index_from_str
 from ax_interface.encodings import ObjectIdentifier
 from ax_interface.util import mac_decimals, ip2byte_tuple
 
@@ -256,7 +255,7 @@ class InterfacesUpdater(MIBUpdater):
         self.rif_port_map, \
         self.port_rif_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_rif_tables, self.db_conn)
         _, self.oid_vlan_phy_addr_map = mibs.init_vlan_interface_tables(self.db_conn[0], self.eth_phy_addr)
-        temp, self.oid_mclag_phy_addr_map = mibs.init_mclag_interface_tables(self.db_conn[0], self.eth_phy_addr)
+        _, self.oid_mclag_phy_addr_map = mibs.init_mclag_interface_tables(self.db_conn[0], self.eth_phy_addr)
         self.loopbk_oid_name_map = mibs.init_loopback_interface_tables(self.db_conn[0])
 
     def update_data(self):

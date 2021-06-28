@@ -331,7 +331,7 @@ class LLDPLocManAddrUpdater(MIBUpdater):
             logger.error("Invalid local mgmt IP {}".format(self.mgmt_ip_str))
             return
 
-        if mgmt_ip_sub_oid == None:
+        if mgmt_ip_sub_oid is None:
             return
         sub_oid = (ManAddrConst.man_addr_subtype_ipv4,
                    *mgmt_ip_sub_oid)

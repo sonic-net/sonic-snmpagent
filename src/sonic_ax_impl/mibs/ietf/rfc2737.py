@@ -952,11 +952,10 @@ class FanCacheUpdater(PhysicalEntityCacheUpdater):
 
         fan_relation_info = self.get_physical_relation_info(fan_name)
         fan_position, fan_parent_name = get_db_data(fan_relation_info, PhysicalRelationInfoDB)
-        try:
-            fan_position = int(fan_position)
-        except:
+        if not fan_position:
             self._remove_entity_cache(fan_name)
             return
+        fan_position = int(fan_position)
         if fan_parent_name in self.mib_updater.physical_name_to_oid_map:
             self._update_fan_mib_info(fan_parent_name, fan_position, fan_name, serial, model, speed, replaceable)
         else:
