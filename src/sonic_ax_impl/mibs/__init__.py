@@ -549,15 +549,20 @@ class Namespace:
                 SonicDBConfig.load_sonic_global_db_config()
             else:
                 SonicDBConfig.load_sonic_db_config()
-        # Ensure that db connector of default namespace is the first element of
-        # db_conn list.
-        db_conn.append(SonicV2Connector(use_unix_socket_path=True, namespace=multi_asic.DEFAULT_NAMESPACE))
+        host_namespace_idx = 0
         ns_list = list(SonicDBConfig.get_ns_list())
-        ns_list.remove(multi_asic.DEFAULT_NAMESPACE)
         for namespace in ns_list:
+            if namespace == multi_asic.DEFAULT_NAMESPACE:
+                host_namespace_idx = ns_list.index(namespace)
             db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
             db_conn.append(db)
-
+        # Ensure that db connector of default namespace is the first element of
+        # db_conn list.
+        if host_namespace_idx != 0:
+            tmp_swap = db_conn[0]
+            db_conn[0] = db_conn[host_namespace_idx]
+            db_conn[host_namespace_idx] = tmp_swap
+        
         Namespace.connect_namespace_dbs(db_conn)
         return db_conn
 
