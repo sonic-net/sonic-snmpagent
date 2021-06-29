@@ -66,7 +66,7 @@ stages:
         sudo apt-add-repository https://packages.microsoft.com/debian/10/prod
         sudo apt-get update
         #sudo apt-get -y install -f
-        sudo apt-get install -y libhiredis0.14=0.14.0-3 libnl-3-200=3.4.0-1 dotnet-sdk-5.0
+        sudo apt-get install -y libhiredis0.14=0.14.0-3 libnl-3-200=3.5.0-1 libnl-route-3-200=3.4.0-1 dotnet-sdk-5.0
       displayName: "Install .NET CORE"
 
     - task: PublishTestResults@2
