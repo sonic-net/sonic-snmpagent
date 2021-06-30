@@ -3,12 +3,13 @@ import re
 import os
 
 from swsscommon.swsscommon import SonicV2Connector
-from swsssdk import SonicDBConfig
+from swsscommon.swsscommon import SonicDBConfig
 from swsssdk import port_util
 from swsssdk.port_util import get_index_from_str
 from ax_interface.mib import MIBUpdater
 from ax_interface.util import oid2tuple
 from sonic_ax_impl import logger
+from sonic_py_common import multi_asic
 
 COUNTERS_PORT_NAME_MAP = 'COUNTERS_PORT_NAME_MAP'
 COUNTERS_QUEUE_NAME_MAP = 'COUNTERS_QUEUE_NAME_MAP'
@@ -218,7 +219,12 @@ def init_db():
     Connects to DB
     :return: db_conn
     """
-    SonicDBConfig.load_sonic_global_db_config()
+    if not SonicDBConfig.isInit():
+        if multi_asic.is_multi_asic():
+            # Load the global config file database_global.json once.
+            SonicDBConfig.load_sonic_global_db_config()
+        else:
+            SonicDBConfig.load_sonic_db_config()
     # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
     # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
     db_conn = SonicV2Connector(**redis_kwargs)
@@ -538,10 +544,20 @@ class Namespace:
     @staticmethod
     def init_namespace_dbs():
         db_conn = []
-        SonicDBConfig.load_sonic_global_db_config()
-        for namespace in SonicDBConfig.get_ns_list():
-            db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace, decode_responses=True)
+        if not SonicDBConfig.isInit():
+            if multi_asic.is_multi_asic():
+                SonicDBConfig.load_sonic_global_db_config()
+            else:
+                SonicDBConfig.load_sonic_db_config()
+        host_namespace_idx = 0
+        for idx, namespace in enumerate(SonicDBConfig.get_ns_list()): 
+            if namespace == multi_asic.DEFAULT_NAMESPACE:
+                host_namespace_idx = idx
+            db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
             db_conn.append(db)
+        # Ensure that db connector of default namespace is the first element of
+        # db_conn list.
+        db_conn[0], db_conn[host_namespace_idx] = db_conn[host_namespace_idx], db_conn[0]
 
         Namespace.connect_namespace_dbs(db_conn)
         return db_conn
