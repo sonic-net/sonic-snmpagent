@@ -61,15 +61,11 @@ stages:
     - script: |
         set -ex
         # Install .NET CORE
-        #wget https://packages.microsoft.com/config/debian/10/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
-        #wget http://ftp.us.debian.org/debian/pool/main/h/hiredis/libhiredis0.14_0.14.1-1_amd64.deb
-        #sudo dpkg -i libhiredis0.14_0.14.1-1_amd64.deb
-        #sudo dpkg -i packages-microsoft-prod.deb
-        #sudo apt-get update
-        #sudo apt-get install -y dotnet-sdk-5.0
-        wget https://dot.net/v1/dotnet-install.sh
-        sudo chmod +x dotnet-install.sh
-        sudo ./dotnet-install.sh -c 5.0
+        wget https://packages.microsoft.com/config/debian/10/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+        sudo dpkg -i packages-microsoft-prod.deb
+        sudo apt-get update
+        sudo apt-get -y install -f
+        sudo apt-get install -y dotnet-sdk-5.0
       displayName: "Install .NET CORE"
 
     - task: PublishTestResults@2
