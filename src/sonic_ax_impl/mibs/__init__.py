@@ -551,18 +551,15 @@ class Namespace:
                 SonicDBConfig.load_sonic_db_config()
         host_namespace_idx = 0
         ns_list = list(SonicDBConfig.get_ns_list())
-        for namespace in ns_list:
+        for idx, namespace in enumerate(ns_list): 
             if namespace == multi_asic.DEFAULT_NAMESPACE:
-                host_namespace_idx = ns_list.index(namespace)
+                host_namespace_idx = idx
             db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
             db_conn.append(db)
         # Ensure that db connector of default namespace is the first element of
         # db_conn list.
-        if host_namespace_idx != 0:
-            tmp_swap = db_conn[0]
-            db_conn[0] = db_conn[host_namespace_idx]
-            db_conn[host_namespace_idx] = tmp_swap
-        
+        db_conn[0], db_conn[host_namespace_idx] = db_conn[host_namespace_idx], db_conn[0]
+
         Namespace.connect_namespace_dbs(db_conn)
         return db_conn
 
