@@ -65,6 +65,8 @@ stages:
     - script: |
         set -ex
         # Install .NET CORE
+        wget http://ftp.us.debian.org/debian/pool/main/h/hiredis/libhiredis0.14_0.14.1-1_amd64.deb
+        dpkg -i libhiredis0.14_0.14.1-1_amd64.deb
         sudo apt-get install -y dotnet-sdk-5.0
       displayName: "Install .NET CORE"
 
