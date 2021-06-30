@@ -44,10 +44,6 @@ stages:
 
     - script: |
         set -ex
-        curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-        sudo apt-add-repository https://packages.microsoft.com/debian/10/prod
-        sudo apt-get update
-
         sudo dpkg -i ../target/debs/buster/{libswsscommon_1.0.0_amd64.deb,python3-swsscommon_1.0.0_amd64.deb,libnl-3-200_*.deb,libnl-genl-3-200_*.deb,libnl-nf-3-200_*.deb,libnl-route-3-200_*.deb,libhiredis0.14_*.deb}
         sudo python3 -m pip install ../target/python-wheels/swsssdk*-py3-*.whl
         sudo python3 -m pip install ../target/python-wheels/sonic_py_common-1.0-py3-none-any.whl
@@ -65,8 +61,10 @@ stages:
     - script: |
         set -ex
         # Install .NET CORE
+        wget https://packages.microsoft.com/config/debian/10/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
         wget http://ftp.us.debian.org/debian/pool/main/h/hiredis/libhiredis0.14_0.14.1-1_amd64.deb
-        dpkg -i libhiredis0.14_0.14.1-1_amd64.deb
+        sudo dpkg -i libhiredis0.14_0.14.1-1_amd64.deb
+        sudo dpkg -i packages-microsoft-prod.deb
         sudo apt-get install -y dotnet-sdk-5.0
       displayName: "Install .NET CORE"
 
