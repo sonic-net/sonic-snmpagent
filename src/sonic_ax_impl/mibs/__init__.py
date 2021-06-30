@@ -550,8 +550,7 @@ class Namespace:
             else:
                 SonicDBConfig.load_sonic_db_config()
         host_namespace_idx = 0
-        ns_list = list(SonicDBConfig.get_ns_list())
-        for idx, namespace in enumerate(ns_list): 
+        for idx, namespace in enumerate(SonicDBConfig.get_ns_list()): 
             if namespace == multi_asic.DEFAULT_NAMESPACE:
                 host_namespace_idx = idx
             db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
