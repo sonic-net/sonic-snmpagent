@@ -2,13 +2,14 @@ import asyncio
 
 from .mib import MIBTable, MIBMeta
 from .socket_io import SocketManager
+from .trap import TrapInfra
 
 # how long to wait before forcibly killing background task(s) during the shutdown procedure.
 BACKGROUND_WAIT_TIMEOUT = 10  # seconds
 
 
 class Agent:
-    def __init__(self, mib_cls, update_frequency, loop):
+    def __init__(self, mib_cls, update_frequency, loop, trap_handlers):
         if not type(mib_cls) is MIBMeta:
             raise ValueError("Expected a class with type: {}".format(MIBMeta))
 
@@ -19,8 +20,11 @@ class Agent:
         self.oid_updaters_enabled = asyncio.Event(loop=loop)
         self.stopped = asyncio.Event(loop=loop)
 
+        # Initialize our Trap infra
+        self.trap_infra = TrapInfra(loop,trap_handlers)
+
         # Initialize our MIB
-        self.mib_table = MIBTable(mib_cls, update_frequency)
+        self.mib_table = MIBTable(mib_cls, update_frequency, self.trap_infra)
 
         # containers
         self.socket_mgr = SocketManager(self.mib_table, self.run_enabled, self.loop)
@@ -54,6 +58,8 @@ class Agent:
     async def shutdown(self):
         # allow the agent to quit
         self.run_enabled.clear()
+        # shutdown trap infra
+        await self.trap_infra.shutdown()
         # close the socket
         self.socket_mgr.close()
         # wait for the agent to signal back
