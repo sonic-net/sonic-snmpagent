@@ -911,7 +911,8 @@ class TestGetNextPDU_2863(TestCase):
 
     def test_vlan_iface_ifMIB(self):
         """
-        Test that vlan interface is present in the ifMIB OID path of the MIB
+        Test that vlan interface is present in the ifMIB OID path of the MIB.
+        It is empty because there is no corresponding entry in config DB.
         """
         oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 2999))
         get_pdu = GetNextPDU(
@@ -926,11 +927,12 @@ class TestGetNextPDU_2863(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 3000))))
-        self.assertEqual(str(value0.data), 'Vlan1000')
+        self.assertEqual(str(value0.data), '')
 
     def test_vlan_iface_description_ifMIB(self):
         """
-        Test vlan interface description (which is simply the name) in the ifMIB OID path of the MIB
+        Test vlan interface description in the ifMIB OID path of the MIB.
+        It is empty because there is no corresponding entry in config DB.
         """
         oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 3000))
         get_pdu = GetPDU(
@@ -945,6 +947,6 @@ class TestGetNextPDU_2863(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 3000))))
-        self.assertEqual(str(value0.data), 'Vlan1000')
+        self.assertEqual(str(value0.data), '')
 
 
