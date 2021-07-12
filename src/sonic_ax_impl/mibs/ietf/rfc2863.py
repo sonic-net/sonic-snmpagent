@@ -210,18 +210,8 @@ class InterfaceMIBUpdater(MIBUpdater):
         if not entry:
             return
 
+        # This returns empty values for LAG, vlan & mgmt, which is the expected result
         result = entry.get("description", "")
-        
-        if not result:
-            #RFC2863 tables don't have descriptions for LAG, vlan & mgmt; take from RFC1213
-            oid = self.get_oid(sub_id)
-            if oid in self.oid_lag_name_map:
-                result = self.oid_lag_name_map[oid]
-            elif oid in self.mgmt_oid_name_map:
-                result = self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
-            elif oid in self.vlan_oid_name_map:
-                result = self.vlan_oid_name_map[oid]
-
         return result
 
     def get_counter32(self, sub_id, table_name):
