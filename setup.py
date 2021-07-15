@@ -10,6 +10,7 @@ test_deps = [
     'mockredispy>=2.9.3',
     'pytest',
     'pytest-cov',
+    'bitstring>=3.1.6',
 ]
 
 high_performance_deps = [
