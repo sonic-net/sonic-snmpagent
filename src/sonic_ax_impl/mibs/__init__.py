@@ -275,7 +275,8 @@ def init_sync_d_interface_tables(db_conn):
     for if_name, sai_id in if_name_map_util.items():
         if_name_str = if_name
         if (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name_str) or \
-                re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name_str)):
+                re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name_str) or \
+                re.match(port_util.SONIC_ETHERNET_IB_RE_PATTERN, if_name_str)):
             if_name_map[if_name] = sai_id
     # As sai_id is not unique in multi-asic platform, concatenate it with
     # namespace to get a unique key. Assuming that ':' is not present in namespace
@@ -283,7 +284,8 @@ def init_sync_d_interface_tables(db_conn):
     # sai_id_key = namespace : sai_id
     for sai_id, if_name in if_id_map_util.items():
         if (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name) or \
-                re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name)):
+                re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name) or \
+                re.match(port_util.SONIC_ETHERNET_IB_RE_PATTERN, if_name)):
             if_id_map[get_sai_id_key(db_conn.namespace, sai_id)] = if_name
     logger.debug("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
     logger.debug("Interface name map:\n" + pprint.pformat(if_id_map, indent=2))
