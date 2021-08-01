@@ -262,8 +262,9 @@ class InterfacesUpdater(MIBUpdater):
             namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
             if_idx = mibs.get_index_from_str(self.if_id_map[sai_id_key])
             counters_db_data = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB,
-                                                                        mibs.counter_table(sai_id),
-                                                                        blocking=True)
+                                                                        mibs.counter_table(sai_id))
+            if counters_db_data is None:
+                counters_db_data = {}
             self.if_counters[if_idx] = {
                 counter: int(value) for counter, value in counters_db_data.items()
             }
@@ -272,8 +273,9 @@ class InterfacesUpdater(MIBUpdater):
         rif_sai_ids = list(self.rif_port_map) + list(self.vlan_name_map)
         for sai_id in rif_sai_ids:
             counters_db_data = Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB,
-                                                     mibs.counter_table(mibs.split_sai_id_key(sai_id)[1]),
-                                                     blocking=False)
+                                                     mibs.counter_table(mibs.split_sai_id_key(sai_id)[1]))
+            if counters_db_data is None:
+                counters_db_data = {}
             self.rif_counters[sai_id] = {
                 counter: int(value) for counter, value in counters_db_data.items()
             }
@@ -358,8 +360,8 @@ class InterfacesUpdater(MIBUpdater):
                 port_idx = mibs.get_index_from_str(self.if_id_map[port_sai_id])
                 for port_counter_name, rif_counter_name in mibs.RIF_DROPS_AGGR_MAP.items():
                     self.if_counters[port_idx][port_counter_name] = \
-                    self.if_counters[port_idx][port_counter_name] + \
-                    self.rif_counters[rif_sai_id][rif_counter_name]
+                    self.if_counters[port_idx].get(port_counter_name, 0) + \
+                    self.rif_counters[rif_sai_id].get(rif_counter_name, 0)
 
         for vlan_sai_id, vlan_name in self.vlan_name_map.items():
             for port_counter_name, rif_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
