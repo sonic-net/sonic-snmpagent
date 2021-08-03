@@ -65,7 +65,7 @@ def connect_SonicV2Connector(self, db_name, retry_on=True):
     _old_connect_SonicV2Connector(self, db_name, retry_on)
 
 
-def _subscribe_keyspace_notification(self, db_name, client):
+def _subscribe_keyspace_notification(self, db_name):
     pass
 
 
