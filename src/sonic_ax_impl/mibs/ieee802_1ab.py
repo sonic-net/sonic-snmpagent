@@ -96,6 +96,18 @@ def poll_lldp_entry_updates(pubsub):
         return ret
     return data, interface, if_index
 
+def get_latest_notification(pubsub):
+    """
+    Fetches the latest notification recorded on a lldp entry.
+    """
+    latest_update_map = {}
+    while True:
+        data, interface, if_index = poll_lldp_entry_updates(pubsub)
+        if not data:
+            break
+        latest_update_map[interface] = (data, if_index)
+    return latest_update_map
+        
 def parse_sys_capability(sys_cap):
     return bytearray([int (x, 16) for x in sys_cap.split()])
 
@@ -542,19 +554,17 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         """
         Listen to updates in APP DB, update local cache
         """
-        while True:
-            data, interface, if_index = poll_lldp_entry_updates(pubsub)
-
-            if not data:
-                break
-
+        event_cache = get_latest_notification(pubsub)
+        for interface in event_cache:
+            data = event_cache[interface][0]
+            if_index = event_cache[interface][1]
+            
             if "set" in data:
                 self.update_rem_if_mgmt(if_index, interface)
             elif "del" in data:
-                # some remote data about that neighbor is gone, del it and try to query again
+                # if del is the latest notification, then delete it from the local cache
                 self.if_range = [sub_oid for sub_oid in self.if_range if sub_oid[0] != if_index]
-                self.update_rem_if_mgmt(if_index, interface)
-
+                
     def update_data(self):
         for i in range(len(self.db_conn)):
             if not self.pubsub[i]:
