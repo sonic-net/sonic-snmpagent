@@ -31,6 +31,10 @@ class MIBUpdater:
     async def start(self):
         # Run the update while we are allowed
         while self.run_event.is_set():
+            # wait based on our update frequency before executing again.
+            # randomize to avoid concurrent update storms.
+            await asyncio.sleep(self.frequency + random.randint(-2, 2))
+
             try:
                 # reinit internal structures
                 if self.update_counter > self.reinit_rate:
@@ -43,11 +47,7 @@ class MIBUpdater:
                 self.update_data()
             except Exception:
                 # Any unexpected exception or error, log it and keep running
-                logger.exception("MIBUpdater.start() caught an unexpected exception during update_data()")
-
-            # wait based on our update frequency before executing again.
-            # randomize to avoid concurrent update storms.
-            await asyncio.sleep(self.frequency + random.randint(-2, 2))
+                logger.warning("MIBUpdater.start() caught an unexpected exception during update_data()", exc_info=True)
 
     def reinit_data(self):
         """
