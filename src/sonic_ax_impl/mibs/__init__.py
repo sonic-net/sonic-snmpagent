@@ -3,12 +3,13 @@ import re
 import os
 
 from swsscommon.swsscommon import SonicV2Connector
-from swsssdk import SonicDBConfig
+from swsscommon.swsscommon import SonicDBConfig
 from swsssdk import port_util
 from swsssdk.port_util import get_index_from_str
 from ax_interface.mib import MIBUpdater
 from ax_interface.util import oid2tuple
 from sonic_ax_impl import logger
+from sonic_py_common import multi_asic
 
 COUNTERS_PORT_NAME_MAP = 'COUNTERS_PORT_NAME_MAP'
 COUNTERS_QUEUE_NAME_MAP = 'COUNTERS_QUEUE_NAME_MAP'
@@ -26,6 +27,20 @@ TABLE_NAME_SEPARATOR_COLON = ':'
 TABLE_NAME_SEPARATOR_VBAR = '|'
 
 HOST_NAMESPACE_DB_IDX = 0
+
+RIF_COUNTERS_AGGR_MAP = {
+    "SAI_PORT_STAT_IF_IN_OCTETS": "SAI_ROUTER_INTERFACE_STAT_IN_OCTETS",
+    "SAI_PORT_STAT_IF_IN_UCAST_PKTS": "SAI_ROUTER_INTERFACE_STAT_IN_PACKETS",
+    "SAI_PORT_STAT_IF_IN_ERRORS": "SAI_ROUTER_INTERFACE_STAT_IN_ERROR_PACKETS",
+    "SAI_PORT_STAT_IF_OUT_OCTETS": "SAI_ROUTER_INTERFACE_STAT_OUT_OCTETS",
+    "SAI_PORT_STAT_IF_OUT_UCAST_PKTS": "SAI_ROUTER_INTERFACE_STAT_OUT_PACKETS",
+    "SAI_PORT_STAT_IF_OUT_ERRORS": "SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS"
+}
+
+RIF_DROPS_AGGR_MAP = {
+    "SAI_PORT_STAT_IF_IN_ERRORS": "SAI_ROUTER_INTERFACE_STAT_IN_ERROR_PACKETS",
+    "SAI_PORT_STAT_IF_OUT_ERRORS": "SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS"
+}
 
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
 
@@ -136,6 +151,14 @@ def if_entry_table(if_name):
     return 'PORT_TABLE:' + if_name
 
 
+def vlan_entry_table(if_name):
+    """
+    :param if_name: given interface to cast.
+    :return: VLAN_TABLE key.
+    """
+    return 'VLAN_TABLE:' + if_name
+
+
 def lag_entry_table(lag_name):
     """
     :param lag_name: given lag to cast.
@@ -196,7 +219,12 @@ def init_db():
     Connects to DB
     :return: db_conn
     """
-    SonicDBConfig.load_sonic_global_db_config()
+    if not SonicDBConfig.isInit():
+        if multi_asic.is_multi_asic():
+            # Load the global config file database_global.json once.
+            SonicDBConfig.load_sonic_global_db_config()
+        else:
+            SonicDBConfig.load_sonic_db_config()
     # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
     # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
     db_conn = SonicV2Connector(**redis_kwargs)
@@ -288,11 +316,52 @@ def init_sync_d_interface_tables(db_conn):
 
     return if_name_map, if_alias_map, if_id_map, oid_name_map
 
+
+def init_sync_d_rif_tables(db_conn):
+    """
+    Initializes map of RIF SAI oids to port SAI oid.
+    :return: dict
+    """
+    rif_port_map = {get_sai_id_key(db_conn.namespace, rif): get_sai_id_key(db_conn.namespace, port)
+                    for rif, port in port_util.get_rif_port_map(db_conn).items()}
+    port_rif_map = {port: rif for rif, port in rif_port_map.items()}
+    logger.debug("Rif port map:\n" + pprint.pformat(rif_port_map, indent=2))
+
+    return rif_port_map, port_rif_map
+
+
+def init_sync_d_vlan_tables(db_conn):
+    """
+    Initializes vlan interface maps for SyncD-connected MIB(s).
+    :return: tuple(vlan_name_map, oid_sai_map, oid_name_map)
+    """
+
+    vlan_name_map = port_util.get_vlan_interface_oid_map(db_conn)
+
+    logger.debug("Vlan oid map:\n" + pprint.pformat(vlan_name_map, indent=2))
+
+    oid_sai_map = {}
+    oid_name_map = {}
+    for sai_id, if_name in vlan_name_map.items():
+        port_index = get_index_from_str(if_name)
+        if not port_index:
+            continue
+        # { OID -> sai_id }
+        oid_sai_map[port_index] = sai_id
+        # { OID -> if_name (SONiC) }
+        oid_name_map[port_index] = if_name
+
+    logger.debug("OID sai map:\n" + pprint.pformat(oid_sai_map, indent=2))
+    logger.debug("OID name map:\n" + pprint.pformat(oid_name_map, indent=2))
+
+    return vlan_name_map, oid_sai_map, oid_name_map
+
+
 def init_sync_d_lag_tables(db_conn):
     """
     Helper method. Connects to and initializes LAG interface maps for SyncD-connected MIB(s).
     :param db_conn: database connector
-    :return: tuple(lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map)
+    :return: tuple(lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map, sai_lag_map)
     """
     # { lag_name (SONiC) -> [ lag_members (if_name) ] }
     # ex: { "PortChannel0" : [ "Ethernet0", "Ethernet4" ] }
@@ -312,7 +381,7 @@ def init_sync_d_lag_tables(db_conn):
     lag_entries = db_conn.keys(APPL_DB, "LAG_TABLE:*")
 
     if not lag_entries:
-        return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map
+        return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map, sai_lag_map
 
     db_conn.connect(COUNTERS_DB)
     lag_sai_map = db_conn.get_all(COUNTERS_DB, "COUNTERS_LAG_NAME_MAP")
@@ -341,7 +410,7 @@ def init_sync_d_lag_tables(db_conn):
         if idx:
             oid_lag_name_map[idx] = if_name
 
-    return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, sai_lag_map
+    return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map, sai_lag_map
 
 def init_sync_d_queue_tables(db_conn):
     """
@@ -356,7 +425,7 @@ def init_sync_d_queue_tables(db_conn):
 
     # Parse the queue_name_map and create the following maps:
     # port_queues_map -> {"port_index : queue_index" : sai_oid}
-    # queue_stat_map -> {"port_index : queue stat table name" : {counter name : value}} 
+    # queue_stat_map -> {"port_index : queue stat table name" : {counter name : value}}
     # port_queue_list_map -> {port_index: [sorted queue list]}
     port_queues_map = {}
     queue_stat_map = {}
@@ -418,7 +487,7 @@ class RedisOidTreeUpdater(MIBUpdater):
     def __init__(self, prefix_str):
         super().__init__()
 
-        self.db_conn = Namespace.init_namespace_dbs() 
+        self.db_conn = Namespace.init_namespace_dbs()
         if prefix_str.startswith('.'):
             prefix_str = prefix_str[1:]
         self.prefix_str = prefix_str
@@ -469,10 +538,20 @@ class Namespace:
     @staticmethod
     def init_namespace_dbs():
         db_conn = []
-        SonicDBConfig.load_sonic_global_db_config()
-        for namespace in SonicDBConfig.get_ns_list():
-            db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace, decode_responses=True)
+        if not SonicDBConfig.isInit():
+            if multi_asic.is_multi_asic():
+                SonicDBConfig.load_sonic_global_db_config()
+            else:
+                SonicDBConfig.load_sonic_db_config()
+        host_namespace_idx = 0
+        for idx, namespace in enumerate(SonicDBConfig.get_ns_list()): 
+            if namespace == multi_asic.DEFAULT_NAMESPACE:
+                host_namespace_idx = idx
+            db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
             db_conn.append(db)
+        # Ensure that db connector of default namespace is the first element of
+        # db_conn list.
+        db_conn[0], db_conn[host_namespace_idx] = db_conn[host_namespace_idx], db_conn[0]
 
         Namespace.connect_namespace_dbs(db_conn)
         return db_conn
@@ -531,7 +610,7 @@ class Namespace:
         db get_all function executed on global and all namespace DBs.
         """
         result = {}
-        # If there are multiple namespaces, _hash might not be 
+        # If there are multiple namespaces, _hash might not be
         # present in all namespace, ignore if not present in a
         # specfic namespace.
         if len(dbs) > 1:
