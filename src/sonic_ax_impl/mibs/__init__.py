@@ -271,7 +271,7 @@ def init_sync_d_interface_tables(db_conn):
 
     # { if_name (SONiC) -> sai_id }
     # ex: { "Ethernet76" : "1000000000023" }
-    if_name_map_util, if_id_map_util = port_util.get_interface_oid_map(db_conn)
+    if_name_map_util, if_id_map_util = port_util.get_interface_oid_map(db_conn, blocking=False)
     for if_name, sai_id in if_name_map_util.items():
         if_name_str = if_name
         if (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name_str) or \
@@ -297,12 +297,8 @@ def init_sync_d_interface_tables(db_conn):
 
     # SyncD consistency checks.
     if not oid_name_map:
-        # In the event no interface exists that follows the SONiC pattern, no OIDs are able to be registered.
-        # A RuntimeError here will prevent the 'main' module from loading. (This is desirable.)
-        message = "No interfaces found matching pattern '{}'. SyncD database is incoherent." \
-            .format(port_util.SONIC_ETHERNET_RE_PATTERN)
-        logger.error(message)
-        raise RuntimeError(message)
+        logger.debug("There are no ports in counters DB")
+        return {}, {}, {}, {}
     elif len(if_id_map) < len(if_name_map) or len(oid_name_map) < len(if_name_map):
         # a length mismatch indicates a bad interface name
         logger.warning("SyncD database contains incoherent interface names. Interfaces must match pattern '{}'"
@@ -424,7 +420,7 @@ def init_sync_d_queue_tables(db_conn):
 
     # { Port name : Queue index (SONiC) -> sai_id }
     # ex: { "Ethernet0:2" : "1000000000023" }
-    queue_name_map = db_conn.get_all(COUNTERS_DB, COUNTERS_QUEUE_NAME_MAP, blocking=True)
+    queue_name_map = db_conn.get_all(COUNTERS_DB, COUNTERS_QUEUE_NAME_MAP, blocking=False)
     logger.debug("Queue name map:\n" + pprint.pformat(queue_name_map, indent=2))
 
     # Parse the queue_name_map and create the following maps:
@@ -455,10 +451,8 @@ def init_sync_d_queue_tables(db_conn):
 
     # SyncD consistency checks.
     if not port_queues_map:
-        # In the event no queue exists that follows the SONiC pattern, no OIDs are able to be registered.
-        # A RuntimeError here will prevent the 'main' module from loading. (This is desirable.)
-        logger.error("No queues found in the Counter DB. SyncD database is incoherent.")
-        raise RuntimeError('The port_queues_map is not defined')
+        logger.debug("Counters DB does not contain ports")
+        return {}, {}, {}
     elif not queue_stat_map:
         logger.error("No queue stat counters found in the Counter DB. SyncD database is incoherent.")
         raise RuntimeError('The queue_stat_map is not defined')
