@@ -52,10 +52,13 @@ def get_transceiver_data(xcvr_info):
     :return: tuple (type, hw_version, mfg_name, model_name) of transceiver;
     Empty string if field not in xcvr_info
     """
-
-    return (xcvr_info.get(xcvr_field.value, b"").decode()
-            for xcvr_field in XcvrInfoDB)
-
+    result = tuple()
+    for xcvr_field in XcvrInfoDB:
+        try:
+            result = result +  (xcvr_info.get(xcvr_field.value, b"").decode(),)
+        except UnicodeError:
+            result = result + ("",)
+    return result
 
 def get_transceiver_description(sfp_type, if_alias):
     """
