@@ -55,7 +55,7 @@ def get_transceiver_data(xcvr_info):
     result = tuple()
     for xcvr_field in XcvrInfoDB:
         try:
-            result = result +  (xcvr_info.get(xcvr_field.value, b"").decode(),)
+            result = result + (xcvr_info.get(xcvr_field.value, b"").decode(),)
         except UnicodeError:
             result = result + ("",)
     return result
