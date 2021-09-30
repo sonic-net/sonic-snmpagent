@@ -95,6 +95,39 @@ class TestSonicMIB(TestCase):
             self.assertEqual(value.type_, expected_type)
             self.assertEqual(str(value.data), str(expected_value))
 
+    def test_getpdu_xcvr_info_eth2(self):
+        sub_id = 1000 * 5 # sub id for Ethernet4
+
+        expected_mib = {
+            2: (ValueType.OCTET_STRING, "QSFP+ for etp2"),
+            5: (ValueType.INTEGER, PhysicalClass.PORT),
+            7: (ValueType.OCTET_STRING, ""), # skip
+            8: (ValueType.OCTET_STRING, ""), # Empty string as DB has junk string
+            9: (ValueType.OCTET_STRING, ""), # skip
+            10: (ValueType.OCTET_STRING, ""), # skip
+            11: (ValueType.OCTET_STRING, "SERIAL_NUM_2"),
+            12: (ValueType.OCTET_STRING, "VENDOR_NAME_2"),
+            13: (ValueType.OCTET_STRING, "MODEL_NAME_2")
+        }
+
+        oids = [ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, field_sub_id, sub_id))
+                for field_sub_id in expected_mib]
+
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=oids
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+
+        for mib_key, value in zip(expected_mib, response.values):
+            expected_oid = ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 47, 1, 1, 1, 1, mib_key, sub_id))
+            expected_type, expected_value = expected_mib[mib_key]
+            self.assertEqual(str(value.name), str(expected_oid))
+            self.assertEqual(value.type_, expected_type)
+            self.assertEqual(str(value.data), str(expected_value))
+
     def test_getpdu_xcvr_dom(self):
         expected_mib = {
             1000 * 1 + 1: "DOM Temperature Sensor for etp1",

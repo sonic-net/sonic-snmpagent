@@ -24,6 +24,13 @@
     "manufacturer": "VENDOR_NAME",
     "model": "MODEL_NAME"
   },
+  "TRANSCEIVER_INFO|Ethernet4": {
+    "type": "QSFP+",
+    "hardware_rev": ""\xff\xff",
+    "serial": "SERIAL_NUM_2",
+    "manufacturer": "VENDOR_NAME_2",
+    "model": "MODEL_NAME_2"
+  },
   "TRANSCEIVER_DOM_SENSOR|Ethernet0": {
     "temperature": 25.39,
     "voltage": 3.37,
