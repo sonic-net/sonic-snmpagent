@@ -410,7 +410,7 @@ class InterfacesUpdater(MIBUpdater):
             # self.lag_sai_map['PortChannel01'] = '2000000000006'
             # self.port_rif_map['2000000000006'] = '6000000000006'
             sai_lag_id = self.lag_sai_map[self.oid_lag_name_map[oid]]
-            sai_lag_rif_id = self.port_rif_map[sai_lag_id]
+            sai_lag_rif_id = self.port_rif_map[sai_lag_id] if sai_lag_id in self.port_rif_map else None
             if sai_lag_rif_id in self.rif_port_map:
                 # Extract the 'name' part of 'table_name'.
                 # Example: 
