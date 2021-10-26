@@ -93,7 +93,6 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.mgmt_alias_map = {}
         self.vlan_oid_name_map = {}
         self.vlan_name_map = {}
-        self.rif_port_map = {}
         self.if_counters = {}
         self.if_range = []
         self.if_name_map = {}
@@ -127,9 +126,6 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.vlan_name_map, \
         self.vlan_oid_sai_map, \
         self.vlan_oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_vlan_tables, self.db_conn)
-
-        self.rif_port_map, \
-        self.port_rif_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_rif_tables, self.db_conn)
 
         self.if_range = sorted(list(self.oid_name_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
