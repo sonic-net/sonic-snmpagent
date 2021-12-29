@@ -3,6 +3,7 @@ import sys
 from unittest import TestCase
 
 import tests.mock_tables.dbconnector
+from sonic_ax_impl import mibs
 
 if sys.version_info.major == 3:
     from unittest import mock
@@ -50,3 +51,14 @@ class TestGetNextPDU(TestCase):
         self.assertTrue(if_alias_map == {})
         self.assertTrue(if_id_map == {})
         self.assertTrue(oid_name_map == {})
+
+    @mock.patch('swsssdk.dbconnector.SonicV2Connector.get_all', mock.MagicMock(return_value=({})))
+    def test_init_sync_d_queue_tables(self):
+        mock_queue_stat_map = {}
+        db_conn = Namespace.init_namespace_dbs()
+
+        port_queues_map, queue_stat_map, port_queue_list_map = \
+            Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_queue_tables, db_conn)
+        self.assertTrue(port_queues_map == {})
+        self.assertTrue(queue_stat_map == {})
+        self.assertTrue(port_queue_list_map == {})

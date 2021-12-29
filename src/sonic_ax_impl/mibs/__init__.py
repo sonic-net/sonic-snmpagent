@@ -454,14 +454,9 @@ def init_sync_d_queue_tables(db_conn):
     if not port_queues_map:
         logger.debug("Counters DB does not contain ports")
         return {}, {}, {}
-    elif not queue_stat_map:
-        init_sync_d_queue_tables.error_counter += 1
-        if init_sync_d_queue_tables.error_counter > 3:
-            logger.error("No queue stat counters found in the Counter DB. SyncD database is incoherent.")
-            raise RuntimeError('The queue_stat_map is not defined')
-        else:
-            logger.debug("No queue stat counters found in the Counter DB. Wait to be updated.")
-            return {}, {}, {}
+    if not queue_stat_map:
+        logger.debug("No queue stat counters found in the Counter DB.")
+        return {}, {}, {}
 
     for queues in port_queue_list_map.values():
         queues.sort()
