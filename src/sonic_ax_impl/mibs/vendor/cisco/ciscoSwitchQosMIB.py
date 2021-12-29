@@ -66,7 +66,6 @@ class QueueStatUpdater(MIBUpdater):
         self.queue_type_map = {}
         self.port_index_namespace = {}
         self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
-        mibs.init_sync_d_queue_tables.error_counter = 0
 
     def reinit_data(self):
         """
