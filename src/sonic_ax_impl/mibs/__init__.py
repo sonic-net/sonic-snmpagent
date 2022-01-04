@@ -44,7 +44,6 @@ RIF_DROPS_AGGR_MAP = {
 
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
 
-
 def get_neigh_info(neigh_key):
     """
     split neigh_key string of the format:
@@ -455,9 +454,9 @@ def init_sync_d_queue_tables(db_conn):
     if not port_queues_map:
         logger.debug("Counters DB does not contain ports")
         return {}, {}, {}
-    elif not queue_stat_map:
-        logger.error("No queue stat counters found in the Counter DB. SyncD database is incoherent.")
-        raise RuntimeError('The queue_stat_map is not defined')
+    if not queue_stat_map:
+        logger.debug("No queue stat counters found in the Counter DB.")
+        return {}, {}, {}
 
     for queues in port_queue_list_map.values():
         queues.sort()
