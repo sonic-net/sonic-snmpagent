@@ -23,7 +23,7 @@ from .sensor_data import ThermalSensorData, FANSensorData, PSUSensorData, Transc
 NOT_AVAILABLE = 'N/A'
 CHASSIS_NAME_SUB_STRING = 'chassis'
 PSU_NAME_SUB_STRING = 'PSU'
-
+RJ45_PORT_TYPE = 'RJ45'
 
 def is_null_empty_str(value):
     """
@@ -425,7 +425,9 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
             # get transceiver sensors from transceiver dom entry in STATE DB
             transceiver_dom_entry_data = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB, transceiver_dom_entry)
 
-            if not transceiver_dom_entry_data:
+            transceiver_info_entry_data = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB, mibs.transceiver_info_table(interface))
+
+            if not transceiver_dom_entry_data or transceiver_info_entry_data['type'] == RJ45_PORT_TYPE:
                 continue
 
             sensor_data_list = TransceiverSensorData.create_sensor_data(transceiver_dom_entry_data)
