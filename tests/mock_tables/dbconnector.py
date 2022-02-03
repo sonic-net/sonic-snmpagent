@@ -94,6 +94,11 @@ class SwssSyncClient(mockredis.MockRedis):
 
         with open(fname) as f:
             js = json.load(f)
+            # Add a corrupted string to test decoding of corrupted string.
+            # If this corrupted string is added in json file, 
+            # json.load throws an exception.
+            if u'TRANSCEIVER_INFO|Ethernet4' in js and u'hardware_rev' in js[u'TRANSCEIVER_INFO|Ethernet4']:
+                js[u'TRANSCEIVER_INFO|Ethernet4'][u'hardware_rev'] = b'\xff\xff'
             for h, table in js.items():
                 for k, v in table.items():
                     self.hset(h, k, v)

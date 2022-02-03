@@ -26,7 +26,7 @@
   },
   "TRANSCEIVER_INFO|Ethernet4": {
     "type": "QSFP+",
-    "hardware_rev": "\xff\xff",
+    "hardware_rev": "\\xff\\xff",
     "serial": "SERIAL_NUM_2",
     "manufacturer": "VENDOR_NAME_2",
     "model": "MODEL_NAME_2"
