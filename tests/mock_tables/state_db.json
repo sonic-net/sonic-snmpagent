@@ -66,7 +66,7 @@
   },
   "TRANSCEIVER_INFO|Ethernet2": {
     "type": "RJ45",
-    "hardware_rev": "N/A",
+    "vendor_rev": "N/A",
     "serial": "N/A",
     "manufacturer": "N/A",
     "model": "N/A",
