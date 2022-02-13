@@ -422,12 +422,14 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
                      in STATE_DB, skipping".format(transceiver_dom_entry))
                 continue
 
+            # skip RJ45 port
+            transceiver_info_entry_data = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB, mibs.transceiver_info_table(interface))
+            if  transceiver_info_entry_data['type'] == RJ45_PORT_TYPE:
+                continue
+
             # get transceiver sensors from transceiver dom entry in STATE DB
             transceiver_dom_entry_data = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB, transceiver_dom_entry)
-
-            transceiver_info_entry_data = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB, mibs.transceiver_info_table(interface))
-
-            if not transceiver_dom_entry_data or transceiver_info_entry_data['type'] == RJ45_PORT_TYPE:
+            if not transceiver_dom_entry_data:
                 continue
 
             sensor_data_list = TransceiverSensorData.create_sensor_data(transceiver_dom_entry_data)
