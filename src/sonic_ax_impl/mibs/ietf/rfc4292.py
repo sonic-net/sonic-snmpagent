@@ -65,7 +65,7 @@ class RouteUpdater(MIBUpdater):
                 continue
             port_table = multi_asic.get_port_table_for_asic(db_conn.namespace)
             ent = db_conn.get_all(mibs.APPL_DB, route_str, blocking=False)
-            if ent is None:
+            if not ent:
                 continue
             nexthops = ent["nexthop"]
             ifnames = ent["ifname"]
