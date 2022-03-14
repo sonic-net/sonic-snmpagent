@@ -303,7 +303,7 @@ class LLDPLocManAddrUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
 
-        self.db_conn = mibs.init_db()
+        self.db_conn = Namespace.init_db()
         self.loc_chassis_data = {}
         self.man_addr_list = []
         self.mgmt_ip_str = None

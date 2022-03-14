@@ -9,7 +9,7 @@ import signal
 import sys
 
 import ax_interface
-from sonic_ax_impl.mibs import ieee802_1ab
+from sonic_ax_impl.mibs import ieee802_1ab, Namespace
 from . import logger
 from .mibs.ietf import rfc1213, rfc2737, rfc2863, rfc3433, rfc4292, rfc4363
 from .mibs.vendor import dell, cisco
@@ -58,6 +58,8 @@ def main(update_frequency=None):
     global event_loop
 
     try:
+        Namespace.init_sonic_db_config()
+
         # initialize handler and set update frequency (or use the default)
         agent = ax_interface.Agent(SonicMIB, update_frequency or DEFAULT_UPDATE_FREQUENCY, event_loop)
 

@@ -708,7 +708,7 @@ class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
 class sysNameUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
-        self.db_conn = mibs.init_db()
+        self.db_conn = Namespace.init_db()
         self.hostname = socket.gethostname()
 
     def reinit_data(self):

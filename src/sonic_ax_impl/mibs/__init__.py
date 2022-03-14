@@ -213,25 +213,6 @@ def config(**kwargs):
     redis_kwargs = {k:v for (k,v) in kwargs.items() if k in ['unix_socket_path', 'host', 'port']}
     redis_kwargs['decode_responses'] = True
 
-def init_db():
-    """
-    Connects to DB
-    :return: db_conn
-    """
-    # SonicDBConfig has 2 initialize flags: isGlobalInit for multi asic and isInit for single asic
-    if multi_asic.is_multi_asic():
-        if not SonicDBConfig.isGlobalInit():
-            # Load the global config file database_global.json once.
-            SonicDBConfig.load_sonic_global_db_config()
-    elif not SonicDBConfig.isInit():
-        SonicDBConfig.load_sonic_db_config()
-
-    # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
-    # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
-    db_conn = SonicV2Connector(**redis_kwargs)
-
-    return db_conn
-
 def init_mgmt_interface_tables(db_conn):
     """
     Initializes interface maps for mgmt ports
@@ -538,15 +519,35 @@ class RedisOidTreeUpdater(MIBUpdater):
         return self.oid_map[oid]
 
 class Namespace:
+
     @staticmethod
-    def init_namespace_dbs():
-        db_conn = []
+    def init_sonic_db_config():
+        """
+        Initialize SonicDBConfig
+        """
         # SonicDBConfig has 2 initialize flags: isGlobalInit for multi asic and isInit for single asic
         if multi_asic.is_multi_asic():
             if not SonicDBConfig.isGlobalInit():
+                # Load the global config file database_global.json once.
                 SonicDBConfig.load_sonic_global_db_config()
         elif not SonicDBConfig.isInit():
             SonicDBConfig.load_sonic_db_config()
+        
+    @staticmethod
+    def init_db():
+        """
+        Connects to DB
+        :return: db_conn
+        """
+        # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
+        # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
+        db_conn = SonicV2Connector(**redis_kwargs)
+
+        return db_conn
+
+    @staticmethod
+    def init_namespace_dbs():
+        db_conn = []
         host_namespace_idx = 0
         for idx, namespace in enumerate(SonicDBConfig.get_ns_list()): 
             if namespace == multi_asic.DEFAULT_NAMESPACE:
