@@ -1,6 +1,5 @@
 from enum import Enum, unique
 from sonic_ax_impl import mibs
-from sonic_ax_impl.mibs import Namespace
 from ax_interface import MIBMeta, ValueType, SubtreeMIBEntry
 
 CHASSIS_INFO_KEY_TEMPLATE = 'chassis {}'
@@ -52,7 +51,7 @@ class PowerStatusHandler:
         """
         init the handler
         """
-        self.statedb = Namespace.init_db()
+        self.statedb = mibs.init_db()
         self.statedb.connect(self.statedb.STATE_DB)
 
     def _get_num_psus(self):
