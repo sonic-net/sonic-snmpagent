@@ -531,12 +531,18 @@ class RedisOidTreeUpdater(MIBUpdater):
         return self.oid_map[oid]
 
 class Namespace:
+
+    """
+        Sonic database initialized flag.
+    """
+    db_config_loaded = False
+
     @staticmethod
     def init_sonic_db_config():
         """
         Initialize SonicDBConfig
         """
-        if Namespace.db_config_loaded():
+        if Namespace.db_config_loaded:
             return
 
         if multi_asic.is_multi_asic():
@@ -545,15 +551,7 @@ class Namespace:
         else:
             SonicDBConfig.load_sonic_db_config()
 
-    @staticmethod
-    def db_config_loaded():
-        """
-        Check if database config loaded
-        """
-        if multi_asic.is_multi_asic():
-            return SonicDBConfig.isGlobalInit()
-        else:
-            return SonicDBConfig.isInit()
+        Namespace.db_config_loaded = True
 
     @staticmethod
     def init_namespace_dbs():
