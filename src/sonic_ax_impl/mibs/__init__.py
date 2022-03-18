@@ -218,16 +218,11 @@ def init_db():
     Connects to DB
     :return: db_conn
     """
-    if not SonicDBConfig.isInit():
-        if multi_asic.is_multi_asic():
-            # Load the global config file database_global.json once.
-            SonicDBConfig.load_sonic_global_db_config()
-        else:
-            SonicDBConfig.load_sonic_db_config()
+    Namespace.init_sonic_db_config()
+    
     # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
     # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
     db_conn = SonicV2Connector(**redis_kwargs)
-
     return db_conn
 
 def init_mgmt_interface_tables(db_conn):
@@ -536,14 +531,32 @@ class RedisOidTreeUpdater(MIBUpdater):
         return self.oid_map[oid]
 
 class Namespace:
+
+    """
+        Sonic database initialized flag.
+    """
+    db_config_loaded = False
+
+    @staticmethod
+    def init_sonic_db_config():
+        """
+        Initialize SonicDBConfig
+        """
+        if Namespace.db_config_loaded:
+            return
+
+        if multi_asic.is_multi_asic():
+            # Load the global config file database_global.json once.
+            SonicDBConfig.load_sonic_global_db_config()
+        else:
+            SonicDBConfig.load_sonic_db_config()
+
+        Namespace.db_config_loaded = True
+
     @staticmethod
     def init_namespace_dbs():
         db_conn = []
-        if not SonicDBConfig.isInit():
-            if multi_asic.is_multi_asic():
-                SonicDBConfig.load_sonic_global_db_config()
-            else:
-                SonicDBConfig.load_sonic_db_config()
+        Namespace.init_sonic_db_config()
         host_namespace_idx = 0
         for idx, namespace in enumerate(SonicDBConfig.get_ns_list()): 
             if namespace == multi_asic.DEFAULT_NAMESPACE:

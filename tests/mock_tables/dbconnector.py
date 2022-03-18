@@ -25,6 +25,9 @@ def clean_up_config():
     SonicDBConfig._sonic_db_global_config_init = False
     SonicDBConfig._sonic_db_config_init = False
 
+def mock_SonicDBConfig_isGlobalInit():
+    return SonicDBConfig._sonic_db_global_config_init
+
 
 # TODO Convert this to fixture as all Test classes require it.
 def load_namespace_config():
@@ -140,6 +143,7 @@ redis.StrictRedis = SwssSyncClient
 SonicV2Connector.connect = connect_SonicV2Connector
 swsscommon.SonicV2Connector = SonicV2Connector
 swsscommon.SonicDBConfig = SonicDBConfig
+swsscommon.SonicDBConfig.isGlobalInit = mock_SonicDBConfig_isGlobalInit
 
 # pytest case collecting will import some module before monkey patch, so reload
 from importlib import reload
