@@ -54,7 +54,6 @@ class Dot1dBaseUpdater(MIBUpdater):
 
         for vmem_entry in vlanmem_entries:
             ifname = vmem_entry.split('|')[2]
-            #if_index = port_util.get_index_from_str(ifname)
             if_index = mibs.get_index_from_str(ifname)
             if if_index is None:
                 continue

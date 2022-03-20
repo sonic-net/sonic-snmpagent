@@ -7,6 +7,8 @@ from ax_interface.util import mac_decimals
 from bisect import bisect_right
 from bitstring import BitArray
 
+ZERO_STRING = '0'
+
 class TpFdbStatusConst:
     other = 1
     invalid = 2
@@ -45,15 +47,15 @@ class FdbUpdater(MIBUpdater):
                     vlan_id = vlan_id.decode()
                 self.bvid_vlan_map[fdb["bvid"]] = vlan_id
         else:
-            return None, None
+            return None
         if not isinstance(vlan_id, str):
-            return None, None 
-        return (int(vlan_id),) + mac_decimals(fdb["mac"]), int(vlan_id)
+            return None
+        return (int(vlan_id),) + mac_decimals(fdb["mac"])
 
     def get_tp_fdb_status(self, ent, fdb):
         #TODO:add code for self type
-        if 'SAI_FDB_ENTRY_ATTR_TYPE' not  in ent:
-            return  TpFdbStatusConst.invalid
+        if 'SAI_FDB_ENTRY_ATTR_TYPE' not in ent:
+            return TpFdbStatusConst.invalid
         ent_type = ent['SAI_FDB_ENTRY_ATTR_TYPE']
         if ent_type == 'SAI_FDB_ENTRY_TYPE_DYNAMIC':
             status = TpFdbStatusConst.learned
@@ -110,7 +112,7 @@ class FdbUpdater(MIBUpdater):
 
             try:
                 ent = Namespace.dbs_get_all(self.db_conn, mibs.ASIC_DB, s, blocking=False)
-            except:
+            except Exception as e:
                 continue
             # Example output: oid:0x3a000000000608
             bridge_port_id = ent["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"][6:]
@@ -126,10 +128,11 @@ class FdbUpdater(MIBUpdater):
             else:
                 continue
 
-            vlanmac, vlanid = self.fdb_vlanmac(fdb)
+            vlanmac = self.fdb_vlanmac(fdb)
             if not vlanmac:
                 mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': failed in fdb_vlanmac().".format(fdb_str))
                 continue
+            vlanid = vlanmac[0]
             self.tp_fdb_status_map[vlanmac] = self.get_tp_fdb_status(ent, fdb)
             self.vlanmac_ifindex_map[vlanmac] = port_index
             self.vlanmac_ifindex_list.append(vlanmac)
@@ -142,7 +145,7 @@ class FdbUpdater(MIBUpdater):
                     else:
                         self.vlan_dynamic_count_map[vlanid] = 1
                 self.vlan_id_list.append(vlanid)
-            except:
+            except Exception as e:
                 continue
         self.vlan_id_list.sort()
         self.vlan_id_list = [(i,) for i in self.vlan_id_list]
@@ -206,7 +209,6 @@ class QBridgeMIBObjects(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.17.7.1'):
 class FdbTableUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
-        self.db_conn = mibs.init_db()
 
         self.vlan_dynamic_count_map = {}
         self.vlan_id_list = []
@@ -364,7 +366,7 @@ class Dot1qVlanCurrentUpdater(MIBUpdater):
                     bs_hex = " ".join([format(i, '02x') for i in bs])
                     return bs_hex
             else:
-                return '0'
+                return ZERO_STRING
 
     def dot1q_vlan_current_untag_ports(self, sub_id):
         if sub_id:
@@ -376,7 +378,7 @@ class Dot1qVlanCurrentUpdater(MIBUpdater):
                     bs_hex = " ".join([format(i, '02x') for i in bs])
                     return bs_hex
             else:
-                return '0'
+                return ZERO_STRING
 
     def dot1q_vlan_status(self, sub_id):
         if sub_id:
@@ -494,7 +496,6 @@ class Dot1qVlanStaticMIBObjects(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.17.7.1')
 class Dot1qPortVlanUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
-        self.db_conn = mibs.init_db()
         self.dot1q_pvid = {}
         self.dot1q_port_vlan_list = []
 
