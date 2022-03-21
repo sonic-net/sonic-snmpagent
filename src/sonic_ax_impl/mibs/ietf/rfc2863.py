@@ -93,7 +93,6 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.mgmt_alias_map = {}
         self.vlan_oid_name_map = {}
         self.vlan_name_map = {}
-        self.rif_port_map = {}
         self.if_counters = {}
         self.if_range = []
         self.if_name_map = {}
@@ -131,9 +130,6 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.vlan_oid_sai_map, \
         self.vlan_oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_vlan_tables, self.db_conn)
 
-        self.rif_port_map, \
-        self.port_rif_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_rif_tables, self.db_conn)
-
         self.if_range = sorted(list(self.oid_name_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
                                list(self.mgmt_oid_name_map.keys()) +
@@ -149,8 +145,11 @@ class InterfaceMIBUpdater(MIBUpdater):
         for sai_id_key in self.if_id_map:
             namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
             if_idx = mibs.get_index_from_str(self.if_id_map[sai_id_key])
-            self.if_counters[if_idx] = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB, \
-                    mibs.counter_table(sai_id), blocking=True)
+            counter_table = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB, \
+                    mibs.counter_table(sai_id))
+            if counter_table is None:
+                counter_table = {}
+            self.if_counters[if_idx] = counter_table
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
@@ -217,18 +216,8 @@ class InterfaceMIBUpdater(MIBUpdater):
         if not entry:
             return
 
+        # This returns empty values for LAG, vlan & mgmt, which is the expected result
         result = entry.get("description", "")
-        
-        if not result:
-            #RFC2863 tables don't have descriptions for LAG, vlan & mgmt; take from RFC1213
-            oid = self.get_oid(sub_id)
-            if oid in self.oid_lag_name_map:
-                result = self.oid_lag_name_map[oid]
-            elif oid in self.mgmt_oid_name_map:
-                result = self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
-            elif oid in self.vlan_oid_name_map:
-                result = self.vlan_oid_name_map[oid]
-
         return result
 
     def get_counter32(self, sub_id, table_name):

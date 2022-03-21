@@ -17,7 +17,12 @@ from ax_interface.constants import PduTypes
 from ax_interface.pdu import PDU, PDUHeader
 from ax_interface.mib import MIBTable
 from sonic_ax_impl.mibs import ieee802_1ab
+from mock import patch
 
+def mock_poll_lldp_notif(mock_lldp_polled_entries):
+    if not mock_lldp_polled_entries:
+        return None, None, None
+    return mock_lldp_polled_entries.pop(0)
 
 class TestLLDPMIB(TestCase):
     @classmethod
@@ -314,3 +319,27 @@ class TestLLDPMIB(TestCase):
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 0, 8802, 1, 1, 2, 1, 4, 1, 1, 12, 1, 1))))
         self.assertEqual(str(value0.data), "\x28\x00")
+    
+    @patch("sonic_ax_impl.mibs.ieee802_1ab.poll_lldp_entry_updates", mock_poll_lldp_notif)
+    def test_get_latest_notification(self):
+        mock_lldp_polled_entries = []
+        mock_lldp_polled_entries.extend([("hset", "Ethernet0", "123"),
+                                        ("hset", "Ethernet4", "124"),
+                                        ("del", "Ethernet4", "124"),
+                                        ("del", "Ethernet8", "125"),
+                                        ("hset", "Ethernet8", "125"),
+                                        ("hset", "Ethernet4", "124"),
+                                        ("del", "Ethernet0", "123"),
+                                        ("hset", "Ethernet12", "126"),
+                                        ("del", "Ethernet12", "126"),
+                                        ("hset", "Ethernet0", "123"),
+                                        ("del", "Ethernet16", "127")])
+        event_cache = ieee802_1ab.get_latest_notification(mock_lldp_polled_entries)
+        expect = {"Ethernet0" : ("hset", "123"),
+                  "Ethernet4" : ("hset", "124"),
+                  "Ethernet8" : ("hset", "125"),
+                  "Ethernet12" : ("del", "126"),
+                  "Ethernet16" : ("del", "127")}
+        for key in expect.keys():
+            assert key in event_cache
+            self.assertEqual(expect[key], event_cache[key])     

@@ -96,7 +96,7 @@ class XcvrInfoDB(str, Enum):
     Transceiver info keys
     """
     TYPE              = "type"
-    HARDWARE_REVISION = "hardware_rev"
+    VENDOR_REVISION   = "vendor_rev"
     SERIAL_NUMBER     = "serial"
     MANUFACTURE_NAME  = "manufacturer"
     MODEL_NAME        = "model"

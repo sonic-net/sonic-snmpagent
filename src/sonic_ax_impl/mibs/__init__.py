@@ -3,12 +3,13 @@ import re
 import os
 
 from swsscommon.swsscommon import SonicV2Connector
-from swsssdk import SonicDBConfig
+from swsscommon.swsscommon import SonicDBConfig
 from swsssdk import port_util
 from swsssdk.port_util import get_index_from_str
 from ax_interface.mib import MIBUpdater
 from ax_interface.util import oid2tuple
 from sonic_ax_impl import logger
+from sonic_py_common import multi_asic
 from ax_interface.util import mac_decimals
 
 COUNTERS_PORT_NAME_MAP = 'COUNTERS_PORT_NAME_MAP'
@@ -43,7 +44,6 @@ RIF_DROPS_AGGR_MAP = {
 }
 
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
-
 
 def get_neigh_info(neigh_key):
     """
@@ -227,11 +227,11 @@ def init_db():
     Connects to DB
     :return: db_conn
     """
-    SonicDBConfig.load_sonic_global_db_config()
+    Namespace.init_sonic_db_config()
+    
     # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
     # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
     db_conn = SonicV2Connector(**redis_kwargs)
-
     return db_conn
 
 def init_mgmt_interface_tables(db_conn):
@@ -359,11 +359,12 @@ def init_sync_d_interface_tables(db_conn):
 
     # { if_name (SONiC) -> sai_id }
     # ex: { "Ethernet76" : "1000000000023" }
-    if_name_map_util, if_id_map_util = port_util.get_interface_oid_map(db_conn)
+    if_name_map_util, if_id_map_util = port_util.get_interface_oid_map(db_conn, blocking=False)
     for if_name, sai_id in if_name_map_util.items():
         if_name_str = if_name
         if (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name_str) or \
-                re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name_str)):
+                re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name_str) or \
+                re.match(port_util.SONIC_ETHERNET_IB_RE_PATTERN, if_name_str)):
             if_name_map[if_name] = sai_id
     # As sai_id is not unique in multi-asic platform, concatenate it with
     # namespace to get a unique key. Assuming that ':' is not present in namespace
@@ -371,7 +372,8 @@ def init_sync_d_interface_tables(db_conn):
     # sai_id_key = namespace : sai_id
     for sai_id, if_name in if_id_map_util.items():
         if (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name) or \
-                re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name)):
+                re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name) or \
+                re.match(port_util.SONIC_ETHERNET_IB_RE_PATTERN, if_name)):
             if_id_map[get_sai_id_key(db_conn.namespace, sai_id)] = if_name
     logger.debug("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
     logger.debug("Interface name map:\n" + pprint.pformat(if_id_map, indent=2))
@@ -385,12 +387,8 @@ def init_sync_d_interface_tables(db_conn):
 
     # SyncD consistency checks.
     if not oid_name_map:
-        # In the event no interface exists that follows the SONiC pattern, no OIDs are able to be registered.
-        # A RuntimeError here will prevent the 'main' module from loading. (This is desirable.)
-        message = "No interfaces found matching pattern '{}'. SyncD database is incoherent." \
-            .format(port_util.SONIC_ETHERNET_RE_PATTERN)
-        logger.error(message)
-        raise RuntimeError(message)
+        logger.debug("There are no ports in counters DB")
+        return {}, {}, {}, {}
     elif len(if_id_map) < len(if_name_map) or len(oid_name_map) < len(if_name_map):
         # a length mismatch indicates a bad interface name
         logger.warning("SyncD database contains incoherent interface names. Interfaces must match pattern '{}'"
@@ -512,7 +510,7 @@ def init_sync_d_queue_tables(db_conn):
 
     # { Port name : Queue index (SONiC) -> sai_id }
     # ex: { "Ethernet0:2" : "1000000000023" }
-    queue_name_map = db_conn.get_all(COUNTERS_DB, COUNTERS_QUEUE_NAME_MAP, blocking=True)
+    queue_name_map = db_conn.get_all(COUNTERS_DB, COUNTERS_QUEUE_NAME_MAP, blocking=False)
     logger.debug("Queue name map:\n" + pprint.pformat(queue_name_map, indent=2))
 
     # Parse the queue_name_map and create the following maps:
@@ -545,13 +543,11 @@ def init_sync_d_queue_tables(db_conn):
 
     # SyncD consistency checks.
     if not port_queues_map:
-        # In the event no queue exists that follows the SONiC pattern, no OIDs are able to be registered.
-        # A RuntimeError here will prevent the 'main' module from loading. (This is desirable.)
-        logger.error("No queues found in the Counter DB. SyncD database is incoherent.")
-        raise RuntimeError('The port_queues_map is not defined')
-    elif not queue_stat_map:
-        logger.error("No queue stat counters found in the Counter DB. SyncD database is incoherent.")
-        raise RuntimeError('The queue_stat_map is not defined')
+        logger.debug("Counters DB does not contain ports")
+        return {}, {}, {}
+    if not queue_stat_map:
+        logger.debug("No queue stat counters found in the Counter DB.")
+        return {}, {}, {}
 
     for queues in port_queue_list_map.values():
         queues.sort()
@@ -654,13 +650,41 @@ class RedisOidTreeUpdater(MIBUpdater):
         return self.oid_map[oid]
 
 class Namespace:
+
+    """
+        Sonic database initialized flag.
+    """
+    db_config_loaded = False
+
+    @staticmethod
+    def init_sonic_db_config():
+        """
+        Initialize SonicDBConfig
+        """
+        if Namespace.db_config_loaded:
+            return
+
+        if multi_asic.is_multi_asic():
+            # Load the global config file database_global.json once.
+            SonicDBConfig.load_sonic_global_db_config()
+        else:
+            SonicDBConfig.load_sonic_db_config()
+
+        Namespace.db_config_loaded = True
+
     @staticmethod
     def init_namespace_dbs():
         db_conn = []
-        SonicDBConfig.load_sonic_global_db_config()
-        for namespace in SonicDBConfig.get_ns_list():
-            db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace, decode_responses=True)
+        Namespace.init_sonic_db_config()
+        host_namespace_idx = 0
+        for idx, namespace in enumerate(SonicDBConfig.get_ns_list()): 
+            if namespace == multi_asic.DEFAULT_NAMESPACE:
+                host_namespace_idx = idx
+            db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
             db_conn.append(db)
+        # Ensure that db connector of default namespace is the first element of
+        # db_conn list.
+        db_conn[0], db_conn[host_namespace_idx] = db_conn[host_namespace_idx], db_conn[0]
 
         Namespace.connect_namespace_dbs(db_conn)
         return db_conn

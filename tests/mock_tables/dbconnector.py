@@ -9,6 +9,7 @@ from swsssdk import SonicV2Connector
 from swsssdk import SonicDBConfig
 from swsssdk.interface import DBInterface
 from swsscommon import swsscommon
+from sonic_py_common import multi_asic
 
 
 if sys.version_info >= (3, 0):
@@ -23,6 +24,9 @@ def clean_up_config():
     SonicDBConfig._sonic_db_config = {}
     SonicDBConfig._sonic_db_global_config_init = False
     SonicDBConfig._sonic_db_config_init = False
+
+def mock_SonicDBConfig_isGlobalInit():
+    return SonicDBConfig._sonic_db_global_config_init
 
 
 # TODO Convert this to fixture as all Test classes require it.
@@ -64,7 +68,7 @@ def connect_SonicV2Connector(self, db_name, retry_on=True):
     _old_connect_SonicV2Connector(self, db_name, retry_on)
 
 
-def _subscribe_keyspace_notification(self, db_name, client):
+def _subscribe_keyspace_notification(self, db_name):
     pass
 
 
@@ -133,12 +137,13 @@ class SwssSyncClient(mockredis.MockRedis):
         # Find every key that matches the pattern
         return [key for key in self.redis.keys() if regex.match(key)]
 
-
 DBInterface._subscribe_keyspace_notification = _subscribe_keyspace_notification
 mockredis.MockRedis.config_set = config_set
 redis.StrictRedis = SwssSyncClient
 SonicV2Connector.connect = connect_SonicV2Connector
 swsscommon.SonicV2Connector = SonicV2Connector
+swsscommon.SonicDBConfig = SonicDBConfig
+swsscommon.SonicDBConfig.isGlobalInit = mock_SonicDBConfig_isGlobalInit
 
 # pytest case collecting will import some module before monkey patch, so reload
 from importlib import reload

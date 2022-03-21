@@ -81,7 +81,7 @@ class ArpUpdater(MIBUpdater):
             neigh_str = neigh_key
             db_index = self.neigh_key_list[neigh_key]
             neigh_info = self.db_conn[db_index].get_all(mibs.APPL_DB, neigh_key, blocking=False)
-            if neigh_info is None or 'family' not in neigh_info:
+            if not neigh_info or 'family' not in neigh_info:
                 continue
             ip_family = neigh_info['family']
             if ip_family == "IPv4":
@@ -258,6 +258,11 @@ class InterfacesUpdater(MIBUpdater):
         _, self.oid_mclag_phy_addr_map = mibs.init_mclag_interface_tables(self.db_conn[0], self.eth_phy_addr)
         self.loopbk_oid_name_map = mibs.init_loopback_interface_tables(self.db_conn[0])
 
+        self.lag_name_if_name_map, \
+        self.if_name_lag_name_map, \
+        self.oid_lag_name_map, \
+        self.lag_sai_map, self.sai_lag_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
+
     def update_data(self):
         """
         Update redis (caches config)
@@ -268,11 +273,6 @@ class InterfacesUpdater(MIBUpdater):
         self.update_rif_counters()
 
         self.aggregate_counters()
-
-        self.lag_name_if_name_map, \
-        self.if_name_lag_name_map, \
-        self.oid_lag_name_map, \
-        self.lag_sai_map, self.sai_lag_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_lag_tables, self.db_conn)
 
         self.if_range = sorted(list(self.oid_name_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
@@ -286,8 +286,9 @@ class InterfacesUpdater(MIBUpdater):
             namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
             if_idx = mibs.get_index_from_str(self.if_id_map[sai_id_key])
             counters_db_data = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB,
-                                                                        mibs.counter_table(sai_id),
-                                                                        blocking=True)
+                                                                        mibs.counter_table(sai_id))
+            if counters_db_data is None:
+                counters_db_data = {}
             self.if_counters[if_idx] = {
                 counter: int(value) for counter, value in counters_db_data.items()
             }
@@ -296,8 +297,9 @@ class InterfacesUpdater(MIBUpdater):
         rif_sai_ids = list(self.rif_port_map) + list(self.vlan_name_map)
         for sai_id in rif_sai_ids:
             counters_db_data = Namespace.dbs_get_all(self.db_conn, mibs.COUNTERS_DB,
-                                                     mibs.counter_table(mibs.split_sai_id_key(sai_id)[1]),
-                                                     blocking=False)
+                                                     mibs.counter_table(mibs.split_sai_id_key(sai_id)[1]))
+            if counters_db_data is None:
+                counters_db_data = {}
             self.rif_counters[sai_id] = {
                 counter: int(value) for counter, value in counters_db_data.items()
             }
@@ -399,8 +401,8 @@ class InterfacesUpdater(MIBUpdater):
                 port_idx = mibs.get_index_from_str(self.if_id_map[port_sai_id])
                 for port_counter_name, rif_counter_name in mibs.RIF_DROPS_AGGR_MAP.items():
                     self.if_counters[port_idx][port_counter_name] = \
-                    self.if_counters[port_idx][port_counter_name] + \
-                    self.rif_counters[rif_sai_id][rif_counter_name]
+                    self.if_counters[port_idx].get(port_counter_name, 0) + \
+                    self.rif_counters[rif_sai_id].get(rif_counter_name, 0)
 
         for vlan_sai_id, vlan_name in self.vlan_name_map.items():
             for port_counter_name, rif_counter_name in mibs.RIF_COUNTERS_AGGR_MAP.items():
@@ -451,7 +453,7 @@ class InterfacesUpdater(MIBUpdater):
             # self.lag_sai_map['PortChannel01'] = '2000000000006'
             # self.port_rif_map['2000000000006'] = '6000000000006'
             sai_lag_id = self.lag_sai_map[self.oid_lag_name_map[oid]]
-            sai_lag_rif_id = self.port_rif_map[sai_lag_id]
+            sai_lag_rif_id = self.port_rif_map[sai_lag_id] if sai_lag_id in self.port_rif_map else None
             if sai_lag_rif_id in self.rif_port_map:
                 # Extract the 'name' part of 'table_name'.
                 # Example: 
