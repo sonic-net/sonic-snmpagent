@@ -1,7 +1,7 @@
 import asyncio
 
 from . import logger, constants, exceptions
-from .encodings import ObjectIdentifier, ValueRepresentation
+from .encodings import ObjectIdentifier
 from .pdu import PDUHeader, PDUStream
 from .pdu_implementations import RegisterPDU, ResponsePDU, OpenPDU
 from .trap import TrapInfra

@@ -1,6 +1,5 @@
-import pdb
 import asyncio
-from . import logger, constants, exceptions
+from . import logger, constants
 from .mib import ValueType
 from .encodings import ObjectIdentifier, ValueRepresentation
 from .pdu import PDUHeader
@@ -8,7 +7,6 @@ from .pdu_implementations import NotifyPDU
 import re
 import json
 import os
-import swsssdk
 
 class TrapInfra:
     """
