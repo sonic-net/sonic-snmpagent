@@ -62,3 +62,15 @@ class TestGetNextPDU(TestCase):
         self.assertTrue(port_queues_map == {})
         self.assertTrue(queue_stat_map == {})
         self.assertTrue(port_queue_list_map == {})
+
+    @mock.patch('swsssdk.dbconnector.SonicV2Connector.get_all', mock.MagicMock(return_value=({})))
+    def test_init_sync_d_vlan_tables(self):
+        db_conn = Namespace.init_namespace_dbs()
+
+        vlan_name_map, \
+        vlan_oid_sai_map, \
+        vlan_oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_vlan_tables, db_conn)
+
+        self.assertTrue(vlan_name_map == {})
+        self.assertTrue(vlan_oid_sai_map == {})
+        self.assertTrue(vlan_oid_name_map == {})

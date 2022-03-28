@@ -332,7 +332,11 @@ def init_sync_d_vlan_tables(db_conn):
     :return: tuple(vlan_name_map, oid_sai_map, oid_name_map)
     """
 
-    vlan_name_map = port_util.get_vlan_interface_oid_map(db_conn)
+    vlan_name_map = port_util.get_vlan_interface_oid_map(db_conn, blocking=False)
+
+    if not vlan_name_map:
+        logger.debug("There is no vlan interface map in counters DB")
+        return {}, {}, {}
 
     logger.debug("Vlan oid map:\n" + pprint.pformat(vlan_name_map, indent=2))
 
