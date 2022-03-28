@@ -100,6 +100,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.if_id_map = {}
         self.oid_name_map = {}
         self.rif_counters = {}
+        self.loopbk_oid_name_map = {}
 
         self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
 
@@ -107,6 +108,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         """
         Subclass update interface information
         """
+
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \
@@ -122,6 +124,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         """
         self.mgmt_oid_name_map, \
         self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn[0])
+        self.loopbk_oid_name_map = mibs.init_loopback_interface_tables(self.db_conn[0])
 
         self.vlan_name_map, \
         self.vlan_oid_sai_map, \
@@ -130,7 +133,8 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.if_range = sorted(list(self.oid_name_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
                                list(self.mgmt_oid_name_map.keys()) +
-                               list(self.vlan_oid_name_map.keys()))
+                               list(self.vlan_oid_name_map.keys()) +
+                               list(self.loopbk_oid_name_map.keys()))
         self.if_range = [(i,) for i in self.if_range]
 
     def update_data(self):
@@ -155,7 +159,8 @@ class InterfaceMIBUpdater(MIBUpdater):
         self.if_range = sorted(list(self.oid_name_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
                                list(self.mgmt_oid_name_map.keys()) +
-                               list(self.vlan_oid_name_map.keys()))
+                               list(self.vlan_oid_name_map.keys()) +
+                               list(self.loopbk_oid_name_map.keys()))
         self.if_range = [(i,) for i in self.if_range]
 
     def get_next(self, sub_id):
@@ -193,6 +198,8 @@ class InterfaceMIBUpdater(MIBUpdater):
             result = self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
         elif oid in self.vlan_oid_name_map:
             result = self.vlan_oid_name_map[oid]
+        elif oid in self.loopbk_oid_name_map:
+            result = self.loopbk_oid_name_map[oid]
         else:
             result = self.if_alias_map[self.oid_name_map[oid]]
 
@@ -239,6 +246,8 @@ class InterfaceMIBUpdater(MIBUpdater):
             # TODO: mgmt counters not available through SNMP right now
             # COUNTERS DB does not have support for generic linux (mgmt) interface counters
             return 0
+        if oid in self.loopbk_oid_name_map:
+            return 0
 
         if oid in self.oid_lag_name_map:
             counter_value = 0
@@ -284,7 +293,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         else:
             return None
 
-        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=True)
+        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=False)
 
     def get_high_speed(self, sub_id):
         """

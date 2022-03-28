@@ -1,6 +1,7 @@
 import ipaddress
 import python_arptable
 import socket
+import os
 from enum import unique, Enum
 from bisect import bisect_right
 
@@ -52,6 +53,7 @@ class IfTypes(int, Enum):
     ethernetCsmacd = 6
     l3ipvlan       = 136
     ieee8023adLag  = 161
+    softwareLoopback = 24
 
 class ArpUpdater(MIBUpdater):
     def __init__(self):
@@ -79,7 +81,7 @@ class ArpUpdater(MIBUpdater):
             neigh_str = neigh_key
             db_index = self.neigh_key_list[neigh_key]
             neigh_info = self.db_conn[db_index].get_all(mibs.APPL_DB, neigh_key, blocking=False)
-            if not neigh_info:
+            if not neigh_info or 'family' not in neigh_info:
                 continue
             ip_family = neigh_info['family']
             if ip_family == "IPv4":
@@ -152,9 +154,18 @@ class NextHopUpdater(MIBUpdater):
             if ipnstr == "0.0.0.0/0":
                 ipn = ipaddress.ip_network(ipnstr)
                 ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, routestr, blocking=True)
-                nexthops = ent["nexthop"]
+                try:
+                    nexthops = ent["nexthop"]
+                except Exception:
+                    # possible reasons include Null0 or blackhole nexthop
+                    nexthops = ""
+                    continue
                 for nh in nexthops.split(','):
                     # TODO: if ipn contains IP range, create more sub_id here
+                    #Allow ipv4 only.
+                    ip1 = ipaddress.ip_address(nh)
+                    if (ip1.version != 4):
+                        continue;
                     sub_id = ip2byte_tuple(ipn.network_address)
                     self.route_list.append(sub_id)
                     self.nexthop_map[sub_id] = ipaddress.ip_address(nh).packed
@@ -200,6 +211,7 @@ class InterfacesUpdater(MIBUpdater):
         self.vlan_name_map = {}
         self.rif_port_map = {}
         self.port_rif_map = {}
+        self.loopbk_oid_name_map = {}
 
         # cache of interface counters
         self.if_counters = {}
@@ -209,6 +221,9 @@ class InterfacesUpdater(MIBUpdater):
         self.if_id_map = {}
         self.oid_name_map = {}
         self.rif_counters = {}
+        self.oid_vlan_phy_addr_map = {}
+        self.oid_mclag_phy_addr_map = {}
+        self.eth_phy_addr = None 
 
         self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
 
@@ -225,6 +240,11 @@ class InterfacesUpdater(MIBUpdater):
         global db. First db in the list is global db.
         Use first global db to get management interface table.
         """
+        #fill physical address.
+        device_meta = mibs.get_config_device_metadata(self.db_conn[0]) 
+        if device_meta and 'mac' in device_meta:
+            mactuple = mac_decimals(device_meta['mac'])
+            self.eth_phy_addr = ''.join(chr(b) for b in mactuple)
         self.mgmt_oid_name_map, \
         self.mgmt_alias_map = mibs.init_mgmt_interface_tables(self.db_conn[0])
 
@@ -234,6 +254,9 @@ class InterfacesUpdater(MIBUpdater):
 
         self.rif_port_map, \
         self.port_rif_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_rif_tables, self.db_conn)
+        _, self.oid_vlan_phy_addr_map = mibs.init_vlan_interface_tables(self.db_conn[0], self.eth_phy_addr)
+        _, self.oid_mclag_phy_addr_map = mibs.init_mclag_interface_tables(self.db_conn[0], self.eth_phy_addr)
+        self.loopbk_oid_name_map = mibs.init_loopback_interface_tables(self.db_conn[0])
 
         self.lag_name_if_name_map, \
         self.if_name_lag_name_map, \
@@ -254,7 +277,8 @@ class InterfacesUpdater(MIBUpdater):
         self.if_range = sorted(list(self.oid_name_map.keys()) +
                                list(self.oid_lag_name_map.keys()) +
                                list(self.mgmt_oid_name_map.keys()) +
-                               list(self.vlan_oid_name_map.keys()))
+                               list(self.vlan_oid_name_map.keys()) +
+                               list(self.loopbk_oid_name_map.keys()))
         self.if_range = [(i,) for i in self.if_range]
 
     def update_if_counters(self):
@@ -306,7 +330,7 @@ class InterfacesUpdater(MIBUpdater):
         :return: the 0-based interface ID.
         """
         if sub_id:
-            return self.get_oid(sub_id) - 1
+            return self.get_oid(sub_id)
 
     def interface_description(self, sub_id):
         """
@@ -323,8 +347,25 @@ class InterfacesUpdater(MIBUpdater):
             return self.mgmt_alias_map[self.mgmt_oid_name_map[oid]]
         elif oid in self.vlan_oid_name_map:
             return self.vlan_oid_name_map[oid]
-
+        elif oid in self.loopbk_oid_name_map:
+            return self.loopbk_oid_name_map[oid]
         return self.if_alias_map[self.oid_name_map[oid]]
+
+    def get_phy_address(self, sub_id):
+        """
+        :param sub_id: The 1-based sub-identifier query.
+        :return: the physical address for the respective sub_id
+        """
+        oid = self.get_oid(sub_id)
+        if not oid:
+            return
+        if oid in self.oid_vlan_phy_addr_map:
+            return self.oid_vlan_phy_addr_map[oid]
+        elif oid in self.oid_mclag_phy_addr_map:
+            return self.oid_mclag_phy_addr_map[oid] 
+        elif oid in self.loopbk_oid_name_map:
+            return ""
+        return self.eth_phy_addr
 
     def _get_counter(self, oid, table_name):
         """
@@ -387,6 +428,8 @@ class InterfacesUpdater(MIBUpdater):
         if oid in self.mgmt_oid_name_map:
             # TODO: mgmt counters not available through SNMP right now
             # COUNTERS DB does not have support for generic linux (mgmt) interface counters
+            return 0
+        elif oid in self.loopbk_oid_name_map:
             return 0
         elif oid in self.oid_lag_name_map:
             counter_value = 0
@@ -455,12 +498,13 @@ class InterfacesUpdater(MIBUpdater):
             db = mibs.CONFIG_DB
         elif oid in self.vlan_oid_name_map:
             if_table = mibs.vlan_entry_table(self.vlan_oid_name_map[oid])
+            #if_table = mibs.vlan_if_entry_table(self.vlan_oid_name_map[oid])
         elif oid in self.oid_name_map:
             if_table = mibs.if_entry_table(self.oid_name_map[oid])
         else:
             return None
 
-        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=True)
+        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=False)
 
     def _get_if_entry_state_db(self, sub_id):
         """
@@ -480,6 +524,51 @@ class InterfacesUpdater(MIBUpdater):
             return None
 
         return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=False)
+
+    def get_loopbk_admin_status(self, ifname):
+        """
+        Given an interface name, return its admin state reported by the kernel.
+        """
+        admin_file = "/sys/class/net/{0}/flags"
+        iface = ifname
+
+        try:
+            state_file = open(admin_file.format(iface), "r")
+        except IOError as e:
+            return 4 
+
+        content = state_file.readline().rstrip()
+        flags = int(content, 16)
+
+        if flags & 0x1:
+            return 1 
+        else:
+            return 2 
+
+    def get_loopbk_oper_status(self, ifname):
+        """
+        Given an interface name, return its operational state reported by the kernel.
+        """
+        oper_file = "/sys/class/net/{0}/carrier"
+        iface = ifname
+
+        if os.path.exists(oper_file.format(iface)) == False:
+            return 2 
+
+        try:
+            state_file = open(oper_file.format(iface), "r")
+        except IOError as e:
+            return 4 
+
+        try:
+            oper_state = state_file.readline().rstrip()
+        except IOError as e:
+            return 2 
+
+        if oper_state == "1":
+            return 1 
+        else:
+            return 2 
 
     def _get_status(self, sub_id, key):
         """
@@ -519,6 +608,11 @@ class InterfacesUpdater(MIBUpdater):
         :param sub_id: The 1-based sub-identifier query.
         :return: admin state value for the respective sub_id.
         """
+        oid = self.get_oid(sub_id)
+        if not oid:
+            return
+        if oid in self.loopbk_oid_name_map:
+            return self.get_loopbk_admin_status(self.loopbk_oid_name_map[oid])
         return self._get_status(sub_id, "admin_status")
 
     def get_oper_status(self, sub_id):
@@ -526,13 +620,48 @@ class InterfacesUpdater(MIBUpdater):
         :param sub_id: The 1-based sub-identifier query.
         :return: oper state value for the respective sub_id.
         """
+        oid = self.get_oid(sub_id)
+        if not oid:
+            return
+        if oid in self.loopbk_oid_name_map:
+            return self.get_loopbk_oper_status(self.loopbk_oid_name_map[oid])
         return self._get_status(sub_id, "oper_status")
+
+    def get_if_last_changed(self, sub_id):
+        """
+        :param sub_id: The 1-based sub-identifier query.
+        :return: oper status change uptime for the respective sub_id.
+        """
+        oid = self.get_oid(sub_id)
+        if not oid:
+            return 0
+
+        if_table = ""
+        db = mibs.APPL_DB
+        if oid in self.oid_lag_name_map:
+            return 0
+        elif oid in self.mgmt_oid_name_map:
+            return 0
+        elif oid in self.vlan_oid_name_map:
+            return 0
+        elif oid in self.oid_name_map:
+            if_table = mibs.if_entry_table(self.oid_name_map[oid])
+            entry = Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=False)
+            if not entry:
+                return 0
+            else:
+                return int(entry.get("oper_status_change_uptime", 0))
+        else:
+            return 0
+
 
     def get_mtu(self, sub_id):
         """
         :param sub_id: The 1-based sub-identifier query.
         :return: MTU value for the respective sub_id.
         """
+        if self.get_oid(sub_id) in self.loopbk_oid_name_map:
+            return 0
         entry = self._get_if_entry(sub_id)
         if not entry:
             return
@@ -544,6 +673,8 @@ class InterfacesUpdater(MIBUpdater):
         :param sub_id: The 1-based sub-identifier query.
         :return: min of RFC1213_MAX_SPEED or speed value for the respective sub_id.
         """
+        if self.get_oid(sub_id) in self.loopbk_oid_name_map:
+            return 0
         entry = self._get_if_entry(sub_id)
         if not entry:
             return
@@ -570,6 +701,8 @@ class InterfacesUpdater(MIBUpdater):
             return IfTypes.ieee8023adLag
         elif oid in self.vlan_oid_name_map:
             return IfTypes.l3ipvlan
+        elif oid in self.loopbk_oid_name_map: 
+            return IfTypes.softwareLoopback
         else:
             return IfTypes.ethernetCsmacd
 
@@ -605,7 +738,7 @@ class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
 
     # FIXME Placeholder.
     ifPhysAddress = \
-        SubtreeMIBEntry('2.1.6', if_updater, ValueType.OCTET_STRING, lambda sub_id: '')
+        SubtreeMIBEntry('2.1.6', if_updater, ValueType.OCTET_STRING, if_updater.get_phy_address)
 
     ifAdminStatus = \
         SubtreeMIBEntry('2.1.7', if_updater, ValueType.INTEGER, if_updater.get_admin_status)
@@ -615,7 +748,7 @@ class InterfacesMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.2'):
 
     # FIXME Placeholder.
     ifLastChange = \
-        SubtreeMIBEntry('2.1.9', if_updater, ValueType.TIME_TICKS, lambda sub_id: 0)
+        SubtreeMIBEntry('2.1.9', if_updater, ValueType.TIME_TICKS, if_updater.get_if_last_changed)
 
     ifInOctets = \
         OverlayAdpaterMIBEntry(

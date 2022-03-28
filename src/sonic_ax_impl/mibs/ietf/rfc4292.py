@@ -5,6 +5,7 @@ from sonic_ax_impl.mibs import Namespace
 from ax_interface import MIBMeta, ValueType, MIBUpdater, SubtreeMIBEntry
 from ax_interface.util import ip2byte_tuple
 from bisect import bisect_right
+import re
 from sonic_py_common import multi_asic
 
 class RouteUpdater(MIBUpdater):
@@ -23,14 +24,17 @@ class RouteUpdater(MIBUpdater):
         """
         self.loips = {}
 
-        loopbacks = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "INTF_TABLE:lo:*")
+        loopbacks = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "INTF_TABLE:Loopback*")
         if not loopbacks:
             return
 
         ## Collect only ipv4 lo interfaces
         for loopback in loopbacks:
-            lostr = loopback
-            loipmask = lostr[len("INTF_TABLE:lo:"):]
+            loTablePrefix = re.search("^(INTF_TABLE:Loopback\d+:)",loopback)
+            if loTablePrefix is None:
+                continue
+            loTablePrefix = loTablePrefix.group(1)
+            loipmask = loopback[len(loTablePrefix):]
             loip = loipmask.split('/')[0]
             ipa = ipaddress.ip_address(loip)
             if isinstance(ipa, ipaddress.IPv4Address):
@@ -65,7 +69,7 @@ class RouteUpdater(MIBUpdater):
                 continue
             port_table = multi_asic.get_port_table_for_asic(db_conn.namespace)
             ent = db_conn.get_all(mibs.APPL_DB, route_str, blocking=False)
-            if not ent:
+            if not ent or "nexthop" not in ent:
                 continue
             nexthops = ent["nexthop"]
             ifnames = ent["ifname"]
@@ -73,6 +77,10 @@ class RouteUpdater(MIBUpdater):
                 ## Ignore non front panel interfaces
                 ## TODO: non front panel interfaces should not be in APPL_DB at very beginning
                 ## This is to workaround the bug in current sonic-swss implementation
+                ##Allow ipv4 only.
+                ip1 = ipaddress.ip_address(nh)
+                if (ip1.version != 4):
+                    continue;
                 if ifn == "eth0" or ifn == "lo" or ifn == "docker0":
                     continue
 

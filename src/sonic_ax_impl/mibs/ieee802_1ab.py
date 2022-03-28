@@ -126,8 +126,10 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
         Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.loc_chassis_data = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
         if self.loc_chassis_data:
-            self.loc_chassis_data['lldp_loc_sys_cap_supported'] = parse_sys_capability(self.loc_chassis_data['lldp_loc_sys_cap_supported'])
-            self.loc_chassis_data['lldp_loc_sys_cap_enabled'] = parse_sys_capability(self.loc_chassis_data['lldp_loc_sys_cap_enabled'])
+           if 'lldp_loc_sys_cap_supported' in self.loc_chassis_data:
+               self.loc_chassis_data['lldp_loc_sys_cap_supported'] = parse_sys_capability(self.loc_chassis_data['lldp_loc_sys_cap_supported'])
+           if 'lldp_loc_sys_cap_enabled' in self.loc_chassis_data:
+               self.loc_chassis_data['lldp_loc_sys_cap_enabled'] = parse_sys_capability(self.loc_chassis_data['lldp_loc_sys_cap_enabled'])
 
     def update_data(self):
         """
@@ -157,6 +159,7 @@ class LocPortUpdater(MIBUpdater):
         self.db_conn = Namespace.init_namespace_dbs()
         # establish connection to application database.
         Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
+        Namespace.connect_all_dbs(self.db_conn, mibs.CONFIG_DB)
         self.if_name_map = {}
         self.if_alias_map = {}
         self.if_id_map = {}
@@ -340,6 +343,8 @@ class LLDPLocManAddrUpdater(MIBUpdater):
             logger.error("Invalid local mgmt IP {}".format(self.mgmt_ip_str))
             return
 
+        if mgmt_ip_sub_oid is None:
+            return
         sub_oid = (ManAddrConst.man_addr_subtype_ipv4,
                    *mgmt_ip_sub_oid)
         self.man_addr_list.append(sub_oid)
@@ -442,7 +447,9 @@ class LLDPRemTableUpdater(MIBUpdater):
         self.lldp_counters = {}
         for if_oid, if_name in self.oid_name_map.items():
             lldp_kvs = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.lldp_entry_table(if_name))
-            if not lldp_kvs:
+            if (not lldp_kvs or
+                'lldp_rem_time_mark' not in lldp_kvs or
+                'lldp_rem_index' not in lldp_kvs ):
                 continue
             try:
                 # OID index for this MIB consists of remote time mark, if_oid, remote_index.
@@ -508,13 +515,17 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         # establish connection to application database.
         Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.if_range = []
+        self.mgmt_ips = {}
         self.oid_name_map = {}
         self.mgmt_oid_name_map = {}
         self.pubsub = [None] * len(self.db_conn)
 
     def update_rem_if_mgmt(self, if_oid, if_name):
         lldp_kvs = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.lldp_entry_table(if_name))
-        if not lldp_kvs or 'lldp_rem_man_addr' not in lldp_kvs:
+        if (not lldp_kvs or
+            'lldp_rem_man_addr' not in lldp_kvs or
+            'lldp_rem_time_mark' not in lldp_kvs or
+            'lldp_rem_index' not in lldp_kvs ):
             # this interfaces doesn't have remote lldp data, or the peer doesn't advertise his mgmt address
             return
         try:
@@ -586,6 +597,7 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
 
         self.if_range = []
+        self.mgmt_ips = {}
         for if_oid, if_name in self.oid_name_map.items():
             self.update_rem_if_mgmt(if_oid, if_name)
 
