@@ -56,6 +56,16 @@
     "alias": "etp4",
     "speed": 100000
   },
+  "PORT_TABLE:Ethernet-IB0": {
+    "description": "inband",
+    "alias": "rec0",
+    "speed": 100000
+  },
+  "PORT_TABLE:Ethernet-Rec0": {
+    "description": "recirc",
+    "alias": "rec1",
+    "speed": 100000
+  },
   "ROUTE_TABLE:0.0.0.0/0": {
     "ifname": "Ethernet0,Ethernet4",
     "nexthop": "10.0.0.1,10.0.0.3"

@@ -36,6 +36,17 @@ class TestGetNextPDU(TestCase):
         self.assertTrue("PortChannel_Temp" in lag_name_if_name_map)
         self.assertTrue(lag_name_if_name_map["PortChannel_Temp"] == [])
 
+    def test_init_sync_d_interface_tables_for_recirc_ports(self):
+        db_conn = Namespace.init_namespace_dbs()
+
+        if_name_map, \
+        if_alias_map, \
+        if_id_map, \
+        oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, db_conn)
+        for recirc_port_name, sai_id in [('Ethernet-IB0', 0), ('Ethernet-Rec0', 1)]:
+            self.assertTrue(if_name_map[recirc_port_name] == sai_id)
+            self.assertTrue(if_id_map[sai_id] == recirc_port_name)            
+        
     @classmethod
     def tearDownClass(cls):
         tests.mock_tables.dbconnector.clean_up_config()
