@@ -295,11 +295,12 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         """
         Subclass update data routine.
         """
+        self.man_addr_list = []
+
         # establish connection to application database.
         self.db_conn.connect(mibs.APPL_DB)
         mgmt_ip_bytes = self.db_conn.get(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE, b'lldp_loc_man_addr')
 
-        self.man_addr_list = []
         if not mgmt_ip_bytes:
             self.mgmt_ip_str = ''
         else:
