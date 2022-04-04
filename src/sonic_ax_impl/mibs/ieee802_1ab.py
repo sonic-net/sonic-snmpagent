@@ -126,8 +126,8 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
         Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.loc_chassis_data = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
         if self.loc_chassis_data:
-            self.loc_chassis_data['lldp_loc_sys_cap_supported'] = parse_sys_capability(self.loc_chassis_data['lldp_loc_sys_cap_supported'])
-            self.loc_chassis_data['lldp_loc_sys_cap_enabled'] = parse_sys_capability(self.loc_chassis_data['lldp_loc_sys_cap_enabled'])
+            self.loc_chassis_data['lldp_loc_sys_cap_supported'] = parse_sys_capability(self.loc_chassis_data.get('lldp_loc_sys_cap_supported', ''))
+            self.loc_chassis_data['lldp_loc_sys_cap_enabled'] = parse_sys_capability(self.loc_chassis_data.get('lldp_loc_sys_cap_enabled', ''))
 
     def update_data(self):
         """
