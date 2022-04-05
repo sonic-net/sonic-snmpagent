@@ -224,6 +224,26 @@ class TestSonicMIB(TestCase):
 
         self._check_getpdu(sub_id, expected_mib)
 
+    def test_getpdu_xcvr_info_port_rj45(self):
+        sub_id = get_transceiver_sub_id(3)[0]
+
+        expected_mib = {
+            2: (ValueType.END_OF_MIB_VIEW, 'None'),
+            4: (ValueType.END_OF_MIB_VIEW, 'None'),
+            5: (ValueType.END_OF_MIB_VIEW, 'None'),
+            6: (ValueType.END_OF_MIB_VIEW, 'None'),
+            7: (ValueType.END_OF_MIB_VIEW, 'None'),
+            8: (ValueType.END_OF_MIB_VIEW, 'None'),
+            9: (ValueType.END_OF_MIB_VIEW, 'None'),
+            10: (ValueType.END_OF_MIB_VIEW, 'None'),
+            11: (ValueType.END_OF_MIB_VIEW, 'None'),
+            12: (ValueType.END_OF_MIB_VIEW, 'None'),
+            13: (ValueType.END_OF_MIB_VIEW, 'None'),
+            16: (ValueType.END_OF_MIB_VIEW, 'None')
+        }
+
+        self._check_getpdu(sub_id, expected_mib)
+
     def test_getpdu_xcvr_dom(self):
         expected_mib = {
             get_transceiver_sensor_sub_id(1, SENSOR_TYPE_TEMP)[0]: "DOM Temperature Sensor for etp1",

@@ -64,6 +64,30 @@
     "tx3power": -5.4,
     "tx4power": -5.4
   },
+  "TRANSCEIVER_INFO|Ethernet2": {
+    "type": "RJ45",
+    "vendor_rev": "N/A",
+    "serial": "N/A",
+    "manufacturer": "N/A",
+    "model": "N/A",
+    "is_replaceable": "N/A"
+  },
+  "TRANSCEIVER_DOM_SENSOR|Ethernet2": {
+    "temperature": "N/A",
+    "voltage": "N/A",
+    "tx1bias": "N/A",
+    "tx2bias": "N/A",
+    "tx3bias": "N/A",
+    "tx4bias": "N/A",
+    "rx1power": "N/A",
+    "rx2power": "N/A",
+    "rx3power": "N/A",
+    "rx4power": "N/A",
+    "tx1power": "N/A",
+    "tx2power": "N/A",
+    "tx3power": "N/A",
+    "tx4power": "N/A"
+  },
   "MGMT_PORT_TABLE|eth0": {
     "oper_status": "down"
   },

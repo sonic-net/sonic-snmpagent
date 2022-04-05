@@ -128,6 +128,8 @@ PSU_SENSOR_POSITION_MAP = {
 
 NOT_AVAILABLE = 'N/A'
 
+RJ45_PORT_TYPE = 'RJ45'
+
 def is_null_str(value):
     """
     Indicate if a string value is null
@@ -747,7 +749,7 @@ class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
         transceiver_info = Namespace.dbs_get_all(self.mib_updater.statedb, mibs.STATE_DB,
                                                  mibs.transceiver_info_table(interface))
 
-        if not transceiver_info:
+        if not transceiver_info or transceiver_info['type'] == RJ45_PORT_TYPE:
             return
 
         # update xcvr info from DB

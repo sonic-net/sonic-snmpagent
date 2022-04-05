@@ -35,6 +35,7 @@ class TestSonicMIB(TestCase):
     def setUpClass(cls):
         cls.lut = MIBTable(rfc3433.PhysicalSensorTableMIB)
         cls.IFINDEX = 1
+        cls.RJ45_IFINDEX = 3
         cls.XCVR_SUB_ID = get_transceiver_sub_id(cls.IFINDEX)
         cls.XCVR_CHANNELS = (1, 2, 3, 4)
         cls.PSU_POSITION = 2
@@ -54,7 +55,7 @@ class TestSonicMIB(TestCase):
         return [ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 99, 1, 1, 1, i, sub_id))
                 for i in range(1, 5)]
 
-    def _test_getpdu_sensor(self, sub_id, expected_values):
+    def _test_getpdu_sensor(self, sub_id, expected_values, value_type=ValueType.INTEGER):
         """
         Test case for correctness of transceiver sensor MIB values
         :param sub_id: sub OID of the sensor
@@ -75,7 +76,7 @@ class TestSonicMIB(TestCase):
 
         for index, value in enumerate(response.values):
             self.assertEqual(str(value.name), str(oids[index]))
-            self.assertEqual(value.type_, ValueType.INTEGER)
+            self.assertEqual(value.type_, value_type)
             self.assertEqual(value.data, expected_values[index])
 
     def test_getpdu_xcvr_temperature_sensor(self):
@@ -93,6 +94,21 @@ class TestSonicMIB(TestCase):
 
         self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_TEMP)[0], expected_values)
 
+    def test_getpdu_rj45_temperature_sensor(self):
+        """
+        Test case for correctness of transceiver temperature sensor MIB values
+        """
+
+        expected_values = [
+            None,
+            None,
+            None,
+            None,
+            None
+        ]
+
+        self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.RJ45_IFINDEX, SENSOR_TYPE_TEMP)[0], expected_values, ValueType.NO_SUCH_INSTANCE)
+
     def test_getpdu_xcvr_voltage_sensor(self):
         """
         Test case for correctness of transceiver voltage sensor MIB values
@@ -107,6 +123,21 @@ class TestSonicMIB(TestCase):
         ]
 
         self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_VOLTAGE)[0], expected_values)
+
+    def test_getpdu_rj45_voltage_sensor(self):
+            """
+            Test case for correctness of transceiver voltage sensor MIB values
+            """
+
+            expected_values = [
+                None,
+                None,
+                None,
+                None,
+                None
+            ]
+
+            self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.RJ45_IFINDEX, SENSOR_TYPE_VOLTAGE)[0], expected_values, ValueType.NO_SUCH_INSTANCE)
 
     def test_getpdu_xcvr_rx_power_sensor_minus_infinity(self):
         """
@@ -141,6 +172,22 @@ class TestSonicMIB(TestCase):
         for channel in (2, 3, 4):
             self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_PORT_RX_POWER + channel)[0], expected_values)
 
+    def test_getpdu_rj45_rx_power_sensor(self):
+        """
+        Test case for correctness of transceiver rx power sensor MIB values
+        """
+
+        expected_values = [
+            None,
+            None,
+            None,
+            None,
+            None
+        ]
+
+        for channel in (1, 2, 3, 4):
+            self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.RJ45_IFINDEX, SENSOR_TYPE_PORT_RX_POWER + channel)[0], expected_values, ValueType.NO_SUCH_INSTANCE)
+
     def test_getpdu_xcvr_tx_power_sensor(self):
         """
         Test case for correctness of transceiver rx power sensor MIB values
@@ -157,6 +204,22 @@ class TestSonicMIB(TestCase):
         # test for each channel except first, we already test above
         for channel in (1, 2, 3, 4):
             self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_PORT_TX_POWER + channel)[0], expected_values)
+
+    def test_getpdu_rj45_tx_power_sensor(self):
+        """
+        Test case for correctness of transceiver tx power sensor MIB values
+        """
+
+        expected_values = [
+            None,
+            None,
+            None,
+            None,
+            None
+        ]
+
+        for channel in (1, 2, 3, 4):
+            self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.RJ45_IFINDEX, SENSOR_TYPE_PORT_TX_POWER + channel)[0], expected_values, ValueType.NO_SUCH_INSTANCE)
 
     def test_getpdu_xcvr_tx_bias_sensor_unknown(self):
         """
@@ -206,6 +269,22 @@ class TestSonicMIB(TestCase):
         # test for each channel
         for channel in (2, 4):
             self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.IFINDEX, SENSOR_TYPE_PORT_TX_BIAS + channel)[0], expected_values)
+
+    def test_getpdu_rj45_tx_bias_sensor(self):
+        """
+        Test case for correctness of transceiver tx bias sensor MIB values
+        """
+
+        expected_values = [
+            None,
+            None,
+            None,
+            None,
+            None
+        ]
+
+        for channel in (2, 4):
+            self._test_getpdu_sensor(get_transceiver_sensor_sub_id(self.RJ45_IFINDEX, SENSOR_TYPE_PORT_TX_BIAS + channel)[0], expected_values, ValueType.NO_SUCH_INSTANCE)
 
     def test_getpdu_psu_temp_sensor(self):
         """
