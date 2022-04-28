@@ -549,11 +549,11 @@ class Namespace:
         if Namespace.db_config_loaded:
             return
 
+        # Load default config first, because when is_multi_asic() can't get platform info from local config file, is_multi_asic() will connect to ConfigDB for platform information.
+        SonicDBConfig.load_sonic_db_config()
         if multi_asic.is_multi_asic():
             # Load the global config file database_global.json once.
             SonicDBConfig.load_sonic_global_db_config()
-        else:
-            SonicDBConfig.load_sonic_db_config()
 
         Namespace.db_config_loaded = True
 
