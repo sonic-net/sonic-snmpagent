@@ -630,7 +630,7 @@ class Namespace:
         result = {}
         # If there are multiple namespaces, _hash might not be
         # present in all namespace, ignore if not present in a
-        # specfic namespace.
+        # specific namespace.
         if len(dbs) > 1:
             tmp_kwargs = kwargs.copy()
             tmp_kwargs['blocking'] = False
@@ -638,7 +638,7 @@ class Namespace:
             tmp_kwargs = kwargs
         for db_conn in dbs:
             ns_result = db_conn.get_all(db_name, _hash, *args, **tmp_kwargs)
-            if ns_result is not None:
+            if ns_result:
                 result.update(ns_result)
         return result
 
