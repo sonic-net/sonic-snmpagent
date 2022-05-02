@@ -311,7 +311,7 @@
     "Ethernet-BP0": "oid:0x1000000000005",
     "Ethernet-BP4": "oid:0x1000000000006",
     "Ethernet-IB0": "oid:0x1000000000007",
-    "Ethernet-Rec0": "oid:0x1000000000008",
+    "Ethernet-Rec0": "oid:0x1000000000008"
   },
   "COUNTERS_LAG_NAME_MAP": {
     "PortChannel01": "oid:0x1000000000007"
