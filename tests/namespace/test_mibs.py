@@ -43,10 +43,17 @@ class TestGetNextPDU(TestCase):
         if_alias_map, \
         if_id_map, \
         oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, db_conn)
+        print(str(if_name_map))
+        print(str(if_alias_map))
+        print(str(if_id_map))
+        print(str(oid_name_map))
         for recirc_port_name, sai_id in [('Ethernet-IB0', 0), ('Ethernet-Rec0', 1)]:
             self.assertTrue(if_name_map[recirc_port_name] == sai_id)
-            self.assertTrue(if_id_map[sai_id] == recirc_port_name)            
-        
+            self.assertTrue(if_id_map[sai_id] == recirc_port_name)
+        for oid, recirc_port_name in [('0x1000000000007', 'Ethernet-IB0'),
+                                      ('0x1000000000008', 'Ethernet-Rec0')]:
+            self.assertTrue(oid_name_map[oid] == recirc_port_name)
+
     @classmethod
     def tearDownClass(cls):
         tests.mock_tables.dbconnector.clean_up_config()
