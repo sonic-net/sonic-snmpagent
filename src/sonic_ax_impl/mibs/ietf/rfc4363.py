@@ -79,7 +79,7 @@ class FdbUpdater(MIBUpdater):
                 mibs.logger.error("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': {}.".format(fdb_str, e))
                 continue
 
-            ent = Namespace.dbs_get_all(self.db_conn, mibs.ASIC_DB, s, blocking=True)
+            ent = Namespace.dbs_get_all(self.db_conn, mibs.ASIC_DB, s, blocking=False)
             # Example output: oid:0x3a000000000608
             bridge_port_id = ent["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"][6:]
             if bridge_port_id not in self.if_bpid_map:
