@@ -10,6 +10,7 @@ modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from sonic_ax_impl import mibs
+from swsssdk.port_util import BaseIdx
 
 class TestGetNextPDU(TestCase):
     @classmethod
@@ -48,8 +49,8 @@ class TestGetNextPDU(TestCase):
         print(str(if_id_map))
         print(str(oid_name_map))
         for recirc_port_name, sai_id, intf_alias, intf_id_key, intf_index in [
-              ('Ethernet-IB0', '1000000000007', 'rec0', 'asic0:1000000000007', port_util.BaseIdx.ethernet_ib_base_idx),
-              ('Ethernet-Rec0', '1000000000008', 'rec1', 'asic0:1000000000008', port_util.BaseIdx.ethernet_rec_base_idx)]:
+              ('Ethernet-IB0', '1000000000007', 'rec0', 'asic0:1000000000007', BaseIdx.ethernet_ib_base_idx),
+              ('Ethernet-Rec0', '1000000000008', 'rec1', 'asic0:1000000000008', BaseIdx.ethernet_rec_base_idx)]:
             self.assertTrue(if_name_map[recirc_port_name] == sai_id)
             self.assertTrue(if_alias_map[recirc_port_name] == intf_alias)
             self.assertTrue(oid_name_map[intf_index] == recirc_port_name)
