@@ -49,8 +49,8 @@ class TestGetNextPDU(TestCase):
         print(str(if_id_map))
         print(str(oid_name_map))
         for recirc_port_name, sai_id, intf_alias, intf_id_key, intf_index in [
-              ('Ethernet-IB0', '1000000000007', 'rec0', 'asic0:1000000000007', BaseIdx.ethernet_ib_base_idx),
-              ('Ethernet-Rec0', '1000000000008', 'rec1', 'asic0:1000000000008', BaseIdx.ethernet_rec_base_idx)]:
+              ('Ethernet-IB0',  '1000000000080', 'rec0', 'asic0:1000000000080', BaseIdx.ethernet_ib_base_idx),
+              ('Ethernet-Rec0', '1000000000081', 'rec1', 'asic0:1000000000081', BaseIdx.ethernet_rec_base_idx)]:
             self.assertTrue(if_name_map[recirc_port_name] == sai_id)
             self.assertTrue(if_alias_map[recirc_port_name] == intf_alias)
             self.assertTrue(oid_name_map[intf_index] == recirc_port_name)
