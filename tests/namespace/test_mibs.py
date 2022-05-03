@@ -44,10 +44,6 @@ class TestGetNextPDU(TestCase):
         if_alias_map, \
         if_id_map, \
         oid_name_map = Namespace.get_sync_d_from_all_namespace(mibs.init_sync_d_interface_tables, db_conn)
-        print(str(if_name_map))
-        print(str(if_alias_map))
-        print(str(if_id_map))
-        print(str(oid_name_map))
         for recirc_port_name, sai_id, intf_alias, intf_id_key, intf_index in [
               ('Ethernet-IB0',  '1000000000080', 'rec0', 'asic0:1000000000080', BaseIdx.ethernet_ib_base_idx),
               ('Ethernet-Rec0', '1000000000081', 'rec1', 'asic0:1000000000081', BaseIdx.ethernet_rec_base_idx)]:
