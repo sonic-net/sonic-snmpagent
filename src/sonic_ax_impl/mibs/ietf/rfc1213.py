@@ -115,14 +115,15 @@ class NextHopUpdater(MIBUpdater):
             ipnstr = routestr[len("ROUTE_TABLE:"):]
             if ipnstr == "0.0.0.0/0":
                 ipn = ipaddress.ip_network(ipnstr)
-                ent = self.db_conn.get_all(mibs.APPL_DB, routestr, blocking=True)
-                nexthops = ent[b"nexthop"].decode()
-                for nh in nexthops.split(','):
-                    # TODO: if ipn contains IP range, create more sub_id here
-                    sub_id = ip2tuple_v4(ipn.network_address)
-                    self.route_list.append(sub_id)
-                    self.nexthop_map[sub_id] = ipaddress.ip_address(nh).packed
-                    break # Just need the first nexthop
+                ent = self.db_conn.get_all(mibs.APPL_DB, routestr, blocking=False)
+                if ent:
+                    nexthops = ent[b"nexthop"].decode()
+                    for nh in nexthops.split(','):
+                        # TODO: if ipn contains IP range, create more sub_id here
+                        sub_id = ip2tuple_v4(ipn.network_address)
+                        self.route_list.append(sub_id)
+                        self.nexthop_map[sub_id] = ipaddress.ip_address(nh).packed
+                        break # Just need the first nexthop
 
         self.route_list.sort()
 
