@@ -27,6 +27,18 @@
     "role": "Int",
     "speed": 100000
   },
+  "PORT_TABLE:Ethernet-IB0": {
+    "description": "inband",
+    "alias": "rec0",
+    "role": "Inb",
+    "speed": 100000
+  },
+  "PORT_TABLE:Ethernet-Rec0": {
+    "description": "recirc",
+    "alias": "rec1",
+    "role": "Rec",
+    "speed": 100000
+  },
   "LAG_MEMBER_TABLE:PortChannel01:Ethernet-BP0": {
     "status": "enabled"
   },
