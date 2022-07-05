@@ -10,7 +10,7 @@ modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from sonic_ax_impl import mibs
-from swsssdk.port_util import BaseIdx
+from sonic_py_common.port_util import BaseIdx
 
 class TestGetNextPDU(TestCase):
     @classmethod

@@ -5,7 +5,7 @@ import ipaddress
 from enum import Enum, unique
 from bisect import bisect_right
 
-from swsssdk import port_util
+from sonic_py_common import port_util
 from sonic_ax_impl import mibs, logger
 from sonic_ax_impl.mibs import Namespace
 from ax_interface.util import ip2byte_tuple

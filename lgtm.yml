@@ -20,6 +20,3 @@ extraction:
       - dh-exec
       - doxygen
       - graphviz
-    after_prepare:
-      - git clone https://github.com/Azure/sonic-py-swsssdk.git; pushd sonic-py-swsssdk; python3 setup.py bdist_wheel; popd
-      - pip3 install --upgrade --user sonic-py-swsssdk/dist/swsssdk-2.0.1-py3-none-any.whl

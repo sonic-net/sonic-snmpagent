@@ -5,7 +5,7 @@ RFC 3433 MIB implementation
 from enum import Enum, unique
 from bisect import bisect_right
 
-from swsssdk import port_util
+from sonic_py_common import port_util
 from ax_interface import MIBMeta, MIBUpdater, ValueType, SubtreeMIBEntry
 from sonic_ax_impl import mibs
 from sonic_ax_impl.mibs import HOST_NAMESPACE_DB_IDX

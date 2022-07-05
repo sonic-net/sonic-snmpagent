@@ -5,7 +5,7 @@ import os
 import shutil
 import sys
 
-import swsssdk.util
+import sonic_py_common.util
 from swsscommon import swsscommon
 
 import ax_interface
@@ -70,7 +70,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     # import command line arguments
-    args = swsssdk.util.process_options("sonic_ax_impl")
+    args = sonic_py_common.util.process_options("sonic_ax_impl")
 
     # configure logging. If debug '-d' is specified, logs to stdout at designated level. syslog/INFO otherwise.
     log_level = log_level_sdk = args.get('log_level')
@@ -96,12 +96,10 @@ if __name__ == "__main__":
     # set the log levels
     sonic_ax_impl.logger.setLevel(log_level)
     ax_interface.logger.setLevel(log_level)
-    swsssdk.logger.setLevel(log_level_sdk)
     swsscommon.Logger.getInstance().setMinPrio(log_level_swsscommon)
 
     # inherit logging handlers in submodules
     ax_interface.logger.handlers = sonic_ax_impl.logger.handlers
-    swsssdk.logger.handlers = sonic_ax_impl.logger.handlers
 
     # init mibs module with command line arguments
     mibs.config(**args)

@@ -5,9 +5,7 @@ import sys
 
 import mockredis
 import redis
-from swsssdk import SonicV2Connector
-from swsssdk import SonicDBConfig
-from swsssdk.interface import DBInterface
+from swsscommon.swsscommon import SonicV2Connector, SonicDBConfig, DBInterface
 from swsscommon import swsscommon
 from sonic_py_common import multi_asic
 
