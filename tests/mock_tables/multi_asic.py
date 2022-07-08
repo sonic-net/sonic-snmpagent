@@ -3,7 +3,8 @@ import json
 
 import tests.mock_tables.dbconnector
 from sonic_py_common import multi_asic
-from swsscommon.swsscommon import SonicDBConfig
+from swsssdk import SonicDBConfig
+
 
 INPUT_DIR = os.path.dirname(os.path.abspath(__file__))
 int_port_channel = ['PortChannel01', 'PortChannel02', 'PortChannel03', 'PortChannel04']
