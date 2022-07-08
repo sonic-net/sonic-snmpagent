@@ -5,7 +5,9 @@ import sys
 
 import mockredis
 import redis
-from swsscommon.swsscommon import SonicV2Connector_Native, SonicDBConfig, DBInterface
+from swsssdk import SonicV2Connector
+from swsssdk import SonicDBConfig
+from swsssdk.interface import DBInterface
 from swsscommon import swsscommon
 from sonic_py_common import multi_asic
 
@@ -47,34 +49,23 @@ def load_database_config():
         sonic_db_file_path=os.path.join(
             os.path.dirname(os.path.abspath(__file__)), 'database_config.json'))
 
-class MockSonicV2Connector(SonicV2Connector_Native):
-    ## Note: there is no easy way for SWIG to map ctor parameter netns(C++) to namespace(python)
-    def __init__(self, use_unix_socket_path = False, namespace = '', **kwargs):
-        if 'host' in kwargs:
-            # Note: host argument will be ignored, same as in sonic-py-swsssdk
-            kwargs.pop('host')
-        if 'decode_responses' in kwargs and kwargs.pop('decode_responses') != True:
-            raise ValueError('decode_responses must be True if specified, False is not supported')
-        ns_list = SonicDBConfig.get_ns_list()
-        if len(ns_list) > 1 and (namespace == "" or namespace == None):
-             namespace = 'global_db'
-        super(MockSonicV2Connector, self).__init__(use_unix_socket_path = use_unix_socket_path, netns = namespace)
 
-        # Add database name attributes into MockSonicV2Connector instance
-        # Note: this is difficult to implement in C++
-        for db_name in self.get_db_list():
-            # set a database name as a constant value attribute.
-            setattr(self, db_name, db_name)
+_old_connect_SonicV2Connector = SonicV2Connector.connect
 
-    @property
-    def namespace(self):
-        return self.getNamespace()
 
-    def get_all(self, db_name, _hash, blocking=False):
-        return dict(super(MockSonicV2Connector, self).get_all(db_name, _hash, blocking))
-
-    def keys(self, *args, **kwargs):
-        return list(super(MockSonicV2Connector, self).keys(*args, **kwargs))
+def connect_SonicV2Connector(self, db_name, retry_on=True):
+    ns_list = SonicDBConfig.get_ns_list()
+    # In case of multiple namespaces, namespace string passed to
+    # SonicV2Connector will specify the namespace or can be empty.
+    # Empty namespace represents global or host namespace.
+    if len(ns_list) > 1 and (self.namespace == "" or self.namespace == None):
+        self.dbintf.redis_kwargs['namespace'] = "global_db"
+    else:
+        self.dbintf.redis_kwargs['namespace'] = self.namespace
+    # Mock DB filename for unit-test
+    self.dbintf.redis_kwargs['db_name'] = db_name
+    self.dbintf.redis_kwargs['decode_responses'] = True
+    _old_connect_SonicV2Connector(self, db_name, retry_on)
 
 
 def _subscribe_keyspace_notification(self, db_name):
@@ -149,7 +140,8 @@ class SwssSyncClient(mockredis.MockRedis):
 DBInterface._subscribe_keyspace_notification = _subscribe_keyspace_notification
 mockredis.MockRedis.config_set = config_set
 redis.StrictRedis = SwssSyncClient
-swsscommon.SonicV2Connector = MockSonicV2Connector
+SonicV2Connector.connect = connect_SonicV2Connector
+swsscommon.SonicV2Connector = SonicV2Connector
 swsscommon.SonicDBConfig = SonicDBConfig
 swsscommon.SonicDBConfig.isGlobalInit = mock_SonicDBConfig_isGlobalInit
 
