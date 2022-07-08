@@ -58,7 +58,7 @@ def connect_SonicV2Connector(self, db_name, retry_on=True):
     # Empty namespace represents global or host namespace.
     selfns = self.getNamespace()
     if len(ns_list) > 1 and (selfns == "" or selfns == None):
-        super(SonicV2Connector, self).__init__(True, "global_db")
+        super(SonicV2Connector, self).__init__(False, "global_db")
     _old_connect_SonicV2Connector(self, db_name, retry_on)
 
 
