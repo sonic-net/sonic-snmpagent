@@ -48,22 +48,17 @@ def load_database_config():
             os.path.dirname(os.path.abspath(__file__)), 'database_config.json'))
 
 
-_old_connect_SonicV2Connector = SonicV2Connector.connect
+_old_init_SonicV2Connector = SonicV2Connector.__init__
 
 
-def connect_SonicV2Connector(self, db_name, retry_on=True):
+def init_SonicV2Connector(self, use_unix_socket_path = False, namespace = '', **kwargs):
     ns_list = SonicDBConfig.get_ns_list()
     # In case of multiple namespaces, namespace string passed to
     # SonicV2Connector will specify the namespace or can be empty.
     # Empty namespace represents global or host namespace.
-    if len(ns_list) > 1 and (self.namespace == "" or self.namespace == None):
-        self.dbintf.redis_kwargs['namespace'] = "global_db"
-    else:
-        self.dbintf.redis_kwargs['namespace'] = self.namespace
-    # Mock DB filename for unit-test
-    self.dbintf.redis_kwargs['db_name'] = db_name
-    self.dbintf.redis_kwargs['decode_responses'] = True
-    _old_connect_SonicV2Connector(self, db_name, retry_on)
+    if len(ns_list) > 1 and (namespace == "" or namespace == None):
+        namespace = "global_db"
+    _old_init_SonicV2Connector(self, use_unix_socket_path, namespace, **kwargs)
 
 
 def _subscribe_keyspace_notification(self, db_name):
@@ -138,7 +133,7 @@ class SwssSyncClient(mockredis.MockRedis):
 DBInterface._subscribe_keyspace_notification = _subscribe_keyspace_notification
 mockredis.MockRedis.config_set = config_set
 redis.StrictRedis = SwssSyncClient
-SonicV2Connector.connect = connect_SonicV2Connector
+SonicV2Connector.__init__ = init_SonicV2Connector
 swsscommon.SonicV2Connector = SonicV2Connector
 swsscommon.SonicDBConfig = SonicDBConfig
 swsscommon.SonicDBConfig.isGlobalInit = mock_SonicDBConfig_isGlobalInit
