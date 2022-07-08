@@ -356,7 +356,6 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         super().__init__()
 
         self.statedb = Namespace.init_namespace_dbs()
-        Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
 
         # list of available sub OIDs
         self.sub_ids = []
