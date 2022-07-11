@@ -4,8 +4,8 @@ import os
 
 from swsscommon.swsscommon import SonicV2Connector
 from swsscommon.swsscommon import SonicDBConfig
-from swsssdk import port_util
-from swsssdk.port_util import get_index_from_str
+from sonic_py_common import port_util
+from sonic_py_common.port_util import get_index_from_str
 from ax_interface.mib import MIBUpdater
 from ax_interface.util import oid2tuple
 from sonic_ax_impl import logger
@@ -221,7 +221,7 @@ def init_db():
     Namespace.init_sonic_db_config()
     
     # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
-    # Redis PubSub objects (such as those within swsssdk) are NOT thread-safe.
+    # Redis PubSub objects (such as those within swsscommon) are NOT thread-safe.
     db_conn = SonicV2Connector(**redis_kwargs)
     return db_conn
 

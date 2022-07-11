@@ -39,7 +39,7 @@ class TestGetNextPDU(TestCase):
         self.assertTrue(lag_name_if_name_map["PortChannel_Temp"] == [])
         self.assertTrue(lag_sai_map["PortChannel01"] == "2000000000006")
 
-    @mock.patch('swsssdk.dbconnector.SonicV2Connector.get_all', mock.MagicMock(return_value=({})))
+    @mock.patch('swsscommon.swsscommon.SonicV2Connector.get_all', mock.MagicMock(return_value=({})))
     def test_init_sync_d_interface_tables(self):
         db_conn = Namespace.init_namespace_dbs()
 
@@ -52,7 +52,7 @@ class TestGetNextPDU(TestCase):
         self.assertTrue(if_id_map == {})
         self.assertTrue(oid_name_map == {})
 
-    @mock.patch('swsssdk.dbconnector.SonicV2Connector.get_all', mock.MagicMock(return_value=({})))
+    @mock.patch('swsscommon.swsscommon.SonicV2Connector.get_all', mock.MagicMock(return_value=({})))
     def test_init_sync_d_queue_tables(self):
         mock_queue_stat_map = {}
         db_conn = Namespace.init_namespace_dbs()
@@ -63,7 +63,7 @@ class TestGetNextPDU(TestCase):
         self.assertTrue(queue_stat_map == {})
         self.assertTrue(port_queue_list_map == {})
 
-    @mock.patch('swsssdk.dbconnector.SonicV2Connector.get_all', mock.MagicMock(return_value=({})))
+    @mock.patch('swsscommon.swsscommon.SonicV2Connector.get_all', mock.MagicMock(return_value=({})))
     def test_init_sync_d_vlan_tables(self):
         db_conn = Namespace.init_namespace_dbs()
 

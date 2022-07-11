@@ -17,7 +17,7 @@ from ax_interface.encodings import ObjectIdentifier
 from ax_interface.constants import PduTypes
 from sonic_ax_impl.mibs.ietf import rfc4363
 from sonic_ax_impl.main import SonicMIB
-from swsssdk.port_util import BaseIdx
+from sonic_py_common.port_util import BaseIdx
 
 class TestSonicMIB(TestCase):
     @classmethod
