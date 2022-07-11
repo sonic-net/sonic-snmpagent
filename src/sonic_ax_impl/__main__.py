@@ -63,7 +63,7 @@ def logging_level_to_swss_level(log_level):
     return log_level_swsscommon
 
 
-if __name__ == "__main__": # pragma: no cover
+if __name__ == "__main__":
 
     if 'install' in sys.argv:
         install_fragments()
