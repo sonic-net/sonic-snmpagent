@@ -1,6 +1,7 @@
 import os
 import sys
 import importlib
+import mock
 
 # 3 directory levels above sonic-snmpagent/tests/namespace/test_interfaces.py = sonic-snmpagent
 modules_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -8,6 +9,7 @@ modules_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 # Insert sonic-snmpagent and sonic-snmpagent/src to path 
 sys.path.insert(0, modules_path)
 sys.path.insert(0, os.path.join(modules_path, 'src'))
+mgmt_iface_status = modules_path + "/mock_tables/{}"
 
 # noinspection PyUnresolvedReferences
 import tests.mock_tables.dbconnector
@@ -22,6 +24,7 @@ from ax_interface.pdu import PDU, PDUHeader
 from ax_interface.mib import MIBTable
 from sonic_ax_impl.mibs.ietf import rfc1213, rfc2863
 from sonic_ax_impl import mibs
+from mock import patch
 
 class TestGetNextPDU_1213(TestCase):
     @classmethod
@@ -29,10 +32,11 @@ class TestGetNextPDU_1213(TestCase):
         tests.mock_tables.dbconnector.load_namespace_config()
         importlib.reload(rfc1213)
         cls.lut = MIBTable(rfc1213.InterfacesMIB)
-        for updater in cls.lut.updater_instances:
-           updater.update_data()
-           updater.reinit_data()
-           updater.update_data()
+        with mock.patch('sonic_ax_impl.mibs.ietf.rfc1213.InterfacesUpdater.if_operstate_file', mgmt_iface_status):
+           for updater in cls.lut.updater_instances:
+               updater.update_data()
+               updater.reinit_data()
+               updater.update_data()
 
     def test_getnextpdu_noneifindex(self):
         # oid.include = 1
@@ -239,6 +243,101 @@ class TestGetNextPDU_1213(TestCase):
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 3, 1001))))
         self.assertEqual(value0.data, 161)
+
+    def test_mgmt_iface(self):
+        """
+        Test that mgmt port is present in the MIB
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 1, 10000))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.INTEGER)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 1, 10001))))
+        self.assertEqual(value0.data, 10000)
+
+    def test_mgmt_iface_description(self):
+        """
+        Test mgmt port description (which is simply an alias)
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 2, 10001))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.OCTET_STRING)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 2, 10001))))
+        self.assertEqual(str(value0.data), 'mgmt1')
+
+    def test_mgmt_iface_oper_status(self):
+        """
+        Test mgmt port operative status
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 8, 10001))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.INTEGER)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 8, 10001))))
+        self.assertEqual(value0.data, 1)
+
+    def test_mgmt_iface_oper_status_unknown(self):
+        """
+        Test mgmt port operative status
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 8, 10002))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.INTEGER)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 8, 10002))))
+        self.assertEqual(value0.data, 4)
+
+    def test_mgmt_iface_admin_status(self):
+        """
+        Test mgmt port admin status
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 7, 10001))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.INTEGER)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 7, 10001))))
+        self.assertEqual(value0.data, 1)
 
     def test_getnextpdu_first_bp_ifindex(self):
         oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 1, 8999))
