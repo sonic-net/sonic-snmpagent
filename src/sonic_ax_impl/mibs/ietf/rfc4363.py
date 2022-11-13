@@ -98,6 +98,8 @@ class FdbUpdater(MIBUpdater):
                 continue
 
             vlanmac = self.fdb_vlanmac(fdb)
+            if not vlanmac:
+                continue
             self.vlanmac_ifindex_map[vlanmac] = port_index
             self.vlanmac_ifindex_list.append(vlanmac)
         self.vlanmac_ifindex_list.sort()
