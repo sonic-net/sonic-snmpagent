@@ -31,7 +31,9 @@ class FdbUpdater(MIBUpdater):
                 vlan_id = Namespace.dbs_get_vlan_id_from_bvid(self.db_conn, fdb["bvid"])
                 if isinstance(vlan_id, bytes):
                     vlan_id = vlan_id.decode()
-                self.bvid_vlan_map[fdb["bvid"]] = vlan_id
+                # only cache vlan_id if valid
+                if vlan_id is not None:
+                    self.bvid_vlan_map[fdb["bvid"]] = vlan_id
         else:
             return None
         if not isinstance(vlan_id, str):
