@@ -13,6 +13,7 @@ from sonic_ax_impl.mibs import ieee802_1ab, Namespace
 from . import logger
 from .mibs.ietf import rfc1213, rfc2737, rfc2863, rfc3433, rfc4292, rfc4363
 from .mibs.vendor import dell, cisco
+from sonic_py_common import device_info
 
 # Background task update frequency ( in seconds )
 DEFAULT_UPDATE_FREQUENCY = 5
@@ -20,27 +21,30 @@ DEFAULT_UPDATE_FREQUENCY = 5
 event_loop = asyncio.get_event_loop()
 shutdown_task = None
 
+if not device_info.is_supervisor():
+    sonicMIB_list = (rfc1213.InterfacesMIB, rfc1213.IpMib, rfc1213.SysNameMIB, \
+                     rfc2737.PhysicalTableMIB, rfc3433.PhysicalSensorTableMIB, \
+                     rfc2863.InterfaceMIBObjects, rfc4363.QBridgeMIBObjects, \
+                     rfc4292.IpCidrRouteTable, \
+                     ieee802_1ab.LLDPLocalSystemData, ieee802_1ab.LLDPLocalSystemData.LLDPLocPortTable, \
+                     ieee802_1ab.LLDPLocalSystemData.LLDPLocManAddrTable, ieee802_1ab.LLDPRemTable,
+                     ieee802_1ab.LLDPRemManAddrTable, \
+                     dell.force10.SSeriesMIB, cisco.mgmt.CiscoSystemExtMIB, \
+                     cisco.bgp4.CiscoBgp4MIB, \
+                     cisco.ciscoPfcExtMIB.cpfcIfTable, cisco.ciscoPfcExtMIB.cpfcIfPriorityTable, \
+                     cisco.ciscoSwitchQosMIB.csqIfQosGroupStatsTable, cisco.ciscoEntityFruControlMIB.cefcFruPowerStatusTable)
+else:
+    sonicMIB_list = (rfc1213.InterfacesMIB, rfc1213.SysNameMIB, \
+                     rfc2737.PhysicalTableMIB, rfc3433.PhysicalSensorTableMIB, \
+                     rfc2863.InterfaceMIBObjects, rfc4363.QBridgeMIBObjects, \
+                     ieee802_1ab.LLDPLocalSystemData,
+                     ieee802_1ab.LLDPLocalSystemData.LLDPLocManAddrTable, ieee802_1ab.LLDPRemManAddrTable, \
+                     dell.force10.SSeriesMIB, cisco.mgmt.CiscoSystemExtMIB, \
+                     cisco.ciscoPfcExtMIB.cpfcIfTable, cisco.ciscoPfcExtMIB.cpfcIfPriorityTable, \
+                     cisco.ciscoSwitchQosMIB.csqIfQosGroupStatsTable, cisco.ciscoEntityFruControlMIB.cefcFruPowerStatusTable)
 
 class SonicMIB(
-    rfc1213.InterfacesMIB,
-    rfc1213.IpMib,
-    rfc1213.SysNameMIB,
-    rfc2737.PhysicalTableMIB,
-    rfc3433.PhysicalSensorTableMIB,
-    rfc2863.InterfaceMIBObjects,
-    rfc4363.QBridgeMIBObjects,
-    rfc4292.IpCidrRouteTable,
-    ieee802_1ab.LLDPLocalSystemData,
-    ieee802_1ab.LLDPLocalSystemData.LLDPLocPortTable,
-    ieee802_1ab.LLDPLocalSystemData.LLDPLocManAddrTable,
-    ieee802_1ab.LLDPRemTable,
-    ieee802_1ab.LLDPRemManAddrTable,
-    dell.force10.SSeriesMIB,
-    cisco.bgp4.CiscoBgp4MIB,
-    cisco.ciscoPfcExtMIB.cpfcIfTable,
-    cisco.ciscoPfcExtMIB.cpfcIfPriorityTable,
-    cisco.ciscoSwitchQosMIB.csqIfQosGroupStatsTable,
-    cisco.ciscoEntityFruControlMIB.cefcFruPowerStatusTable,
+    *sonicMIB_list
 ):
     """
     If SONiC was to create custom MIBEntries, they may be specified here.
