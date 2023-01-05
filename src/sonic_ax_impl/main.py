@@ -29,7 +29,7 @@ if not device_info.is_supervisor():
                      ieee802_1ab.LLDPLocalSystemData, ieee802_1ab.LLDPLocalSystemData.LLDPLocPortTable, \
                      ieee802_1ab.LLDPLocalSystemData.LLDPLocManAddrTable, ieee802_1ab.LLDPRemTable,
                      ieee802_1ab.LLDPRemManAddrTable, \
-                     dell.force10.SSeriesMIB, cisco.mgmt.CiscoSystemExtMIB, \
+                     dell.force10.SSeriesMIB, \
                      cisco.bgp4.CiscoBgp4MIB, \
                      cisco.ciscoPfcExtMIB.cpfcIfTable, cisco.ciscoPfcExtMIB.cpfcIfPriorityTable, \
                      cisco.ciscoSwitchQosMIB.csqIfQosGroupStatsTable, cisco.ciscoEntityFruControlMIB.cefcFruPowerStatusTable)
@@ -39,7 +39,7 @@ else:
                      rfc2863.InterfaceMIBObjects, rfc4363.QBridgeMIBObjects, \
                      ieee802_1ab.LLDPLocalSystemData,
                      ieee802_1ab.LLDPLocalSystemData.LLDPLocManAddrTable, ieee802_1ab.LLDPRemManAddrTable, \
-                     dell.force10.SSeriesMIB, cisco.mgmt.CiscoSystemExtMIB, \
+                     dell.force10.SSeriesMIB, \
                      cisco.ciscoPfcExtMIB.cpfcIfTable, cisco.ciscoPfcExtMIB.cpfcIfPriorityTable, \
                      cisco.ciscoSwitchQosMIB.csqIfQosGroupStatsTable, cisco.ciscoEntityFruControlMIB.cefcFruPowerStatusTable)
 
