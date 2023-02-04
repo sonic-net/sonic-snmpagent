@@ -153,7 +153,7 @@ class NextHopUpdater(MIBUpdater):
                 ipn = ipaddress.ip_network(ipnstr)
                 ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, routestr, blocking=False)
                 if ent:
-                    nexthops = ent["nexthop"]
+                    nexthops = ent.get("nexthop", "")
                     for nh in nexthops.split(','):
                         # TODO: if ipn contains IP range, create more sub_id here
                         sub_id = ip2byte_tuple(ipn.network_address)
