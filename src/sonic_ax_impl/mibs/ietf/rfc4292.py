@@ -67,8 +67,14 @@ class RouteUpdater(MIBUpdater):
             ent = db_conn.get_all(mibs.APPL_DB, route_str, blocking=False)
             if not ent:
                 continue
-            nexthops = ent["nexthop"]
-            ifnames = ent["ifname"]
+            nexthops = ent.get("nexthop", None)
+            if nexthops is None:
+                mibs.logger.warning("Route has no nexthop: {} {}".format(route_str, str(ent)))
+                continue
+            ifnames = ent.get("ifname", None)
+            if ifnames is None:
+                mibs.logger.warning("Route has no ifname: {} {}".format(route_str, str(ent)))
+                continue
             for nh, ifn in zip(nexthops.split(','), ifnames.split(',')):
                 ## Ignore non front panel interfaces
                 ## TODO: non front panel interfaces should not be in APPL_DB at very beginning
