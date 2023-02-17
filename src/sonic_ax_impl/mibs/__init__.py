@@ -435,21 +435,23 @@ def init_sync_d_queue_tables(db_conn):
 
     for queue_name, sai_id in queue_name_map.items():
         port_name, queue_index = queue_name.split(':')
-        queue_index = ''.join(i for i in queue_index if i.isdigit())
-        port_index = get_index_from_str(port_name)
-        key = queue_key(port_index, queue_index)
-        port_queues_map[key] = sai_id
+        match_port_name = re.match(port_util.SONIC_CPU_PORT_RE_PATTERN, port_name)
+        if match_port_name is None:
+            queue_index = ''.join(i for i in queue_index if i.isdigit())
+            port_index = get_index_from_str(port_name)
+            key = queue_key(port_index, queue_index)
+            port_queues_map[key] = sai_id
 
-        queue_stat_name = queue_table(sai_id)
-        queue_stat = db_conn.get_all(COUNTERS_DB, queue_stat_name, blocking=False)
-        if queue_stat is not None:
-            queue_stat_key = queue_key(port_index, queue_stat_name)
-            queue_stat_map[queue_stat_key] = queue_stat
+            queue_stat_name = queue_table(sai_id)
+            queue_stat = db_conn.get_all(COUNTERS_DB, queue_stat_name, blocking=False)
+            if queue_stat is not None:
+                queue_stat_key = queue_key(port_index, queue_stat_name)
+                queue_stat_map[queue_stat_key] = queue_stat
 
-        if not port_queue_list_map.get(int(port_index)):
-            port_queue_list_map[int(port_index)] = [int(queue_index)]
-        else:
-            port_queue_list_map[int(port_index)].append(int(queue_index))
+            if not port_queue_list_map.get(int(port_index)):
+                port_queue_list_map[int(port_index)] = [int(queue_index)]
+            else:
+                port_queue_list_map[int(port_index)].append(int(queue_index))
 
     # SyncD consistency checks.
     if not port_queues_map:
