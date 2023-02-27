@@ -269,11 +269,12 @@ class InterfacesUpdater(MIBUpdater):
         for sai_id_key in self.if_id_map:
             namespace, sai_id = mibs.split_sai_id_key(sai_id_key)
             if_idx = mibs.get_index_from_str(self.if_id_map[sai_id_key])
-            counters_db_data = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB,
-                                                                        mibs.counter_table(sai_id),
-                                                                        blocking=True)
+            counter_table = self.namespace_db_map[namespace].get_all(mibs.COUNTERS_DB, \
+                    mibs.counter_table(sai_id))
+            if counter_table is None:
+                counter_table = {}
             self.if_counters[if_idx] = {
-                counter: int(value) for counter, value in counters_db_data.items()
+                counter: int(value) for counter, value in counter_table.items()
             }
 
     def update_rif_counters(self):
