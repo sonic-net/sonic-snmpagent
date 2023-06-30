@@ -258,6 +258,7 @@ class IfIndexUpdater(MIBUpdater):
 class IpMib(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.4'):
     arp_updater = ArpUpdater()
     nexthop_updater = NextHopUpdater()
+    ifindex_updater = IfIndexUpdater()
 
     ipRouteNextHop = \
         SubtreeMIBEntry('21.1.7', nexthop_updater, ValueType.IP_ADDRESS, nexthop_updater.nexthop)
