@@ -85,6 +85,7 @@ class FdbUpdater(MIBUpdater):
             if not ent:
                 continue
 
+            bridge_port_id = ""
             try:
                 # Example output: oid:0x3a000000000608
                 bridge_port_id = ent["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"][6:]
