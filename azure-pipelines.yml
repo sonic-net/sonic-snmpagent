@@ -42,6 +42,9 @@ stages:
         artifact: sonic-buildimage.vs
         runVersion: 'latestFromBranch'
         runBranch: 'refs/heads/master'
+        patterns: |
+          **/*.whl
+          **/*.deb
       displayName: "Download sonic buildimage"
 
     - script: |
