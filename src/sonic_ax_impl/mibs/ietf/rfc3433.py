@@ -372,6 +372,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         self.fan_sensor = []
         self.psu_sensor = []
         self.thermal_sensor = []
+        self.broken_transceiver_info = []
 
     def reinit_data(self):
         """
@@ -424,6 +425,16 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
 
             # skip RJ45 port
             transceiver_info_entry_data = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB, mibs.transceiver_info_table(interface))
+    
+            if 'type' not in transceiver_info_entry_data:
+                # Only write error log once
+                if interface not in self.broken_transceiver_info:
+                    mibs.logger.error(
+                        "Invalid interface {} in STATE_DB, \
+                        attribute 'type' missing in transceiver_info '{}'".format(interface, transceiver_info_entry_data))
+                    self.broken_transceiver_info.append(interface)
+                continue
+
             if  transceiver_info_entry_data['type'] == RJ45_PORT_TYPE:
                 continue
 
