@@ -19,10 +19,10 @@ class TestPhysicalSensorTableMIBUpdater(TestCase):
         updater = PhysicalSensorTableMIBUpdater()
         updater.transceiver_dom.append("TRANSCEIVER_INFO|Ethernet0")
 
-        with mock.patch('sonic_ax_impl.mibs.logger.error') as mocked_error:
+        with mock.patch('sonic_ax_impl.mibs.logger.warn') as mocked_warn:
             updater.update_data()
 
             # check warning
-            mocked_error.assert_called()
+            mocked_warn.assert_called()
 
         self.assertTrue(len(updater.sub_ids) == 0)
