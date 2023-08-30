@@ -19,10 +19,10 @@ class TestFdbUpdater(TestCase):
     def test_FdbUpdater_ent_bridge_port_id_attr_missing(self):
         updater = FdbUpdater()
 
-        with mock.patch('sonic_ax_impl.mibs.logger.error') as mocked_error:
+        with mock.patch('sonic_ax_impl.mibs.logger.warn') as mocked_warn:
             updater.update_data()
             
             # check warning
-            mocked_error.assert_called()
+            mocked_warn.assert_called()
 
         self.assertTrue(len(updater.vlanmac_ifindex_list) == 0)
