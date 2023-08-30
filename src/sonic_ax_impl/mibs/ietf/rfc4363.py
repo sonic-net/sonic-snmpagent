@@ -20,6 +20,7 @@ class FdbUpdater(MIBUpdater):
         self.vlanmac_ifindex_list = []
         self.if_bpid_map = {}
         self.bvid_vlan_map = {}
+        self.broken_fdbs = []
 
     def fdb_vlanmac(self, fdb):
         if 'vlan' in fdb:
@@ -60,6 +61,7 @@ class FdbUpdater(MIBUpdater):
 
         self.if_bpid_map = Namespace.dbs_get_bridge_port_map(self.db_conn, mibs.ASIC_DB)
         self.bvid_vlan_map.clear()
+        self.broken_fdbs.clear()
 
     def update_data(self):
         """
@@ -85,8 +87,18 @@ class FdbUpdater(MIBUpdater):
             if not ent:
                 continue
 
+            bridge_port_id_attr = ""
+            try:
+                bridge_port_id_attr = ent["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"]
+            except KeyError as e:
+                # Only write warning log once
+                if fdb_str not in self.broken_fdbs:
+                    mibs.logger.warn("SyncD 'ASIC_DB' includes invalid FDB_ENTRY '{}': failed to get bridge_port_id, exception: {}".format(fdb_str, e))
+                    self.broken_fdbs.append(fdb_str)
+                continue
+
             # Example output: oid:0x3a000000000608
-            bridge_port_id = ent["SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID"][6:]
+            bridge_port_id = bridge_port_id_attr[6:]
             if bridge_port_id not in self.if_bpid_map:
                 continue
             port_id = self.if_bpid_map[bridge_port_id]
