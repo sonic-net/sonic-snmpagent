@@ -23,6 +23,7 @@ class RouteUpdater(MIBUpdater):
         """
         self.loips = {}
 
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         loopbacks = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "INTF_TABLE:lo:*")
         if not loopbacks:
             return

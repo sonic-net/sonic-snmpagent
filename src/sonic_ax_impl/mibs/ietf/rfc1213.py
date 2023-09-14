@@ -134,6 +134,9 @@ class NextHopUpdater(MIBUpdater):
         self.nexthop_map = {}
         self.route_list = []
 
+    def reinit_data(self):
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
+
     def update_data(self):
         """
         Update redis (caches config)
@@ -220,6 +223,7 @@ class InterfacesUpdater(MIBUpdater):
         """
         Subclass update interface information
         """
+        Namespace.connect_namespace_dbs(self.db_conn)
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \
