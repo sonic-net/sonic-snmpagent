@@ -205,7 +205,11 @@ class InterfaceMIBUpdater(MIBUpdater):
         :param sub_id: The 1-based sub-identifier query.
         :return: The  SONiC interface description, empty string if not defined.
         """
-        entry = self._get_if_entry(sub_id)
+        oid = self.get_oid(sub_id)
+        if not oid:
+            return
+
+        entry = self._get_if_entry(oid)
         if not entry:
             return
 
@@ -259,15 +263,11 @@ class InterfaceMIBUpdater(MIBUpdater):
             mibs.logger.warning("SyncD 'COUNTERS_DB' missing attribute '{}'.".format(e))
             return None
 
-    def _get_if_entry(self, sub_id):
+    def _get_if_entry(self, oid):
         """
         :param oid: The 1-based sub-identifier query.
         :return: the DB entry for the respective sub_id.
         """
-        oid = self.get_oid(sub_id)
-        if not oid:
-            return
-
         if_table = ""
         # Once PORT_TABLE will be moved to CONFIG DB
         # we will get entry from CONFIG_DB for all cases
@@ -291,7 +291,19 @@ class InterfaceMIBUpdater(MIBUpdater):
         :param sub_id: The 1-based sub-identifier query.
         :return: speed value for the respective sub_id or 40000 if not defined.
         """
-        entry = self._get_if_entry(sub_id)
+        oid = self.get_oid(sub_id)
+        if not oid:
+            return
+
+        if oid in self.oid_lag_name_map:
+            speed = 0
+            for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
+                entry = self._get_if_entry(mibs.get_index_from_str(lag_member))
+                if entry:
+                    speed += int(entry.get("speed", 0))
+            return speed
+
+        entry = self._get_if_entry(oid)
         if not entry:
             return
 
