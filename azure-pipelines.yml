@@ -50,7 +50,8 @@ stages:
     - script: |
         set -ex
         sudo apt-get -y purge libhiredis-dev libnl-3-dev libnl-route-3-dev
-        sudo dpkg -i ../target/debs/buster/{libyang_1.0.73_amd64.deb,libswsscommon_1.0.0_amd64.deb,python3-swsscommon_1.0.0_amd64.deb,libnl-3-200_*.deb,libnl-genl-3-200_*.deb,libnl-nf-3-200_*.deb,libnl-route-3-200_*.deb,libhiredis0.14_*.deb}
+        sudo apt-get -y install libhiredis0.14
+        sudo dpkg -i ../target/debs/buster/{libyang_1.0.73_amd64.deb,libswsscommon_1.0.0_amd64.deb,python3-swsscommon_1.0.0_amd64.deb,libnl-3-200_*.deb,libnl-genl-3-200_*.deb,libnl-nf-3-200_*.deb,libnl-route-3-200_*.deb}
         sudo python3 -m pip install ../target/python-wheels/buster/swsssdk*-py3-*.whl
         sudo python3 -m pip install ../target/python-wheels/buster/sonic_py_common-1.0-py3-none-any.whl
         python3 setup.py bdist_wheel
