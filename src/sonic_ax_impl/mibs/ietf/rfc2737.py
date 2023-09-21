@@ -1081,9 +1081,8 @@ class VoltageSensorCacheUpdater(PhysicalEntityCacheUpdater):
             voltage_sensor_position, voltage_sensor_parent_name = get_db_data(voltage_sensor_relation_info, PhysicalRelationInfoDB)
             voltage_sensor_position = int(voltage_sensor_position)
 
-            # only process voltage_sensors belong to chassis here, voltage_sensors belong to other
-            # physical entity will be processed in other entity updater, for example
-            # PSU voltage_sensor will be processed by PsuCacheUpdater
+            # only process voltage_sensors belonging to chassis here, voltage_sensors belong to other
+            # physical entity will be processed in other entity updater
             if voltage_sensor_parent_name in self.mib_updater.physical_name_to_oid_map and \
                 self.mib_updater.physical_name_to_oid_map[voltage_sensor_parent_name] == (CHASSIS_SUB_ID,):
                 voltage_sensor_sub_id = get_chassis_voltage_sensor_sub_id(voltage_sensor_position)
@@ -1125,8 +1124,7 @@ class CurrentSensorCacheUpdater(PhysicalEntityCacheUpdater):
             current_sensor_position = int(current_sensor_position)
 
             # only process current_sensors belong to chassis here, current_sensors belong to other
-            # physical entity will be processed in other entity updater, for example
-            # PSU current_sensor will be processed by PsuCacheUpdater
+            # physical entity will be processed in other entity updater
             if current_sensor_parent_name in self.mib_updater.physical_name_to_oid_map and \
                 self.mib_updater.physical_name_to_oid_map[current_sensor_parent_name] == (CHASSIS_SUB_ID,):
                 current_sensor_sub_id = get_chassis_current_sensor_sub_id(current_sensor_position)
