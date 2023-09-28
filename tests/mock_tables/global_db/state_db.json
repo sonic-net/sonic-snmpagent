@@ -129,11 +129,11 @@
     "is_replaceable": "False"
   },
   "VOLTAGE_INFO|voltage1": {
-    "voltage": "10",
+    "voltage": "54000",
     "is_replaceable": "False"
   },
   "CURRENT_INFO|current1": {
-    "current": "10",
+    "current": "10000",
     "is_replaceable": "False"
   },
   "TEMPERATURE_INFO|thermal1": {
