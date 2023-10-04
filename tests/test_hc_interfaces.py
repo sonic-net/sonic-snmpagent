@@ -147,6 +147,25 @@ class TestGetNextPDU(TestCase):
         self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 121))))
         self.assertEqual(value0.data, 40000)
 
+    def test_portchannel_speed(self):
+        """
+        For a portchannel, the speed should be the sum of all members' speeds
+        """
+        oid = ObjectIdentifier(12, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 1000))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.GAUGE_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 1001))))
+        self.assertEqual(value0.data, 200000)
+
     def test_no_description(self):
         """
         For a port with no speed in the db the result should be 40000
