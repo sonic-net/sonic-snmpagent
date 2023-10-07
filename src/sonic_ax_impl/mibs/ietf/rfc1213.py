@@ -135,7 +135,8 @@ class NextHopUpdater(MIBUpdater):
         self.route_list = []
 
     def reinit_data(self):
-        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
+        if self.redis_exception_happen:
+            Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
 
     def update_data(self):
         """
@@ -223,7 +224,9 @@ class InterfacesUpdater(MIBUpdater):
         """
         Subclass update interface information
         """
-        Namespace.connect_namespace_dbs(self.db_conn)
+        if self.redis_exception_happen:
+            Namespace.connect_namespace_dbs(self.db_conn)
+
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \

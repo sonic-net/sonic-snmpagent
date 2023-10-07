@@ -71,7 +71,9 @@ class QueueStatUpdater(MIBUpdater):
         """
         Subclass update interface information
         """
-        Namespace.connect_namespace_dbs(self.db_conn)
+        if self.redis_exception_happen:
+            Namespace.connect_namespace_dbs(self.db_conn)
+
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \

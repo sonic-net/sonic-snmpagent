@@ -27,6 +27,7 @@ class MIBUpdater:
         self.frequency = DEFAULT_UPDATE_FREQUENCY
         self.reinit_rate = DEFAULT_REINIT_RATE // DEFAULT_UPDATE_FREQUENCY
         self.update_counter = self.reinit_rate + 1  # reinit_data when init
+        self.redis_exception_happen = False
 
     async def start(self):
         # Run the update while we are allowed
@@ -41,6 +42,13 @@ class MIBUpdater:
 
                 # run the background update task
                 self.update_data()
+                self.redis_exception_happen = False
+            except RuntimeError as e:
+                # Any unexpected exception or error, log it and keep running
+                logger.exception("MIBUpdater.start() caught an unexpected exception during update_data(), exception: {}".format(e))
+                # When redis server restart, swsscommon will throw swsscommon.RedisError, redis connection need re-initialize in reinit_data()
+                # TODO: change to swsscommon.RedisError
+                self.redis_exception_happen = True
             except Exception:
                 # Any unexpected exception or error, log it and keep running
                 logger.exception("MIBUpdater.start() caught an unexpected exception during update_data()")

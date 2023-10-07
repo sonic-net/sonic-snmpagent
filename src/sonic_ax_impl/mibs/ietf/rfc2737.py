@@ -287,7 +287,9 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_name_to_oid_map = {}
         self.pending_resolve_parent_name_map = {}
 
-        Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
+        if self.redis_exception_happen:
+            Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
+
         device_metadata = mibs.get_device_metadata(self.statedb[0])
         chassis_sub_id = (CHASSIS_SUB_ID, )
         self.physical_entities = [chassis_sub_id]
