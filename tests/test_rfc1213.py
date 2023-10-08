@@ -1,5 +1,6 @@
 import asyncio
 import os
+import sonic_ax_impl
 import sys
 from unittest import TestCase
 
@@ -11,7 +12,7 @@ else:
 modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
-from sonic_ax_impl.mibs.ietf.rfc1213 import NextHopUpdater
+from sonic_ax_impl.mibs.ietf.rfc1213 import NextHopUpdater, InterfacesUpdater
 
 
 class TestNextHopUpdater(TestCase):
@@ -80,4 +81,29 @@ class TestNextHopUpdaterRedisException(TestCase):
                 ]
                 mocked_exception.assert_has_calls(expected)
 
-        self.assertTrue(len(self.updater.route_list) == 0)
+        self.assertTrue(self.updater.redis_exception_happen == False)
+
+
+    @mock.patch('sonic_ax_impl.mibs.init_mgmt_interface_tables', mock.MagicMock(return_value=([{}, {}])))
+    def test_InterfacesUpdater_re_init_redis_exception(self):
+
+        def mock_get_sync_d_from_all_namespace(per_namespace_func, db_conn):
+            if per_namespace_func == sonic_ax_impl.mibs.init_sync_d_interface_tables:
+                return [{}, {}, {}, {}]
+
+            if per_namespace_func == sonic_ax_impl.mibs.init_sync_d_vlan_tables:
+                return [{}, {}, {}]
+
+            if per_namespace_func == sonic_ax_impl.mibs.init_sync_d_rif_tables:
+                return [{}, {}]
+            
+            return [{}, {}, {}, {}, {}]
+        
+        updater = InterfacesUpdater()
+        updater.redis_exception_happen = True
+        with mock.patch('sonic_ax_impl.mibs.Namespace.get_sync_d_from_all_namespace', mock_get_sync_d_from_all_namespace):
+            with mock.patch('sonic_ax_impl.mibs.Namespace.connect_namespace_dbs') as connect_namespace_dbs:
+                updater.reinit_data()
+
+                # check re-init
+                connect_namespace_dbs.assert_called()
