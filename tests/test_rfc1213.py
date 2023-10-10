@@ -12,7 +12,7 @@ else:
 modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
-from sonic_ax_impl.mibs.ietf.rfc1213 import NextHopUpdater, InterfacesUpdater
+from sonic_ax_impl.mibs.ietf.rfc1213 import NextHopUpdater, InterfacesUpdater, ArpUpdater
 
 
 class TestNextHopUpdater(TestCase):
@@ -100,7 +100,8 @@ class TestNextHopUpdaterRedisException(TestCase):
         updater = InterfacesUpdater()
         with mock.patch('sonic_ax_impl.mibs.Namespace.get_sync_d_from_all_namespace', mock_get_sync_d_from_all_namespace):
             with mock.patch('sonic_ax_impl.mibs.Namespace.connect_namespace_dbs') as connect_namespace_dbs:
-                updater.reinit_data(True)
+                updater.reinit_connection()
+                updater.reinit_data()
 
                 # check re-init
                 connect_namespace_dbs.assert_called()

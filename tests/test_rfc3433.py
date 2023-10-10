@@ -33,7 +33,7 @@ class TestPhysicalSensorTableMIBUpdater(TestCase):
         updater = PhysicalSensorTableMIBUpdater()
 
         with mock.patch('sonic_ax_impl.mibs.Namespace.connect_all_dbs') as connect_all_dbs:
-            updater.reinit_data(True)
+            updater.reinit_connection()
 
             # check re-init
             connect_all_dbs.assert_called()

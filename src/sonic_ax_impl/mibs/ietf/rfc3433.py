@@ -374,7 +374,10 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         self.thermal_sensor = []
         self.broken_transceiver_info = []
 
-    def reinit_data(self, reconnect=False):
+    def reinit_connection(self):
+        Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
+    
+    def reinit_data(self):
         """
         Reinit data, clear cache
         """
@@ -385,10 +388,6 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         self.ent_phy_sensor_precision_map = {}
         self.ent_phy_sensor_value_map = {}
         self.ent_phy_sensor_oper_state_map = {}
-
-        if reconnect:
-            Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
-
         transceiver_dom_encoded = Namespace.dbs_keys(self.statedb, mibs.STATE_DB, self.TRANSCEIVER_DOM_KEY_PATTERN)
         if transceiver_dom_encoded:
             self.transceiver_dom = [entry for entry in transceiver_dom_encoded]

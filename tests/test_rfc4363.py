@@ -42,7 +42,7 @@ class TestFdbUpdater(TestCase):
 
         with mock.patch('sonic_ax_impl.mibs.Namespace.get_sync_d_from_all_namespace', mock_get_sync_d_from_all_namespace):
             with mock.patch('sonic_ax_impl.mibs.Namespace.connect_namespace_dbs') as connect_namespace_dbs:
-                updater.reinit_data(True)
+                updater.reinit_connection()
 
                 # check re-init
                 connect_namespace_dbs.assert_called()

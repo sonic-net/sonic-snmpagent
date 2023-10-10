@@ -267,7 +267,10 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         """
         return [creator(self) for creator in PhysicalTableMIBUpdater.physical_entity_updater_types]
 
-    def reinit_data(self, reconnect=False):
+    def reinit_connection(self):
+        Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
+
+    def reinit_data(self):
         """
         Re-initialize all data.
         """
@@ -286,9 +289,6 @@ class PhysicalTableMIBUpdater(MIBUpdater):
 
         self.physical_name_to_oid_map = {}
         self.pending_resolve_parent_name_map = {}
-
-        if reconnect:
-            Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
 
         device_metadata = mibs.get_device_metadata(self.statedb[0])
         chassis_sub_id = (CHASSIS_SUB_ID, )

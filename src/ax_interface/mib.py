@@ -36,7 +36,10 @@ class MIBUpdater:
                 # reinit internal structures
                 if self.update_counter > self.reinit_rate:
                     # reconnect when redis exception happen
-                    self.reinit_data(redis_exception_happen)
+                    if redis_exception_happen:
+                            self.reinit_connection()
+
+                    self.reinit_data()
                     self.update_counter = 0
                 else:
                     self.update_counter += 1
@@ -61,16 +64,13 @@ class MIBUpdater:
     def reinit_data(self):
         """
         Reinit task. Children may override this method.
-        Deprecated, new Children need override: reinit_data(self, reconnect=False)
         """
         return
 
-    def reinit_data(self, reconnect=False):
+    def reinit_connection(self):
         """
-        Reinit task. Children may override this method.
+        Reinit redis connection task. Children may override this method.
         """
-        # call reinit_data() if Children only override reinit_data(self)
-        self.reinit_data()
         return
 
     def update_data(self):
