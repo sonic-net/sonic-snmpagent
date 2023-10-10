@@ -64,10 +64,9 @@ class TestRouteUpdater(TestCase):
     @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_keys', mock.MagicMock(return_value=(None)))
     def test_RouteUpdater_re_init_redis_exception(self):
         updater = RouteUpdater()
-        updater.redis_exception_happen = True
 
         with mock.patch('sonic_ax_impl.mibs.Namespace.connect_all_dbs') as connect_all_dbs:
-            updater.reinit_data()
+            updater.reinit_data(True)
 
             # check re-init
             connect_all_dbs.assert_called()

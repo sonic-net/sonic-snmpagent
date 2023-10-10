@@ -81,8 +81,6 @@ class TestNextHopUpdaterRedisException(TestCase):
                 ]
                 mocked_exception.assert_has_calls(expected)
 
-        self.assertTrue(self.updater.redis_exception_happen == False)
-
 
     @mock.patch('sonic_ax_impl.mibs.init_mgmt_interface_tables', mock.MagicMock(return_value=([{}, {}])))
     def test_InterfacesUpdater_re_init_redis_exception(self):
@@ -100,10 +98,9 @@ class TestNextHopUpdaterRedisException(TestCase):
             return [{}, {}, {}, {}, {}]
         
         updater = InterfacesUpdater()
-        updater.redis_exception_happen = True
         with mock.patch('sonic_ax_impl.mibs.Namespace.get_sync_d_from_all_namespace', mock_get_sync_d_from_all_namespace):
             with mock.patch('sonic_ax_impl.mibs.Namespace.connect_namespace_dbs') as connect_namespace_dbs:
-                updater.reinit_data()
+                updater.reinit_data(True)
 
                 # check re-init
                 connect_namespace_dbs.assert_called()

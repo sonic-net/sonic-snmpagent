@@ -33,7 +33,6 @@ class TestFdbUpdater(TestCase):
     @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_bridge_port_map', mock.MagicMock(return_value=(None)))
     def test_RouteUpdater_re_init_redis_exception(self):
         updater = FdbUpdater()
-        updater.redis_exception_happen = True
 
         def mock_get_sync_d_from_all_namespace(per_namespace_func, db_conn):
             if per_namespace_func == sonic_ax_impl.mibs.init_sync_d_interface_tables:
@@ -43,7 +42,7 @@ class TestFdbUpdater(TestCase):
 
         with mock.patch('sonic_ax_impl.mibs.Namespace.get_sync_d_from_all_namespace', mock_get_sync_d_from_all_namespace):
             with mock.patch('sonic_ax_impl.mibs.Namespace.connect_namespace_dbs') as connect_namespace_dbs:
-                updater.reinit_data()
+                updater.reinit_data(True)
 
                 # check re-init
                 connect_namespace_dbs.assert_called()
