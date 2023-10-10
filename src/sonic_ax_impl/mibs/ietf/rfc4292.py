@@ -17,13 +17,13 @@ class RouteUpdater(MIBUpdater):
         ## loopback ip string -> ip address object
         self.loips = {}
 
-    def reinit_data(self):
+    def reinit_data(self, reconnect=False):
         """
         Subclass update loopback information
         """
         self.loips = {}
 
-        if self.redis_exception_happen:
+        if reconnect:
             Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
 
         loopbacks = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "INTF_TABLE:lo:*")

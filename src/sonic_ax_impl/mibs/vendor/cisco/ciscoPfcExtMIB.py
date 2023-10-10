@@ -28,11 +28,11 @@ class PfcUpdater(MIBUpdater):
         self.if_range = []
         self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
 
-    def reinit_data(self):
+    def reinit_data(self, reconnect=False):
         """
         Subclass update interface information
         """
-        if self.redis_exception_happen:
+        if reconnect:
             Namespace.connect_namespace_dbs(self.db_conn)
 
         self.if_name_map, \

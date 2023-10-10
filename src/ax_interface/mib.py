@@ -27,28 +27,29 @@ class MIBUpdater:
         self.frequency = DEFAULT_UPDATE_FREQUENCY
         self.reinit_rate = DEFAULT_REINIT_RATE // DEFAULT_UPDATE_FREQUENCY
         self.update_counter = self.reinit_rate + 1  # reinit_data when init
-        self.redis_exception_happen = False
 
     async def start(self):
         # Run the update while we are allowed
+        redis_exception_happen = False
         while self.run_event.is_set():
             try:
                 # reinit internal structures
                 if self.update_counter > self.reinit_rate:
-                    self.reinit_data()
+                    # reconnect when redis exception happen
+                    self.reinit_data(redis_exception_happen)
                     self.update_counter = 0
                 else:
                     self.update_counter += 1
 
                 # run the background update task
                 self.update_data()
-                self.redis_exception_happen = False
+                redis_exception_happen = False
             except RuntimeError:
                 # Any unexpected exception or error, log it and keep running
                 logger.exception("MIBUpdater.start() caught an unexpected exception during update_data()")
                 # When redis server restart, swsscommon will throw swsscommon.RedisError, redis connection need re-initialize in reinit_data()
                 # TODO: change to swsscommon.RedisError
-                self.redis_exception_happen = True
+                redis_exception_happen = True
             except Exception:
                 # Any unexpected exception or error, log it and keep running
                 logger.exception("MIBUpdater.start() caught an unexpected exception during update_data()")
@@ -60,7 +61,16 @@ class MIBUpdater:
     def reinit_data(self):
         """
         Reinit task. Children may override this method.
+        Deprecated, new Children need override: reinit_data(self, reconnect=False)
         """
+        return
+
+    def reinit_data(self, reconnect=False):
+        """
+        Reinit task. Children may override this method.
+        """
+        # call reinit_data() if Children only override reinit_data(self)
+        self.reinit_data()
         return
 
     def update_data(self):

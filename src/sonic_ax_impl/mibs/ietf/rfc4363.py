@@ -41,11 +41,11 @@ class FdbUpdater(MIBUpdater):
             return None
         return (int(vlan_id),) + mac_decimals(fdb["mac"])
 
-    def reinit_data(self):
+    def reinit_data(self, reconnect=False):
         """
         Subclass update interface information
         """
-        if self.redis_exception_happen:
+        if reconnect:
             Namespace.connect_namespace_dbs(self.db_conn)
 
         (
