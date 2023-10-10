@@ -12,7 +12,7 @@ else:
 modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
-from sonic_ax_impl.mibs.ietf.rfc1213 import NextHopUpdater, InterfacesUpdater, ArpUpdater
+from sonic_ax_impl.mibs.ietf.rfc1213 import NextHopUpdater, InterfacesUpdater
 
 
 class TestNextHopUpdater(TestCase):

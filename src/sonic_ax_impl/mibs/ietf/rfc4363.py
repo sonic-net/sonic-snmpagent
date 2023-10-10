@@ -44,7 +44,7 @@ class FdbUpdater(MIBUpdater):
     def reinit_connection(self):
         Namespace.connect_namespace_dbs(self.db_conn)
 
-    def reinit_data(self, reconnect=False):
+    def reinit_data(self):
         """
         Subclass update interface information
         """

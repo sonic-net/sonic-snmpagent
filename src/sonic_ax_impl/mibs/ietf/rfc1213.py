@@ -226,7 +226,6 @@ class InterfacesUpdater(MIBUpdater):
         """
         Subclass update interface information
         """
-
         self.if_name_map, \
         self.if_alias_map, \
         self.if_id_map, \
