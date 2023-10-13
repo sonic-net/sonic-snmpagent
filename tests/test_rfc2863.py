@@ -20,7 +20,6 @@ class TestInterfaceMIBUpdater(TestCase):
             return [{'PortChannel999': [], 'PortChannel103': ['Ethernet120']}, # lag_name_if_name_map
                     {},
                     {1999: 'PortChannel999', 1103: 'PortChannel103'}, # oid_lag_name_map
-                    {},
                     {}]
 
         if per_namespace_func == sonic_ax_impl.mibs.init_sync_d_interface_tables:
