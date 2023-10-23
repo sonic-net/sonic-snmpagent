@@ -37,7 +37,7 @@ class MIBUpdater:
                 if self.update_counter > self.reinit_rate:
                     # reconnect when redis exception happen
                     if redis_exception_happen:
-                            self.reinit_connection()
+                        self.reinit_connection()
 
                     self.reinit_data()
                     self.update_counter = 0
