@@ -17,28 +17,28 @@ class TestInterfaceMIBUpdater(TestCase):
 
     def mock_get_sync_d_from_all_namespace(per_namespace_func, dbs):
         if per_namespace_func == sonic_ax_impl.mibs.init_sync_d_lag_tables:
-            return [{'PortChannel999': [], 'PortChannel103': ['Ethernet120']}, # lag_name_if_name_map
+            return [{b'PortChannel999': [], b'PortChannel103': [b'Ethernet120']}, # lag_name_if_name_map
                     {},
-                    {1999: 'PortChannel999', 1103: 'PortChannel103'}, # oid_lag_name_map
+                    {1999: b'PortChannel999', 1103: b'PortChannel103'}, # oid_lag_name_map
                     {}]
 
         if per_namespace_func == sonic_ax_impl.mibs.init_sync_d_interface_tables:
             return [{},
                     {},
                     {},
-                    {121: 'Ethernet120'}]
+                    {121: b'Ethernet120'}]
 
         return [{},{},{}]
 
     def mock_lag_entry_table(lag_name):
-        if lag_name == "PortChannel103":
-            return "PORT_TABLE:Ethernet120"
+        if lag_name == b"PortChannel103":
+            return b"PORT_TABLE:Ethernet120"
 
         return
 
     def mock_dbs_get_all(dbs, db_name, hash, *args, **kwargs):
-        if hash == "PORT_TABLE:Ethernet120":
-            return {'admin_status': 'up', 'alias': 'fortyGigE0/120', 'description': 'ARISTA03T1:Ethernet1', 'index': '30', 'lanes': '101,102,103,104', 'mtu': '9100', 'oper_status': 'up', 'pfc_asym': 'off', 'speed': '40000', 'tpid': '0x8100'}
+        if hash == b"PORT_TABLE:Ethernet120":
+            return {b'admin_status': b'up', b'alias': b'fortyGigE0/120', b'description': b'ARISTA03T1:Ethernet1', b'index': b'30', b'lanes': b'101,102,103,104', b'mtu': b'9100', b'oper_status': b'up', b'pfc_asym': b'off', b'speed': b'40000', b'tpid': b'0x8100'}
 
         return
 

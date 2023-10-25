@@ -236,9 +236,9 @@ class InterfaceMIBUpdater(MIBUpdater):
         if oid in self.oid_lag_name_map:
             speed = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
-                entry = self._get_if_entry(mibs.get_index_from_str(lag_member))
+                entry = self._get_if_entry(mibs.get_index(lag_member))
                 if entry:
-                    speed += int(entry.get("speed", 0))
+                    speed += int(entry.get(b"speed", 0))
             return speed
 
         entry = self._get_if_entry(oid)
