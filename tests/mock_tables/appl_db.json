@@ -640,6 +640,9 @@
     "nexthop": "",
     "ifname": "lo"
   },
+  "LAG_MEMBER_TABLE:PortChannel01:Ethernet108": {
+    "status": "enabled"
+  },
   "LAG_MEMBER_TABLE:PortChannel01:Ethernet112": {
     "status": "enabled"
   },
