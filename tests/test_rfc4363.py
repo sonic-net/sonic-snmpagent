@@ -1,5 +1,6 @@
 import os
 import sys
+import sonic_ax_impl
 from unittest import TestCase
 
 if sys.version_info.major == 3:
@@ -26,3 +27,22 @@ class TestFdbUpdater(TestCase):
             mocked_warn.assert_called()
 
         self.assertTrue(len(updater.vlanmac_ifindex_list) == 0)
+
+
+    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_keys', mock.MagicMock(return_value=(None)))
+    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_bridge_port_map', mock.MagicMock(return_value=(None)))
+    def test_RouteUpdater_re_init_redis_exception(self):
+        updater = FdbUpdater()
+
+        def mock_get_sync_d_from_all_namespace(per_namespace_func, db_conn):
+            if per_namespace_func == sonic_ax_impl.mibs.init_sync_d_interface_tables:
+                return [{}, {}, {}, {}]
+
+            return [{}, {}, {}, {}, {}]
+
+        with mock.patch('sonic_ax_impl.mibs.Namespace.get_sync_d_from_all_namespace', mock_get_sync_d_from_all_namespace):
+            with mock.patch('sonic_ax_impl.mibs.Namespace.connect_namespace_dbs') as connect_namespace_dbs:
+                updater.reinit_connection()
+
+                # check re-init
+                connect_namespace_dbs.assert_called()

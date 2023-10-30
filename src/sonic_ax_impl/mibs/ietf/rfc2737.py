@@ -267,6 +267,9 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         """
         return [creator(self) for creator in PhysicalTableMIBUpdater.physical_entity_updater_types]
 
+    def reinit_connection(self):
+        Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
+
     def reinit_data(self):
         """
         Re-initialize all data.

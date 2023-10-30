@@ -30,10 +30,15 @@ class MIBUpdater:
 
     async def start(self):
         # Run the update while we are allowed
+        redis_exception_happen = False
         while self.run_event.is_set():
             try:
                 # reinit internal structures
                 if self.update_counter > self.reinit_rate:
+                    # reconnect when redis exception happen
+                    if redis_exception_happen:
+                        self.reinit_connection()
+
                     self.reinit_data()
                     self.update_counter = 0
                 else:
@@ -41,6 +46,13 @@ class MIBUpdater:
 
                 # run the background update task
                 self.update_data()
+                redis_exception_happen = False
+            except RuntimeError:
+                # Any unexpected exception or error, log it and keep running
+                logger.exception("MIBUpdater.start() caught an unexpected exception during update_data()")
+                # When redis server restart, swsscommon will throw swsscommon.RedisError, redis connection need re-initialize in reinit_data()
+                # TODO: change to swsscommon.RedisError
+                redis_exception_happen = True
             except Exception:
                 # Any unexpected exception or error, log it and keep running
                 logger.exception("MIBUpdater.start() caught an unexpected exception during update_data()")
@@ -52,6 +64,12 @@ class MIBUpdater:
     def reinit_data(self):
         """
         Reinit task. Children may override this method.
+        """
+        return
+
+    def reinit_connection(self):
+        """
+        Reinit redis connection task. Children may override this method.
         """
         return
 
