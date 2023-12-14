@@ -67,6 +67,10 @@ class QueueStatUpdater(MIBUpdater):
         self.port_index_namespace = {}
         self.namespace_db_map = Namespace.get_namespace_db_map(self.db_conn)
 
+        self.statedb = mibs.init_db()
+        self.statedb.connect(self.statedb.STATE_DB)
+
+
     def reinit_connection(self):
         Namespace.connect_namespace_dbs(self.db_conn)
 
@@ -132,8 +136,8 @@ class QueueStatUpdater(MIBUpdater):
             namespace = self.port_index_namespace[if_index]
 
             # The first half of queue id is for ucast, and second half is for mcast
-            # To simulate vendor OID, we wrap queues by half distance
-            pq_count = math.ceil((max(if_queues) + 1) / 2)
+            # To simulate vendor OID, we wrap queues by max priority groups
+            port_max_priority_groups = self.statedb.get_all(self.statedb.STATE_DB, mibs.buffer_max_parm_table(self.oid_name_map[if_index]))['max_priority_groups']
 
             for queue in if_queues:
                 # Get queue type and statistics
@@ -146,7 +150,7 @@ class QueueStatUpdater(MIBUpdater):
                 # Add supported counters to MIBs list and store counters values
                 for (counter, counter_type), counter_mib_id in CounterMap.items():
                     # Only egress queues are supported
-                    mib_oid = (if_index, int(DirectionTypes.EGRESS), (queue % pq_count) + 1, counter_mib_id)
+                    mib_oid = (if_index, int(DirectionTypes.EGRESS), (queue % int(port_max_priority_groups)) + 1, counter_mib_id)
 
                     counter_value = 0
                     if queue_type == counter_type:
