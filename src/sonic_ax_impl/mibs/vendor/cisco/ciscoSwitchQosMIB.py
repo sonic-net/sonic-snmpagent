@@ -139,7 +139,7 @@ class QueueStatUpdater(MIBUpdater):
             # To simulate vendor OID, we wrap queues by max priority groups
             port_max_queues = self.statedb.get_all(self.statedb.STATE_DB,
                                                    mibs.buffer_max_parm_table(self.oid_name_map[if_index]))['max_queues']
-            pq_count = math.ceil((port_max_queues + 1) / 2)
+            pq_count = math.ceil(int(port_max_queues) / 2)
 
             for queue in if_queues:
                 # Get queue type and statistics

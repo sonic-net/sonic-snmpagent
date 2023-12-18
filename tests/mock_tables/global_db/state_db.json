@@ -123,5 +123,23 @@
   "TEMPERATURE_INFO|thermal1": {
     "temperature": "20.5",
     "is_replaceable": "False"
+  },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet0": {
+    "max_queues": "16"
+  },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet4": {
+    "max_queues": "16"
+  },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet8": {
+    "max_queues": "16"
+  },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet12": {
+    "max_queues": "16"
+  },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet-BP16": {
+    "max_queues": "16"
+  },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet-BP20": {
+    "max_queues": "16"
   }
 }
