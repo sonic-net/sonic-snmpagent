@@ -451,6 +451,7 @@ def init_sync_d_queue_tables(db_conn):
         port_index = get_index_from_str(port_name)
         key = queue_key(port_index, queue_index)
         port_queues_map[key] = sai_id
+
         queue_stat_name = queue_table(sai_id)
         queue_stat = db_conn.get_all(COUNTERS_DB, queue_stat_name, blocking=False)
         if queue_stat is not None:

@@ -137,7 +137,9 @@ class QueueStatUpdater(MIBUpdater):
 
             # The first half of queue id is for ucast, and second half is for mcast
             # To simulate vendor OID, we wrap queues by max priority groups
-            port_max_priority_groups = self.statedb.get_all(self.statedb.STATE_DB, mibs.buffer_max_parm_table(self.oid_name_map[if_index]))['max_priority_groups']
+            port_max_queues = self.statedb.get_all(self.statedb.STATE_DB,
+                                                   mibs.buffer_max_parm_table(self.oid_name_map[if_index]))['max_queues']
+            pq_count = math.ceil((port_max_queues + 1) / 2)
 
             for queue in if_queues:
                 # Get queue type and statistics
@@ -150,7 +152,7 @@ class QueueStatUpdater(MIBUpdater):
                 # Add supported counters to MIBs list and store counters values
                 for (counter, counter_type), counter_mib_id in CounterMap.items():
                     # Only egress queues are supported
-                    mib_oid = (if_index, int(DirectionTypes.EGRESS), (queue % int(port_max_priority_groups)) + 1, counter_mib_id)
+                    mib_oid = (if_index, int(DirectionTypes.EGRESS), (queue % pq_count) + 1, counter_mib_id)
 
                     counter_value = 0
                     if queue_type == counter_type:
