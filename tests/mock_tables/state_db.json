@@ -204,5 +204,8 @@
     },
   "BUFFER_MAX_PARAM_TABLE|Ethernet8": {
     "max_queues": "16"
+  },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet16": {
+    "max_queues": "16"
   }
 }
