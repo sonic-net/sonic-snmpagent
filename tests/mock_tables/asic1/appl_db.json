@@ -49,6 +49,10 @@
     "speed": 1000,
     "alias": "etp16"
   },
+  "PORT_TABLE:Ethernet32": {
+    "speed": 1000,
+    "alias": "etp18"
+  },
   "PORT_TABLE:Ethernet-BP8": {
     "alias": "etp7"
   },

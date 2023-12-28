@@ -141,5 +141,14 @@
   },
   "BUFFER_MAX_PARAM_TABLE|Ethernet-BP20": {
     "max_queues": "16"
+  },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet24": {
+    "max_queues": "16"
+  },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet32": {
+    "max_queues": "16"
+  },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet40": {
+    "max_queues": "16"
   }
 }
