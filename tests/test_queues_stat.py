@@ -44,6 +44,51 @@ class TestQueueCounters(TestCase):
             self.assertEqual(str(value0.name), str(oid))
             self.assertEqual(value0.data, 1)
 
+    # Test issue https://github.com/sonic-net/sonic-buildimage/issues/17448
+    # In this Scenario not all counters are created.
+    # Ethernet16 is created on mock_tables\counters_db.json with only counters for UC 0,1,2,3,4,6
+    # Ethernet24 is created on mock_tables\counters_db.json with only counters for MC 0,2,3,5,6,7
+    # Ethernet32 is created on mock_tables\counters_db.json with only counters for UC 1,2,4,6,7 and MC 0,1,3,5,6
+    def test_getQueueCountersForPortWithAllCounters(self):
+        tested_ports_counters_data = {
+            17: { 1: {1:1, 2:23492723984237432, 5:3,6:0}, 2: {1:1, 2:2, 5:3, 6:0},
+                  3: {1:1, 2:2, 5:3, 6:0}, 4: {1:1, 2:2, 5:3, 6:0},
+                  5: {1:1, 2:2, 5:3, 6:0}, 7: {1:1, 2:2, 5:3, 6:0}
+                  },
+            25: { 1: {3:1, 4:2, 7:3, 8:0}, 3: {3:1, 4:2, 7:3, 8:0},
+                  4: {3:1, 4:2, 7:3, 8:0}, 6: {3:1, 4:2, 7:3, 8:0},
+                  7: {3:1, 4:2, 7:3, 8:0}, 8: {3:1, 4:2, 7:3, 8:0}
+                  },
+            33: { 1: {3:123459, 4:23492723984237432, 7:3, 8:0}, 2: {1:1, 2:2, 3:1, 4:2, 5:3, 6:0, 7:3,8:0},
+                  3: {1:1, 2:2, 5:3, 6:0}, 4: {3:1, 4:2, 7:3, 8:0},
+                  5: {1:1, 2:2, 5:3, 6:0}, 6: {3:1, 4:2, 7:3, 8:0},
+                  7: {1:1, 2:2, 3:1, 4:2, 5:3, 6:0, 7:3,8:0}, 8: {1:1, 2:2, 5:3, 6:0}
+                  }
+        }
+
+        for port, configured_queues in tested_ports_counters_data.items():
+            for queue_id in range(1, 8):
+                for counter_id in range(1, 8):
+                    oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 580, 1, 5, 5, 1, 4, port, 2, queue_id, counter_id))
+                    get_pdu = GetPDU(
+                        header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+                        oids=[oid]
+                    )
+
+                    encoded = get_pdu.encode()
+                    response = get_pdu.make_response(self.lut)
+                    print(response)
+                    value0 = response.values[0]
+                    if queue_id in configured_queues.keys() and counter_id in configured_queues[queue_id]:
+                        self.assertEqual(value0.type_, ValueType.COUNTER_64)
+                        self.assertEqual(str(value0.name), str(oid))
+                        self.assertEqual(value0.data, configured_queues[queue_id][counter_id])
+                    else:
+                        self.assertEqual(value0.type_, ValueType.NO_SUCH_INSTANCE)
+                        self.assertEqual(str(value0.name), str(oid))
+                        self.assertEqual(value0.data, None)
+
+
     def test_getNextPduForQueueCounter(self):
         oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 580, 1, 5, 5, 1, 4, 1, 2, 1, 1))
         expected_oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 580, 1, 5, 5, 1, 4, 1, 2, 1, 2))
