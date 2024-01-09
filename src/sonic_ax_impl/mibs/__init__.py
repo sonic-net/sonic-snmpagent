@@ -13,6 +13,8 @@ from sonic_py_common import multi_asic
 
 COUNTERS_PORT_NAME_MAP = 'COUNTERS_PORT_NAME_MAP'
 COUNTERS_QUEUE_NAME_MAP = 'COUNTERS_QUEUE_NAME_MAP'
+BUFFER_MAX_PARAM_TABLE = 'BUFFER_MAX_PARAM_TABLE'
+
 LAG_TABLE = 'LAG_TABLE'
 LAG_MEMBER_TABLE = 'LAG_MEMBER_TABLE'
 LOC_CHASSIS_TABLE = 'LLDP_LOC_CHASSIS'
@@ -59,6 +61,16 @@ def chassis_info_table(chassis_name):
     """
 
     return "CHASSIS_INFO" + TABLE_NAME_SEPARATOR_VBAR + chassis_name
+
+
+def buffer_max_parm_table(port_name):
+    """
+    :param: port_name: port name
+    :return: max buffer parametes info for this port
+    """
+
+    return "BUFFER_MAX_PARAM_TABLE" + TABLE_NAME_SEPARATOR_VBAR + port_name
+
 
 def fan_info_table(fan_name):
     """
@@ -439,7 +451,6 @@ def init_sync_d_queue_tables(db_conn):
         port_index = get_index_from_str(port_name)
         key = queue_key(port_index, queue_index)
         port_queues_map[key] = sai_id
-
         queue_stat_name = queue_table(sai_id)
         queue_stat = db_conn.get_all(COUNTERS_DB, queue_stat_name, blocking=False)
         if queue_stat is not None:

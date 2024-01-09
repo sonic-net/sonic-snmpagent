@@ -46,6 +46,10 @@
     "alias": "etp2",
     "speed": 100000
   },
+  "PORT_TABLE:Ethernet24": {
+    "alias": "etp17",
+    "speed": 100000
+  },
   "PORT_TABLE:Ethernet-BP0": {
     "description": "snowflake",
     "alias": "etp3",

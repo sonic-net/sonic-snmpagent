@@ -195,5 +195,23 @@
     },
   "NEIGH_STATE_TABLE|fc00::12": {
     "state" : "Deleted"
-    }
+    },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet0": {
+    "max_queues": "16"
+    },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet4": {
+    "max_queues": "16"
+    },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet8": {
+    "max_queues": "16"
+  },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet16": {
+    "max_queues": "16"
+  },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet24": {
+    "max_queues": "16"
+  },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet32": {
+    "max_queues": "16"
+  }
 }
