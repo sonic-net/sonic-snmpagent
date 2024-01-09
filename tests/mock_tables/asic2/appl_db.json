@@ -47,6 +47,11 @@
     "alias": "etp12",
     "speed": 100000
   },
+  "PORT_TABLE:Ethernet40": {
+    "description": "snowflake",
+    "alias": "etp19",
+    "speed": 100000
+  },
   "ROUTE_TABLE:10.1.0.32": {
     "nexthop": "",
     "ifname": "lo"

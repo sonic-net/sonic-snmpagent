@@ -46,6 +46,9 @@ class QueueStatUpdater(MIBUpdater):
         """
         super().__init__()
         self.db_conn = Namespace.init_namespace_dbs()
+        # establish connection to state database.
+        Namespace.connect_all_dbs(self.db_conn, mibs.STATE_DB)
+
         self.lag_name_if_name_map = {}
         self.if_name_lag_name_map = {}
         self.oid_lag_name_map = {}
@@ -129,8 +132,10 @@ class QueueStatUpdater(MIBUpdater):
             namespace = self.port_index_namespace[if_index]
 
             # The first half of queue id is for ucast, and second half is for mcast
-            # To simulate vendor OID, we wrap queues by half distance
-            pq_count = math.ceil((max(if_queues) + 1) / 2)
+            # To simulate vendor OID, we wrap queues by max priority groups
+            port_max_queues = Namespace.dbs_get_all(self.db_conn, mibs.STATE_DB,
+                                                    mibs.buffer_max_parm_table(self.oid_name_map[if_index]))['max_queues']
+            pq_count = math.ceil(int(port_max_queues) / 2)
 
             for queue in if_queues:
                 # Get queue type and statistics
