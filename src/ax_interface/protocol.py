@@ -4,7 +4,7 @@ from . import logger, constants, exceptions
 from .encodings import ObjectIdentifier
 from .pdu import PDUHeader, PDUStream
 from .pdu_implementations import RegisterPDU, ResponsePDU, OpenPDU
-
+from .trap import TrapInfra
 
 class AgentX(asyncio.Protocol):
     """
@@ -49,6 +49,7 @@ class AgentX(asyncio.Protocol):
 
     def register_subtrees(self, pdu):
         self.session_id = pdu.header.session_id
+        TrapInfra.protocol_obj = self
         logger.info("AgentX session starting with ID: {}".format(self.session_id))
 
         for idx, subtree in enumerate(self.mib_table.prefixes):

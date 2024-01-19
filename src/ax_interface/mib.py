@@ -275,13 +275,14 @@ class MIBTable(dict):
     Simplistic LUT for Get/GetNext OID. Interprets iterables as keys and implements the same interfaces as dict's.
     """
 
-    def __init__(self, mib_cls, update_frequency=DEFAULT_UPDATE_FREQUENCY):
+    def __init__(self, mib_cls, update_frequency=DEFAULT_UPDATE_FREQUENCY, trap_infra_obj=None):
         if type(mib_cls) is not MIBMeta:
             raise ValueError("Supplied object is not a MIB class instance.")
         super().__init__(getattr(mib_cls, MIBMeta.KEYSTORE))
         self.update_frequency = update_frequency
         self.updater_instances = getattr(mib_cls, MIBMeta.UPDATERS)
         self.prefixes = getattr(mib_cls, MIBMeta.PREFIXES)
+        self.trap_infra_obj = trap_infra_obj
 
     @staticmethod
     def _done_background_task_callback(fut):
@@ -299,6 +300,10 @@ class MIBTable(dict):
             updater.run_event = event
             fut = asyncio.ensure_future(updater.start())
             fut.add_done_callback(MIBTable._done_background_task_callback)
+            tasks.append(fut)
+
+        if self.trap_infra_obj is not None:
+            fut = asyncio.ensure_future(self.trap_infra_obj.db_listener())
             tasks.append(fut)
         return asyncio.gather(*tasks, loop=event._loop)
 
