@@ -2,6 +2,7 @@ import pprint
 import re
 import os
 
+from swsscommon.swsscommon import Table, DBConnector
 from swsscommon.swsscommon import SonicV2Connector
 from swsscommon.swsscommon import SonicDBConfig
 from sonic_py_common import port_util
@@ -571,6 +572,12 @@ class Namespace:
         Namespace.db_config_loaded = True
 
     @staticmethod
+    def init_appl_db():
+        # FIXME: [ISU2023080229051] Use swsscommon Table obj instead of DbInterface obj
+        appl_db = DBConnector(APPL_DB, 0, True)
+        return appl_db
+
+    @staticmethod
     def init_namespace_dbs():
         db_conn = []
         Namespace.init_sonic_db_config()
@@ -619,6 +626,17 @@ class Namespace:
             if keys is not None:
                 result_keys.extend(keys)
         return result_keys
+
+    @staticmethod
+    def db_keys_app_route_table(appdb_conn, table_name):
+        """
+        db keys function to get route table in appl_db.
+        """
+        # FIXME: [ISU2023080229051] Use swsscommon Table obj instead of DbInterface obj
+        app_route_table = None
+        if appdb_conn:
+            app_route_table = Table(appdb_conn, table_name)
+        return app_route_table
 
     @staticmethod
     def dbs_keys_namespace(dbs, db_name, pattern='*'):
