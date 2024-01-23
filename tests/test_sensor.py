@@ -22,6 +22,8 @@ from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_fan_dr
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_fan_sub_id
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_fan_tachometers_sub_id
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_chassis_thermal_sub_id
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_chassis_voltage_sensor_sub_id
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_chassis_current_sensor_sub_id
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import SENSOR_TYPE_TEMP
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import SENSOR_TYPE_VOLTAGE
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import SENSOR_TYPE_PORT_RX_POWER
@@ -43,6 +45,8 @@ class TestSonicMIB(TestCase):
         cls.FAN_POSITION = 1
         cls.PSU_FAN_POSITION = 1
         cls.THERMAL_POSITION = 1
+        cls.VOLTAGE_SENSOR_POSITION = 1
+        cls.CURRENT_SENSOR_POSITION = 1
 
         # Update MIBs
         for updater in cls.lut.updater_instances:
@@ -400,3 +404,33 @@ class TestSonicMIB(TestCase):
         ]
 
         self._test_getpdu_sensor(get_chassis_thermal_sub_id(self.THERMAL_POSITION)[0], expected_values)
+
+    def test_getpdu_chassis_voltage_sensor(self):
+        """
+        Test case for correctness of chassis voltage sensors MIB values
+        """
+
+        expected_values = [
+            rfc3433.EntitySensorDataType.VOLTS_DC,
+            rfc3433.EntitySensorDataScale.MILLI,
+            0, # precision
+            54000, # expected sensor value
+            rfc3433.EntitySensorStatus.OK
+        ]
+
+        self._test_getpdu_sensor(get_chassis_voltage_sensor_sub_id(self.VOLTAGE_SENSOR_POSITION)[0], expected_values)
+
+    def test_getpdu_chassis_current_sensor(self):
+        """
+        Test case for correctness of chassis voltage sensors MIB values
+        """
+
+        expected_values = [
+            rfc3433.EntitySensorDataType.AMPERES,
+            rfc3433.EntitySensorDataScale.MILLI,
+            0, # precision
+            10000, # expected sensor value
+            rfc3433.EntitySensorStatus.OK
+        ]
+
+        self._test_getpdu_sensor(get_chassis_current_sensor_sub_id(self.CURRENT_SENSOR_POSITION)[0], expected_values)

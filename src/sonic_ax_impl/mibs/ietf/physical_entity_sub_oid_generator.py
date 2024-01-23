@@ -168,3 +168,21 @@ def get_transceiver_sensor_sub_id(ifindex, offset):
 
     transceiver_oid, = get_transceiver_sub_id(ifindex)
     return (transceiver_oid + offset,)
+
+def get_chassis_voltage_sensor_sub_id(position):
+    """
+    Returns sub OID for voltage sensors that belong to chassis. Sub OID is calculated as follows:
+    sub OID = CHASSIS_MGMT_SUB_ID + DEVICE_TYPE_POWER_MONITOR + position * DEVICE_INDEX_MULTIPLE + SENSOR_TYPE_VOLTAGE, 
+    :param position: voltage sensor position
+    :return: sub OID of the voltage sensor
+    """
+    return (CHASSIS_MGMT_SUB_ID + DEVICE_TYPE_POWER_MONITOR + position * DEVICE_INDEX_MULTIPLE + SENSOR_TYPE_VOLTAGE, )
+
+def get_chassis_current_sensor_sub_id(position):
+    """
+    Returns sub OID for current sensors that belong to chassis. Sub OID is calculated as follows:
+    sub OID = CHASSIS_MGMT_SUB_ID + DEVICE_TYPE_POWER_MONITOR + position * DEVICE_INDEX_MULTIPLE + SENSOR_TYPE_CURRENT, 
+    :param position: current sensor position
+    :return: sub OID of the current sensor
+    """
+    return (CHASSIS_MGMT_SUB_ID + DEVICE_TYPE_POWER_MONITOR + position * DEVICE_INDEX_MULTIPLE + SENSOR_TYPE_CURRENT, )

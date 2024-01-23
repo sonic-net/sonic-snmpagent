@@ -98,6 +98,14 @@
     "position_in_parent": "1",
     "parent_name": "PSU 2"
   },
+  "PHYSICAL_ENTITY_INFO|current1": {
+    "position_in_parent": 1,
+    "parent_name": "chassis 1"
+  },
+  "PHYSICAL_ENTITY_INFO|voltage1": {
+    "position_in_parent": 1,
+    "parent_name": "chassis 1"
+  },
   "FAN_DRAWER_INFO|drawer1": {
     "model": "DRAWERMODEL",
     "serial": "DRAWERSERIAL",
@@ -118,6 +126,14 @@
     "drawer_name": "N/A",
     "model": "PSUFANMODEL",
     "serial": "PSUFANSERIAL",
+    "is_replaceable": "False"
+  },
+  "VOLTAGE_INFO|voltage1": {
+    "voltage": "54000",
+    "is_replaceable": "False"
+  },
+  "CURRENT_INFO|current1": {
+    "current": "10000",
     "is_replaceable": "False"
   },
   "TEMPERATURE_INFO|thermal1": {

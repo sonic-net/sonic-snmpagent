@@ -146,6 +146,20 @@ def thermal_info_table(thermal_name):
 
     return "TEMPERATURE_INFO" + TABLE_NAME_SEPARATOR_VBAR + thermal_name
 
+def voltage_sensor_info_table(sensor_name):
+    """
+    :param: sensor_name : Voltage Sensor name
+    :return: voltage sensor info key
+    """
+    return "VOLTAGE_INFO" + TABLE_NAME_SEPARATOR_VBAR + sensor_name
+
+def current_sensor_info_table(sensor_name):
+    """
+    :param: sensor_name : Current Sensor name
+    :return: current sensor info key
+    """
+    return "CURRENT_INFO" + TABLE_NAME_SEPARATOR_VBAR + sensor_name
+
 def lldp_entry_table(if_name):
     """
     :param if_name: given interface to cast.
