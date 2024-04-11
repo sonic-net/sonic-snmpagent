@@ -300,7 +300,7 @@ class MIBTable(dict):
             fut = asyncio.ensure_future(updater.start())
             fut.add_done_callback(MIBTable._done_background_task_callback)
             tasks.append(fut)
-        return asyncio.gather(*tasks, loop=event._loop)
+        return asyncio.gather(*tasks)
 
     def _find_parent_prefix(self, item):
         oids = sorted(self.prefixes)
