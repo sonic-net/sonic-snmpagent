@@ -17,7 +17,7 @@ class AgentX(asyncio.Protocol):
         self.loop = loop
         self.session_id = -1
         self.mib_table = mib_table
-        self.closed = asyncio.Event(loop=loop)
+        self.closed = asyncio.Event()
         self.counter = 0
 
     def send_pdu(self, pdu):
