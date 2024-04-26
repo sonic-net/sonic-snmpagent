@@ -244,9 +244,6 @@ def init_mgmt_interface_tables(db_conn):
     :return: tuple of mgmt name to oid map and mgmt name to alias map
     """
 
-    db_conn.connect(CONFIG_DB)
-    db_conn.connect(STATE_DB)
-
     mgmt_ports_keys = db_conn.keys(CONFIG_DB, mgmt_if_entry_table('*'))
 
     if not mgmt_ports_keys:
@@ -390,14 +387,11 @@ def init_sync_d_lag_tables(db_conn):
     # { lag_oid (SAI) -> lag_name (SONiC) }
     sai_lag_map = {}
 
-    db_conn.connect(APPL_DB)
-
     lag_entries = db_conn.keys(APPL_DB, "LAG_TABLE:*")
 
     if not lag_entries:
         return lag_name_if_name_map, if_name_lag_name_map, oid_lag_name_map, lag_sai_map, sai_lag_map
 
-    db_conn.connect(COUNTERS_DB)
     lag_sai_map = db_conn.get_all(COUNTERS_DB, "COUNTERS_LAG_NAME_MAP")
     for name, sai_id in lag_sai_map.items():
         sai_id_key = get_sai_id_key(db_conn.namespace, sai_id.lstrip("oid:0x"))
@@ -482,7 +476,6 @@ def get_device_metadata(db_conn):
     """
 
     DEVICE_METADATA = "DEVICE_METADATA|localhost"
-    db_conn.connect(db_conn.STATE_DB)
 
     device_metadata = db_conn.get_all(db_conn.STATE_DB, DEVICE_METADATA)
     return device_metadata
@@ -701,7 +694,6 @@ class Namespace:
     @staticmethod
     def dbs_get_vlan_id_from_bvid(dbs, bvid):
         for db_conn in Namespace.get_non_host_dbs(dbs):
-            db_conn.connect('ASIC_DB')
             vlan_obj = db_conn.keys('ASIC_DB', "ASIC_STATE:SAI_OBJECT_TYPE_VLAN:" + bvid)
             if vlan_obj is not None:
                 return port_util.get_vlan_id_from_bvid(db_conn, bvid)
