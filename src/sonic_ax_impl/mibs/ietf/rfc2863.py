@@ -287,7 +287,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         else:
             return None
 
-        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=True)
+        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=False)
 
     def get_high_speed(self, sub_id):
         """

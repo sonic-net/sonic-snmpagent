@@ -470,7 +470,7 @@ class InterfacesUpdater(MIBUpdater):
         else:
             return None
 
-        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=True)
+        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=False)
 
     def _get_if_entry_state_db(self, sub_id):
         """
