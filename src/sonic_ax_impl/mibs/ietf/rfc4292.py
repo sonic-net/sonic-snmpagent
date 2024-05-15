@@ -17,6 +17,9 @@ class RouteUpdater(MIBUpdater):
         ## loopback ip string -> ip address object
         self.loips = {}
 
+    def reinit_connection(self):
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
+
     def reinit_data(self):
         """
         Subclass update loopback information
