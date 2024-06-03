@@ -15,9 +15,9 @@ class Agent:
         self.loop = loop
 
         # synchronization events
-        self.run_enabled = asyncio.Event(loop=loop)
-        self.oid_updaters_enabled = asyncio.Event(loop=loop)
-        self.stopped = asyncio.Event(loop=loop)
+        self.run_enabled = asyncio.Event()
+        self.oid_updaters_enabled = asyncio.Event()
+        self.stopped = asyncio.Event()
 
         # Initialize our MIB
         self.mib_table = MIBTable(mib_cls, update_frequency)
@@ -46,7 +46,7 @@ class Agent:
             # signal background tasks to halt
             self.oid_updaters_enabled.clear()
             # wait for handlers to come back
-            await asyncio.wait_for(background_task, BACKGROUND_WAIT_TIMEOUT, loop=self.loop)
+            await asyncio.wait_for(background_task, BACKGROUND_WAIT_TIMEOUT)
 
         # signal that we're done!
         self.stopped.set()
