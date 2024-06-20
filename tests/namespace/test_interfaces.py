@@ -51,7 +51,7 @@ class TestGetNextPDU_1213(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 1, 1))))
-        self.assertEqual(value0.data, 0)
+        self.assertEqual(value0.data, 1)
 
     def test_getnextpdu_firstifindex(self):
         # oid.include = 1
@@ -70,7 +70,7 @@ class TestGetNextPDU_1213(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 1, 1))))
-        self.assertEqual(value0.data, 0)
+        self.assertEqual(value0.data, 1)
 
     def test_getnextpdu_secondifindex(self):
         oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 1, 1))
@@ -88,7 +88,7 @@ class TestGetNextPDU_1213(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 1, 5))))
-        self.assertEqual(value0.data, 4)
+        self.assertEqual(value0.data, 5)
 
     def test_regisiter_response(self):
         mib_2_response = b'\x01\x12\x10\x00\x00\x00\x001\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00,\x01d`\xab\x00\x00\x00\x00\x00\x05\x00\x00\x07\x04\x00\x00\x00\x00\x00\x01\x00\x00\x17\x8b\x00\x00\x00\x03\x00\x00\x00\n\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\t\x01\x12\x10\x00\x00\x00\x001\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x18\x01d`\xab\x00\x00\x00\x00\x00\x05\x00\x00\x02\x02\x00\x00\x00\x00\x00\x01\x00\x00\x00\x02'
@@ -256,7 +256,7 @@ class TestGetNextPDU_1213(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 1, 9000))))
-        self.assertEqual(value0.data, 8999)
+        self.assertEqual(value0.data, 9000)
 
 
     def test_getnextpdu_second_bp_ifindex(self):
@@ -275,7 +275,7 @@ class TestGetNextPDU_1213(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 1, 9024))))
-        self.assertEqual(value0.data, 9023)
+        self.assertEqual(value0.data, 9024)
 
 
     def test_mgmt_iface(self):
@@ -295,7 +295,7 @@ class TestGetNextPDU_1213(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.INTEGER)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 1, 10001))))
-        self.assertEqual(value0.data, 10000)
+        self.assertEqual(value0.data, 10001)
 
     def test_mgmt_iface_description(self):
         """
