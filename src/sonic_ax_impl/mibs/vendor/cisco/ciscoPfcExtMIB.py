@@ -70,9 +70,6 @@ class PfcUpdater(MIBUpdater):
         :return: the next sub id.
         """
         try:
-            if not sub_id:
-                return self.if_range[0]
-
             right = bisect_right(self.if_range, sub_id)
             if right >= len(self.if_range):
                 return None
