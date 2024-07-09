@@ -9,6 +9,11 @@ sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from unittest import TestCase
 
+if sys.version_info.major == 3:
+    from unittest import mock
+else:
+    import mock
+
 from ax_interface import ValueType
 from ax_interface.pdu_implementations import GetPDU, GetNextPDU
 from ax_interface.encodings import ObjectIdentifier
@@ -115,3 +120,46 @@ class TestPsuStatus(TestCase):
         self.assertEqual(value0.type_, ValueType.END_OF_MIB_VIEW)
         self.assertEqual(str(value0.name), str(oid))
         self.assertEqual(value0.data, None)
+
+    @mock.patch('sonic_ax_impl.mibs.vendor.cisco.ciscoEntityFruControlMIB.is_chassis', mock.MagicMock(return_value=True))
+    @mock.patch('sonic_ax_impl.mibs.vendor.cisco.ciscoEntityFruControlMIB.is_supervisor', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_ax_impl.mibs.vendor.cisco.ciscoEntityFruControlMIB.get_chassis_data', mock.MagicMock(return_value=(('',))))
+    def test_getNoPsuChassisLineCard(self):
+        # is_chassis is True and is_supervisor is False
+        # Expect no PSU in Linecard of Chassis
+        # Fail if Exception is caught, no exception should be caught for Linecard with no PSU
+        oid = ObjectIdentifier(2, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 117, 1, 1, 2, 1, 2, 1))
+        expected_oid = None
+        try:
+            ciscoEntityFruControlMIB.cefcFruPowerStatusTable.power_status_handler._get_num_psus()
+        except Exception as e:
+            self.fail(f"Caught unexpected exception: {type(e).__name__}: {str(e)}")
+
+
+    @mock.patch('sonic_ax_impl.mibs.vendor.cisco.ciscoEntityFruControlMIB.is_chassis', mock.MagicMock(return_value=True))
+    @mock.patch('sonic_ax_impl.mibs.vendor.cisco.ciscoEntityFruControlMIB.is_supervisor', mock.MagicMock(return_value=True))
+    @mock.patch('sonic_ax_impl.mibs.vendor.cisco.ciscoEntityFruControlMIB.get_chassis_data', mock.MagicMock(return_value=(('',))))
+    def test_getNoPsuChassisSupervisor(self):
+        # is_chassis is True and is_supervisor is True
+        # get_chassis_data() should return num_psu
+        # Exception will be caught on supervisory if num_psu is empty
+        oid = ObjectIdentifier(2, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 117, 1, 1, 2, 1, 2, 1))
+        expected_oid = None
+
+        with self.assertRaises(Exception):
+            ciscoEntityFruControlMIB.cefcFruPowerStatusTable.power_status_handler._get_num_psus()
+
+    @mock.patch('sonic_ax_impl.mibs.vendor.cisco.ciscoEntityFruControlMIB.is_chassis', mock.MagicMock(return_value=True))
+    @mock.patch('sonic_ax_impl.mibs.vendor.cisco.ciscoEntityFruControlMIB.is_supervisor', mock.MagicMock(return_value=True))
+    @mock.patch('sonic_ax_impl.mibs.vendor.cisco.ciscoEntityFruControlMIB.get_chassis_data', mock.MagicMock(return_value=(('8',))))
+    def test_getPsuPresentChassisSupervisor(self):
+        # is_chassis is True and is_supervisor is True
+        # get_chassis_data() should return num_psu
+        # no exception should be caught and number of psus should be returned
+        oid = ObjectIdentifier(2, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 117, 1, 1, 2, 1, 2, 1))
+        expected_oid = None
+        try:
+            num_psus = ciscoEntityFruControlMIB.cefcFruPowerStatusTable.power_status_handler._get_num_psus()
+            self.assertEqual(num_psus, 8)
+        except Exception as e:
+            self.fail(f"Caught unexpected exception: {type(e).__name__}: {str(e)}")

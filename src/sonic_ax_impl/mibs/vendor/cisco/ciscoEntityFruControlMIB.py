@@ -1,6 +1,7 @@
 from enum import Enum, unique
 from sonic_ax_impl import mibs
 from ax_interface import MIBMeta, ValueType, SubtreeMIBEntry
+from sonic_py_common.device_info import is_chassis, is_supervisor
 
 CHASSIS_INFO_KEY_TEMPLATE = 'chassis {}'
 PSU_INFO_KEY_TEMPLATE = 'PSU {}'
@@ -59,6 +60,9 @@ class PowerStatusHandler:
         Get PSU number
         :return: the number of supported PSU
         """
+        if is_chassis() and not is_supervisor():
+            return 0
+
         chassis_name = CHASSIS_INFO_KEY_TEMPLATE.format(1)
         chassis_info = self.statedb.get_all(self.statedb.STATE_DB, mibs.chassis_info_table(chassis_name))
         num_psus = get_chassis_data(chassis_info)
