@@ -2,6 +2,11 @@ import os
 import sys
 import importlib
 
+if sys.version_info.major == 3:
+    from unittest import mock
+else:
+    import mock
+
 # noinspection PyUnresolvedReferences
 import tests.mock_tables.dbconnector
 
@@ -264,6 +269,18 @@ class TestPfcPortCounters(TestCase):
         self.assertEqual(value0.type_, ValueType.COUNTER_64)
         self.assertEqual(str(value0.name), str(expected_oid))
         self.assertEqual(value0.data, 209347219842134092490 % pow(2, 64)) # Test integer truncation
+
+    def test_no_interfaces(self):
+        # Test the scenario where there are no interfaces
+        # like the case of Packet-chassis supervisor
+        ciscoPfcExtMIB.cpfcIfTable.pfc_updater.if_range = []
+        importlib.reload(ciscoPfcExtMIB)
+        oid = ObjectIdentifier(32, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 813, 1))
+        sub_id = ()
+        with mock.patch('sonic_ax_impl.mibs.logger.error') as mock_logger:
+            get_pdu = ciscoPfcExtMIB.cpfcIfTable.pfc_updater.get_next(sub_id)
+            self.assertEqual(get_pdu, None)
+            mock_logger.assert_not_called()
 
     @classmethod
     def tearDownClass(cls):
