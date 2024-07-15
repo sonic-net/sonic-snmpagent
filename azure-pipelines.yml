@@ -26,7 +26,7 @@ stages:
       vmImage: ubuntu-20.04
 
     container:
-      image: sonicdev-microsoft.azurecr.io:443/sonic-slave-buster:latest
+      image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm:latest
 
     steps:
     - checkout: self
@@ -51,9 +51,9 @@ stages:
         set -ex
         sudo apt-get -y purge libhiredis-dev libnl-3-dev libnl-route-3-dev
         sudo apt-get -y install libhiredis0.14
-        sudo dpkg -i ../target/debs/buster/{libyang_1.0.73_amd64.deb,libswsscommon_1.0.0_amd64.deb,python3-swsscommon_1.0.0_amd64.deb,libnl-3-200_*.deb,libnl-genl-3-200_*.deb,libnl-nf-3-200_*.deb,libnl-route-3-200_*.deb}
-        sudo python3 -m pip install ../target/python-wheels/buster/swsssdk*-py3-*.whl
-        sudo python3 -m pip install ../target/python-wheels/buster/sonic_py_common-1.0-py3-none-any.whl
+        sudo dpkg -i ../target/debs/bookworm/{libyang_1.0.73_amd64.deb,libswsscommon_1.0.0_amd64.deb,python3-swsscommon_1.0.0_amd64.deb,libnl-3-200_*.deb,libnl-genl-3-200_*.deb,libnl-nf-3-200_*.deb,libnl-route-3-200_*.deb}
+        sudo python3 -m pip install ../target/python-wheels/bookworm/swsssdk*-py3-*.whl
+        sudo python3 -m pip install ../target/python-wheels/bookworm/sonic_py_common-1.0-py3-none-any.whl
         python3 setup.py bdist_wheel
         cp dist/*.whl $(Build.ArtifactStagingDirectory)/
       displayName: "Build"
@@ -69,7 +69,7 @@ stages:
         set -ex
         # Install .NET CORE
         curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-        sudo apt-add-repository https://packages.microsoft.com/debian/10/prod
+        sudo apt-add-repository https://packages.microsoft.com/debian/12/prod
         sudo apt-get update
         sudo apt-get install -y dotnet-sdk-8.0
       displayName: "Install .NET CORE"
