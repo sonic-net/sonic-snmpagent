@@ -2,6 +2,7 @@ import ipaddress
 import python_arptable
 import re
 import socket
+import psutil
 from enum import unique, Enum
 from bisect import bisect_right
 
