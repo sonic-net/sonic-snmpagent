@@ -5,7 +5,7 @@ import importlib
 # 3 directory levels above sonic-snmpagent/tests/namespace/test_interfaces.py = sonic-snmpagent
 modules_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Insert sonic-snmpagent and sonic-snmpagent/src to path 
+# Insert sonic-snmpagent and sonic-snmpagent/src to path
 sys.path.insert(0, modules_path)
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
@@ -466,7 +466,7 @@ class TestGetNextPDU_1213(TestCase):
 
     def test_in_errors_rif(self):
         """
-        For a port with RIF the counter values are aggregated
+        For a port with RIF the error counter values are not aggregated
         """
         oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 14, 9))
         get_pdu = GetPDU(
@@ -480,7 +480,25 @@ class TestGetNextPDU_1213(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.COUNTER_32)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 14, 9))))
-        self.assertEqual(value0.data, 101)
+        self.assertEqual(value0.data, 100)
+
+    def test_in_discards_rif(self):
+        """
+        For a port with RIF the discard counter values are aggregated
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 13, 9))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.COUNTER_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 13, 9))))
+        self.assertEqual(value0.data, 14)
 
     def test_out_octets_rif(self):
         """
@@ -520,7 +538,7 @@ class TestGetNextPDU_1213(TestCase):
 
     def test_out_errors_rif(self):
         """
-        For a port with RIF the counter values are aggregated
+        For a port with RIF the error counter values are not aggregated
         """
         oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 20, 9))
         get_pdu = GetPDU(
@@ -534,7 +552,25 @@ class TestGetNextPDU_1213(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.COUNTER_32)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 20, 9))))
-        self.assertEqual(value0.data, 102)
+        self.assertEqual(value0.data, 100)
+
+    def test_out_discards_rif(self):
+        """
+        For a port with RIF the discard counter values are aggregated
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 19, 9))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.COUNTER_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 19, 9))))
+        self.assertEqual(value0.data, 17)
 
     def test_in_octets_vlan(self):
         """
@@ -572,11 +608,11 @@ class TestGetNextPDU_1213(TestCase):
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 11, 3000))))
         self.assertEqual(value0.data, 10)
 
-    def test_in_errors_vlan(self):
+    def test_in_discards_vlan(self):
         """
         For a l3 Vlan values are mapped from RIF stats
         """
-        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 14, 3000))
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 13, 3000))
         get_pdu = GetPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=[oid]
@@ -587,7 +623,7 @@ class TestGetNextPDU_1213(TestCase):
 
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.COUNTER_32)
-        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 14, 3000))))
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 13, 3000))))
         self.assertEqual(value0.data, 1)
 
     def test_out_octets_vlan(self):
@@ -626,11 +662,11 @@ class TestGetNextPDU_1213(TestCase):
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 17, 3000))))
         self.assertEqual(value0.data, 20)
 
-    def test_out_errors_vlan(self):
+    def test_out_discards_vlan(self):
         """
         For a l3 Vlan values are mapped from RIF stats
         """
-        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 20, 3000))
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 19, 3000))
         get_pdu = GetPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=[oid]
@@ -641,7 +677,7 @@ class TestGetNextPDU_1213(TestCase):
 
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.COUNTER_32)
-        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 20, 3000))))
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 19, 3000))))
         self.assertEqual(value0.data, 2)
 
     def test_in_octets_vlan_subinterface(self):
@@ -682,7 +718,7 @@ class TestGetNextPDU_1213(TestCase):
 
     def test_in_errors_vlan_subinterface(self):
         """
-        For a port with multiple vlan subinterfaces (RIF) all RIF drops are accumulated
+        For a port with multiple vlan subinterfaces (RIF) all RIF errors are not accumulated
         """
         oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 14, 17))
         get_pdu = GetPDU(
@@ -696,6 +732,24 @@ class TestGetNextPDU_1213(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.COUNTER_32)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 14, 17))))
+        self.assertEqual(value0.data, 0)
+
+    def test_in_discards_vlan_subinterface(self):
+        """
+        For a port with multiple vlan subinterfaces (RIF) all RIF drops are accumulated
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 13, 17))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.COUNTER_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 13, 17))))
         self.assertEqual(value0.data, 203)
 
     def test_out_octets_vlan_subinterface(self):
@@ -736,7 +790,7 @@ class TestGetNextPDU_1213(TestCase):
 
     def test_out_errors_vlan_subinterface(self):
         """
-        For a port with multiple vlan subinterfaces (RIF) all RIF drops are accumulated
+        For a port with multiple vlan subinterfaces (RIF) all RIF errors are not accumulated
         """
         oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 20, 17))
         get_pdu = GetPDU(
@@ -750,6 +804,24 @@ class TestGetNextPDU_1213(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.COUNTER_32)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 20, 17))))
+        self.assertEqual(value0.data, 0)
+
+    def test_out_discards_vlan_subinterface(self):
+        """
+        For a port with multiple vlan subinterfaces (RIF) all RIF drops are accumulated
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 19, 17))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.COUNTER_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 19, 17))))
         self.assertEqual(value0.data, 203)
 
     def test_in_octets_portchannel(self):
@@ -790,7 +862,7 @@ class TestGetNextPDU_1213(TestCase):
 
     def test_in_errors_portchannel(self):
         """
-          For a l3 portchannel interface value is accumulated on members plus added Rif counters
+          For a l3 portchannel interface error value is accumulated on members
         """
         oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 14, 1001))
         get_pdu = GetPDU(
@@ -804,7 +876,25 @@ class TestGetNextPDU_1213(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.COUNTER_32)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 14, 1001))))
-        self.assertEqual(value0.data, 106)
+        self.assertEqual(value0.data, 100)
+
+    def test_in_discards_portchannel(self):
+        """
+          For a l3 portchannel interface discard value is accumulated on members plus added Rif counters
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 13, 1001))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.COUNTER_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 13, 1001))))
+        self.assertEqual(value0.data, 14)
 
     def test_out_octets_portchannel(self):
         """
@@ -844,7 +934,7 @@ class TestGetNextPDU_1213(TestCase):
 
     def test_out_errors_portchannel(self):
         """
-        For a l3 portchannel interface value is accumulated on members plus added Rif counters
+        For a l3 portchannel interface error value is accumulated on members plus
         """
         oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 20, 1001))
         get_pdu = GetPDU(
@@ -858,7 +948,25 @@ class TestGetNextPDU_1213(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.COUNTER_32)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 20, 1001))))
-        self.assertEqual(value0.data, 106)
+        self.assertEqual(value0.data, 100)
+
+    def test_out_discards_portchannel(self):
+        """
+        For a l3 portchannel interface discard value is accumulated on members plus added Rif counters
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 19, 1001))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.COUNTER_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 2, 2, 1, 19, 1001))))
+        self.assertEqual(value0.data, 20)
 
 class TestGetNextPDU_2863(TestCase):
     @classmethod
@@ -948,5 +1056,3 @@ class TestGetNextPDU_2863(TestCase):
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 3000))))
         self.assertEqual(str(value0.data), '')
-
-
