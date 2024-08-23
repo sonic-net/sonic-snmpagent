@@ -64,7 +64,6 @@ class ArpUpdater(MIBUpdater):
         self.neigh_key_list = {}
 
     def reinit_data(self):
-        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.neigh_key_list = Namespace.dbs_keys_namespace(self.db_conn, mibs.APPL_DB, "NEIGH_TABLE:*")
 
     def _update_from_arptable(self):
@@ -720,9 +719,9 @@ class sysNameUpdater(MIBUpdater):
         super().__init__()
         self.db_conn = mibs.init_db()
         self.hostname = socket.gethostname()
+        self.db_conn.connect(self.db_conn.CONFIG_DB)
 
     def reinit_data(self):
-        self.db_conn.connect(self.db_conn.CONFIG_DB)
         device_metadata = self.db_conn.get_all(self.db_conn.CONFIG_DB, "DEVICE_METADATA|localhost")
 
         if device_metadata and device_metadata.get('hostname'):
