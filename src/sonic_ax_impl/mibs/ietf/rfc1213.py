@@ -1,6 +1,8 @@
 import ipaddress
 import python_arptable
+import re
 import socket
+import psutil
 from enum import unique, Enum
 from bisect import bisect_right
 
@@ -179,15 +181,194 @@ class NextHopUpdater(MIBUpdater):
 
         return self.route_list[right]
 
+class IfIndexUpdater(MIBUpdater):
+    def __init__(self):
+        super().__init__()
+        self.db_conn = Namespace.init_namespace_dbs()
+        self.if_index_map = {}
+        self.if_index_list = []
+
+    def _update_if_index_info(self, dev, ip):
+        if ip is None: return
+
+        if_index = mibs.get_index_from_str(dev)
+        if if_index is None: return
+
+        try:
+            ipaddr = ipaddress.ip_address(ip)
+        except Exception as e:
+            mibs.logger.warning("Failed to convert IP address '{}', error: {}.".format(ip, e))
+            return
+
+        iptuple = ip2byte_tuple(ip)
+        ip_type = 1 if isinstance(ipaddr, ipaddress.IPv4Address) else 2
+        ip_len = 4 if isinstance(ipaddr, ipaddress.IPv4Address) else 16
+        subid = (ip_type, ip_len,) + iptuple
+        self.if_index_map[subid] = if_index
+        self.if_index_list.append(subid)
+
+    def _getIfaceAddress(self, iface):
+        return [x.address if x.family == socket.AddressFamily.AF_INET else x.address.replace('%{}'.format(iface), '') for x in psutil.net_if_addrs().get(iface, []) if x.address and (x.family == socket.AddressFamily.AF_INET or x.family == socket.AddressFamily.AF_INET6)]
+
+    def _getIfaceBrdAddress(self, iface):
+        return [x.broadcast if x.family == socket.AddressFamily.AF_INET else x.broadcast.replace('{}'.format(iface), '') for x in psutil.net_if_addrs().get(iface, []) if x.broadcast and (x.family == socket.AddressFamily.AF_INET or x.family == socket.AddressFamily.AF_INET6)]
+
+    def update_data(self):
+        self.if_index_map = {}
+        self.if_index_list = []
+
+        interfaces = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "INTF_TABLE:*")
+        loopback_intf_list = set()
+        for interface in interfaces:
+            ethTablePrefix = re.search(r"INTF_TABLE\:[A-Za-z]+[0-9]+\:[0-9.\:A-Fa-f]+", interface)
+            if ethTablePrefix is None:
+                continue
+            else:
+                dev = ethTablePrefix.group().split(':')[1]
+                ip = ':'.join(ethTablePrefix.group().split(':')[2:])
+                if dev.startswith('Loopback'):
+                    loopback_intf_list.add(dev)
+                    # continue
+            self._update_if_index_info(dev, ip)
+
+        # For the Loopback interface, since its link-local address is not recorded in APPLDB, its IP needs to be retrieved separately and updated.
+        for dev in loopback_intf_list:
+            for ip in self._getIfaceAddress(dev):
+                self._update_if_index_info(dev, ip)
+
+        for mgmt_ip in self._getIfaceAddress('eth0'):
+            self._update_if_index_info("eth0", mgmt_ip)
+
+        for ip in self._getIfaceAddress('docker0') + self._getIfaceBrdAddress('docker0'):
+            self._update_if_index_info("docker0", ip)
+
+        for ip in self._getIfaceAddress('Bridge'):
+            self._update_if_index_info("Bridge", ip)
+
+        self.if_index_list.sort()
+
+    def get_if_index(self, sub_id):
+        return self.if_index_map.get(sub_id, None)
+
+    def get_next(self, sub_id):
+        right = bisect_right(self.if_index_list, sub_id)
+        if right >= len(self.if_index_list):
+            return None
+
+        return self.if_index_list[right]
+
+
+class NetmaskUpdater(MIBUpdater):
+    def __init__(self):
+        super().__init__()
+        self.db_conn = Namespace.init_namespace_dbs()
+        self.netmask_map = {}
+        self.netmask_list = []
+
+    def _update_netmask_info(self, dev, ip_mask):
+        if ip_mask is None: return
+
+        if_index = mibs.get_index_from_str(dev)
+        if if_index is None: return
+
+        try:
+            netip = ipaddress.ip_network(ip_mask, False)
+        except Exception as e:
+            mibs.logger.warning("Failed to convert IP address '{}', error: {}.".format(ip_mask, e))
+            return
+
+        netmask = ip_mask.split('/')[1]
+        netmask = int(netmask)
+        ip = ip_mask.split('/')[0]
+
+        iptuple = ip2byte_tuple(ip)
+        ip_type = 1 if netip.version == 4 else 2
+        ip_len = 4 if netip.version == 4 else 16
+        subid = (ip_type, ip_len,) + iptuple
+
+        netip = str(netip)
+        netip = netip.split('/')[0]
+        netiptuple = ip2byte_tuple(netip)
+
+        # Create map beteen subid and OID
+        oid_tuple = (1, 3, 6, 1, 2, 1, 4, 32, 1, 5)
+        self.netmask_map[subid] = oid_tuple + (if_index,) + (ip_type, ip_len,)  + netiptuple + (netmask,)
+        self.netmask_list.append(subid)
+
+    def _getIfaceAddress(self, iface):
+        return [ (x.address, x.netmask) if x.family == socket.AddressFamily.AF_INET else (x.address.replace('%{}'.format(iface), ''), x.netmask) for x in psutil.net_if_addrs().get(iface, []) if x.address and (x.family == socket.AddressFamily.AF_INET or x.family == socket.AddressFamily.AF_INET6)]
+
+    def _getIfaceBrdAddress(self, iface):
+        return [ (x.broadcast, x.netmask) if x.family == socket.AddressFamily.AF_INET else (x.broadcast.replace('{}'.format(iface), ''), x.netmask) for x in psutil.net_if_addrs().get(iface, []) if x.broadcast and (x.family == socket.AddressFamily.AF_INET or x.family == socket.AddressFamily.AF_INET6)]
+
+    def update_data(self):
+        self.netmask_map = {}
+        self.netmask_list = []
+
+        interfaces = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "INTF_TABLE:*")
+        for interface in interfaces:
+            ethTablePrefix = re.search(r"INTF_TABLE\:[A-Za-z]+[0-9]+\:[0-9.\:A-Fa-f]+/[0-9]+", interface)
+            if ethTablePrefix is None:
+                continue
+            else:
+                dev = ethTablePrefix.group().split(':')[1]
+                ip_mask = ':'.join(ethTablePrefix.group().split(':')[2:])
+
+            self._update_netmask_info(dev, ip_mask)
+
+        for ip, mask in self._getIfaceAddress('eth0'):
+            ipaddr = ipaddress.ip_address(ip)
+
+            if isinstance(ipaddr, ipaddress.IPv4Address):
+                ip_mask = str(ipaddress.ip_interface('{}/{}'.format(ip, mask)))
+            else:
+                masktuple = ip2byte_tuple(mask)
+                prefix_length = sum(bin(x).count("1") for x in masktuple)
+                ip_mask = str(ipaddress.ip_interface('{}/{}'.format(ip, prefix_length)))
+
+            self._update_netmask_info("eth0", ip_mask)
+
+        for ip, mask in self._getIfaceAddress('docker0') + self._getIfaceBrdAddress('docker0'):
+            ipaddr = ipaddress.ip_address(ip)
+
+            if isinstance(ipaddr, ipaddress.IPv4Address):
+                ip_mask = str(ipaddress.ip_interface('{}/{}'.format(ip, mask)))
+            else:
+                masktuple = ip2byte_tuple(mask)
+                prefix_length = sum(bin(x).count("1") for x in masktuple)
+                ip_mask = str(ipaddress.ip_interface('{}/{}'.format(ip, prefix_length)))
+
+            self._update_netmask_info("docker0", ip_mask)
+
+        self.netmask_list.sort()
+
+    def get_netmask_oid(self, sub_id):
+        return self.netmask_map.get(sub_id, None)
+
+    def get_next(self, sub_id):
+        right = bisect_right(self.netmask_list, sub_id)
+        if right >= len(self.netmask_list):
+            return None
+
+        return self.netmask_list[right]
+
 class IpMib(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.4'):
     arp_updater = ArpUpdater()
     nexthop_updater = NextHopUpdater()
+    ifindex_updater = IfIndexUpdater()
+    netmask_updater = NetmaskUpdater()
 
     ipRouteNextHop = \
         SubtreeMIBEntry('21.1.7', nexthop_updater, ValueType.IP_ADDRESS, nexthop_updater.nexthop)
 
     ipNetToMediaPhysAddress = \
         SubtreeMIBEntry('22.1.2', arp_updater, ValueType.OCTET_STRING, arp_updater.arp_dest)
+
+    ipNetToIfIndex = \
+        SubtreeMIBEntry('34.1.3', ifindex_updater, ValueType.INTEGER, ifindex_updater.get_if_index)
+
+    ipNetToNetMask = \
+        SubtreeMIBEntry('34.1.5', netmask_updater, ValueType.OBJECT_IDENTIFIER, netmask_updater.get_netmask_oid)
 
 class InterfacesUpdater(MIBUpdater):
 
