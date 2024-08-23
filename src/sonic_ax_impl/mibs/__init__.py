@@ -280,7 +280,7 @@ def init_sync_d_interface_tables(db_conn):
     if_name_map_util, if_id_map_util = port_util.get_interface_oid_map(db_conn, blocking=False)
     for if_name, sai_id in if_name_map_util.items():
         if_name_str = if_name
-        if (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name_str) or \
+        if (re.match(port_util.SONIC_FRONT_PANEL_RE_PATTERN, if_name_str) or \
                 re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name_str) or \
                 re.match(port_util.SONIC_ETHERNET_IB_RE_PATTERN, if_name_str) or \
                 re.match(port_util.SONIC_ETHERNET_REC_RE_PATTERN, if_name_str)):
@@ -290,7 +290,7 @@ def init_sync_d_interface_tables(db_conn):
     # string or in sai id.
     # sai_id_key = namespace : sai_id
     for sai_id, if_name in if_id_map_util.items():
-        if (re.match(port_util.SONIC_ETHERNET_RE_PATTERN, if_name) or \
+        if (re.match(port_util.SONIC_FRONT_PANEL_RE_PATTERN, if_name) or \
                 re.match(port_util.SONIC_ETHERNET_BP_RE_PATTERN, if_name) or \
                 re.match(port_util.SONIC_ETHERNET_IB_RE_PATTERN, if_name) or \
                 re.match(port_util.SONIC_ETHERNET_REC_RE_PATTERN, if_name)):
@@ -312,7 +312,7 @@ def init_sync_d_interface_tables(db_conn):
     elif len(if_id_map) < len(if_name_map) or len(oid_name_map) < len(if_name_map):
         # a length mismatch indicates a bad interface name
         logger.warning("SyncD database contains incoherent interface names. Interfaces must match pattern '{}'"
-                       .format(port_util.SONIC_ETHERNET_RE_PATTERN))
+                       .format(port_util.SONIC_FRONT_PANEL_RE_PATTERN))
         logger.warning("Port name map:\n" + pprint.pformat(if_name_map, indent=2))
 
 
