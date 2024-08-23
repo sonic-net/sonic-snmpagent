@@ -21,6 +21,8 @@ from .physical_entity_sub_oid_generator import get_psu_sub_id
 from .physical_entity_sub_oid_generator import get_psu_sensor_sub_id
 from .physical_entity_sub_oid_generator import get_transceiver_sub_id
 from .physical_entity_sub_oid_generator import get_transceiver_sensor_sub_id
+from .physical_entity_sub_oid_generator import get_chassis_voltage_sensor_sub_id
+from .physical_entity_sub_oid_generator import get_chassis_current_sensor_sub_id
 from .sensor_data import TransceiverSensorData
 
 @unique
@@ -108,6 +110,24 @@ class ThermalInfoDB(str, Enum):
     FAN drawer info keys
     """
     TEMPERATURE = 'temperature'
+    REPLACEABLE = 'is_replaceable'
+
+
+@unique
+class VoltageSensorInfoDB(str, Enum):
+    """
+    Voltage sensor info keys
+    """
+    VOLTAGE = 'voltage'
+    REPLACEABLE = 'is_replaceable'
+
+
+@unique
+class CurrentSensorInfoDB(str, Enum):
+    """
+    Current Sensor info keys
+    """
+    CURRENT = 'current'
     REPLACEABLE = 'is_replaceable'
 
 
@@ -1039,6 +1059,90 @@ class ThermalCacheUpdater(PhysicalEntityCacheUpdater):
                 self.mib_updater.set_phy_fru(thermal_sub_id, replaceable)
         else:
             self._remove_entity_cache(thermal_name)
+
+@physical_entity_updater()
+class VoltageSensorCacheUpdater(PhysicalEntityCacheUpdater):
+    KEY_PATTERN = mibs.voltage_sensor_info_table("*")
+
+    def __init__(self, mib_updater):
+        super(VoltageSensorCacheUpdater, self).__init__(mib_updater)
+
+    def get_key_pattern(self):
+        return VoltageSensorCacheUpdater.KEY_PATTERN
+
+    def _update_entity_cache(self, voltage_sensor_name):
+        voltage_sensor_info = Namespace.dbs_get_all(self.mib_updater.statedb, mibs.STATE_DB,
+                                             mibs.voltage_sensor_info_table(voltage_sensor_name))
+        if not voltage_sensor_info:
+            return
+
+        voltage, replaceable = get_db_data(voltage_sensor_info, VoltageSensorInfoDB)
+        if voltage and not is_null_str(voltage):
+            voltage_sensor_relation_info = self.get_physical_relation_info(voltage_sensor_name)
+            if not voltage_sensor_relation_info:
+                return
+            voltage_sensor_position, voltage_sensor_parent_name = get_db_data(voltage_sensor_relation_info, PhysicalRelationInfoDB)
+            voltage_sensor_position = int(voltage_sensor_position)
+
+            # only process voltage_sensors belonging to chassis here, voltage_sensors belong to other
+            # physical entity will be processed in other entity updater
+            if voltage_sensor_parent_name in self.mib_updater.physical_name_to_oid_map and \
+                self.mib_updater.physical_name_to_oid_map[voltage_sensor_parent_name] == (CHASSIS_SUB_ID,):
+                voltage_sensor_sub_id = get_chassis_voltage_sensor_sub_id(voltage_sensor_position)
+                self._add_entity_related_oid(voltage_sensor_name, voltage_sensor_sub_id)
+
+                # add voltage_sensor to available OID list
+                self.mib_updater.add_sub_id(voltage_sensor_sub_id)
+                self.mib_updater.set_phy_class(voltage_sensor_sub_id, PhysicalClass.SENSOR)
+                self.mib_updater.set_phy_descr(voltage_sensor_sub_id, voltage_sensor_name)
+                self.mib_updater.set_phy_name(voltage_sensor_sub_id, voltage_sensor_name)
+                self.mib_updater.set_phy_parent_relative_pos(voltage_sensor_sub_id, voltage_sensor_position)
+                self.mib_updater.set_phy_contained_in(voltage_sensor_sub_id, CHASSIS_MGMT_SUB_ID)
+                self.mib_updater.set_phy_fru(voltage_sensor_sub_id, replaceable)
+        else:
+            self._remove_entity_cache(voltage_sensor_name)
+
+@physical_entity_updater()
+class CurrentSensorCacheUpdater(PhysicalEntityCacheUpdater):
+    KEY_PATTERN = mibs.current_sensor_info_table("*")
+
+    def __init__(self, mib_updater):
+        super(CurrentSensorCacheUpdater, self).__init__(mib_updater)
+
+    def get_key_pattern(self):
+        return CurrentSensorCacheUpdater.KEY_PATTERN
+
+    def _update_entity_cache(self, current_sensor_name):
+        current_sensor_info = Namespace.dbs_get_all(self.mib_updater.statedb, mibs.STATE_DB,
+                                             mibs.current_sensor_info_table(current_sensor_name))
+        if not current_sensor_info:
+            return
+
+        current, replaceable = get_db_data(current_sensor_info, CurrentSensorInfoDB)
+        if current and not is_null_str(current):
+            current_sensor_relation_info = self.get_physical_relation_info(current_sensor_name)
+            if not current_sensor_relation_info:
+                return
+            current_sensor_position, current_sensor_parent_name = get_db_data(current_sensor_relation_info, PhysicalRelationInfoDB)
+            current_sensor_position = int(current_sensor_position)
+
+            # only process current_sensors belong to chassis here, current_sensors belong to other
+            # physical entity will be processed in other entity updater
+            if current_sensor_parent_name in self.mib_updater.physical_name_to_oid_map and \
+                self.mib_updater.physical_name_to_oid_map[current_sensor_parent_name] == (CHASSIS_SUB_ID,):
+                current_sensor_sub_id = get_chassis_current_sensor_sub_id(current_sensor_position)
+                self._add_entity_related_oid(current_sensor_name, current_sensor_sub_id)
+
+                # add current_sensor to available OID list
+                self.mib_updater.add_sub_id(current_sensor_sub_id)
+                self.mib_updater.set_phy_class(current_sensor_sub_id, PhysicalClass.SENSOR)
+                self.mib_updater.set_phy_descr(current_sensor_sub_id, current_sensor_name)
+                self.mib_updater.set_phy_name(current_sensor_sub_id, current_sensor_name)
+                self.mib_updater.set_phy_parent_relative_pos(current_sensor_sub_id, current_sensor_position)
+                self.mib_updater.set_phy_contained_in(current_sensor_sub_id, CHASSIS_MGMT_SUB_ID)
+                self.mib_updater.set_phy_fru(current_sensor_sub_id, replaceable)
+        else:
+            self._remove_entity_cache(current_sensor_name)
 
 
 class PhysicalTableMIB(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.47.1.1.1'):

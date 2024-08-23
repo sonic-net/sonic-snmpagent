@@ -18,7 +18,10 @@ from .physical_entity_sub_oid_generator import get_fan_tachometers_sub_id
 from .physical_entity_sub_oid_generator import get_psu_sub_id
 from .physical_entity_sub_oid_generator import get_psu_sensor_sub_id
 from .physical_entity_sub_oid_generator import get_chassis_thermal_sub_id
+from .physical_entity_sub_oid_generator import get_chassis_voltage_sensor_sub_id
+from .physical_entity_sub_oid_generator import get_chassis_current_sensor_sub_id
 from .sensor_data import ThermalSensorData, FANSensorData, PSUSensorData, TransceiverSensorData
+from .sensor_data import VoltageSensorData, CurrentSensorData
 
 NOT_AVAILABLE = 'N/A'
 CHASSIS_NAME_SUB_STRING = 'chassis'
@@ -337,6 +340,33 @@ ThermalSensorData.bind_sensor_interface({
     'temperature': ThermalSensor
 })
 
+class VoltageSensor(SensorInterface):
+    """
+    Voltage sensor.
+    """
+
+    TYPE = EntitySensorDataType.VOLTS_DC
+    SCALE = EntitySensorDataScale.MILLI
+    PRECISION = 0
+
+
+VoltageSensorData.bind_sensor_interface({
+    'voltage': VoltageSensor
+})
+
+class CurrentSensor(SensorInterface):
+    """
+    Current sensor.
+    """
+
+    TYPE = EntitySensorDataType.AMPERES
+    SCALE = EntitySensorDataScale.MILLI
+    PRECISION = 0
+
+
+CurrentSensorData.bind_sensor_interface({
+    'current': CurrentSensor
+})
 
 class PhysicalSensorTableMIBUpdater(MIBUpdater):
     """
@@ -347,6 +377,8 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
     PSU_SENSOR_KEY_PATTERN = mibs.psu_info_table("*")
     FAN_SENSOR_KEY_PATTERN = mibs.fan_info_table("*")
     THERMAL_SENSOR_KEY_PATTERN = mibs.thermal_info_table("*")
+    VOLTAGE_SENSOR_KEY_PATTERN = mibs.voltage_sensor_info_table("*")
+    CURRENT_SENSOR_KEY_PATTERN = mibs.current_sensor_info_table("*")
 
     def __init__(self):
         """
@@ -373,6 +405,8 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         self.psu_sensor = []
         self.thermal_sensor = []
         self.broken_transceiver_info = []
+        self.voltage_sensor = []
+        self.current_sensor = []
 
     def reinit_connection(self):
         Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
@@ -408,6 +442,16 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
                                                                           self.THERMAL_SENSOR_KEY_PATTERN)
         if thermal_sensor_encoded:
             self.thermal_sensor = [entry for entry in thermal_sensor_encoded]
+
+        voltage_sensor_encoded = self.statedb[HOST_NAMESPACE_DB_IDX].keys(self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB,
+                                                                          self.VOLTAGE_SENSOR_KEY_PATTERN)
+        if voltage_sensor_encoded:
+            self.voltage_sensor = [entry for entry in voltage_sensor_encoded]
+
+        current_sensor_encoded = self.statedb[HOST_NAMESPACE_DB_IDX].keys(self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB,
+                                                                          self.CURRENT_SENSOR_KEY_PATTERN)
+        if current_sensor_encoded:
+            self.current_sensor = [entry for entry in current_sensor_encoded]
 
     def update_xcvr_dom_data(self):
         if not self.transceiver_dom:
@@ -619,6 +663,96 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
 
                     self.sub_ids.append(sub_id)
 
+    def update_voltage_sensor_data(self):
+        if not self.voltage_sensor:
+            return
+
+        for voltage_sensor_entry in self.voltage_sensor:
+            voltage_name = voltage_sensor_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
+            voltage_relation_info = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, mibs.physical_entity_info_table(voltage_name))
+            voltage_position, voltage_parent_name = get_db_data(voltage_relation_info, PhysicalRelationInfoDB)
+
+            if is_null_empty_str(voltage_parent_name) or is_null_empty_str(voltage_parent_name) or \
+                    CHASSIS_NAME_SUB_STRING not in voltage_parent_name.lower():
+                continue
+
+            voltage_position = int(voltage_position)
+
+            voltage_sensor_entry_data = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, voltage_sensor_entry)
+
+            if not voltage_sensor_entry_data:
+                continue
+
+            sensor_data_list = VoltageSensorData.create_sensor_data(voltage_sensor_entry_data)
+            for sensor_data in sensor_data_list:
+                raw_sensor_value = sensor_data.get_raw_value()
+                if is_null_empty_str(raw_sensor_value):
+                    continue
+                sensor = sensor_data.get_sensor_interface()
+                sub_id = get_chassis_voltage_sensor_sub_id(voltage_position)
+
+                try:
+                    mib_values = sensor.mib_values(raw_sensor_value)
+                except (ValueError, ArithmeticError):
+                    mibs.logger.error("Exception occurred when converting"
+                            "value for sensor {} : {}".format(sensor, voltage_name))
+                    continue
+                else:
+                    self.ent_phy_sensor_type_map[sub_id], \
+                        self.ent_phy_sensor_scale_map[sub_id], \
+                        self.ent_phy_sensor_precision_map[sub_id], \
+                        self.ent_phy_sensor_value_map[sub_id], \
+                        self.ent_phy_sensor_oper_state_map[sub_id] = mib_values
+
+                    self.sub_ids.append(sub_id)
+
+    def update_current_sensor_data(self):
+        if not self.current_sensor:
+            return
+
+        for current_sensor_entry in self.current_sensor:
+            current_name = current_sensor_entry.split(mibs.TABLE_NAME_SEPARATOR_VBAR)[-1]
+            current_relation_info = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, mibs.physical_entity_info_table(current_name))
+            current_position, current_parent_name = get_db_data(current_relation_info, PhysicalRelationInfoDB)
+
+            if is_null_empty_str(current_parent_name) or is_null_empty_str(current_parent_name) or \
+                    CHASSIS_NAME_SUB_STRING not in current_parent_name.lower():
+                continue
+
+            current_position = int(current_position)
+
+            current_sensor_entry_data = self.statedb[HOST_NAMESPACE_DB_IDX].get_all(
+                self.statedb[HOST_NAMESPACE_DB_IDX].STATE_DB, current_sensor_entry)
+
+            if not current_sensor_entry_data:
+                continue
+
+            sensor_data_list = CurrentSensorData.create_sensor_data(current_sensor_entry_data)
+            for sensor_data in sensor_data_list:
+                raw_sensor_value = sensor_data.get_raw_value()
+                if is_null_empty_str(raw_sensor_value):
+                    continue
+                sensor = sensor_data.get_sensor_interface()
+                sub_id = get_chassis_current_sensor_sub_id(current_position)
+
+                try:
+                    mib_values = sensor.mib_values(raw_sensor_value)
+                except (ValueError, ArithmeticError):
+                    mibs.logger.error("Exception occurred when converting"
+                            "value for sensor {} : {}".format(sensor, current_name))
+                    continue
+                else:
+                    self.ent_phy_sensor_type_map[sub_id], \
+                        self.ent_phy_sensor_scale_map[sub_id], \
+                        self.ent_phy_sensor_precision_map[sub_id], \
+                        self.ent_phy_sensor_value_map[sub_id], \
+                        self.ent_phy_sensor_oper_state_map[sub_id] = mib_values
+
+                    self.sub_ids.append(sub_id)
+
     def update_data(self):
         """
         Update sensors cache.
@@ -633,6 +767,10 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         self.update_fan_sensor_data()
 
         self.update_thermal_sensor_data()
+
+        self.update_voltage_sensor_data()
+
+        self.update_current_sensor_data()
 
         self.sub_ids.sort()
 

@@ -20,6 +20,7 @@ from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import CHASSIS_SU
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_psu_sensor_sub_id, get_psu_sub_id, get_fan_drawer_sub_id
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_fan_sub_id, get_fan_tachometers_sub_id
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_chassis_thermal_sub_id, get_transceiver_sub_id
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_chassis_current_sensor_sub_id, get_chassis_voltage_sensor_sub_id
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_transceiver_sensor_sub_id
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import SENSOR_TYPE_TEMP
 from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import SENSOR_TYPE_VOLTAGE
@@ -180,6 +181,30 @@ class TestSonicMIB(TestCase):
             5: (ValueType.INTEGER, PhysicalClass.SENSOR),
             6: (ValueType.INTEGER, 1),
             7: (ValueType.OCTET_STRING, "thermal1"), 
+            16: (ValueType.INTEGER, 2)
+        }
+        self._check_getpdu(sub_id, expected_mib)
+
+    def test_getpdu_voltage_info(self):
+        sub_id = get_chassis_voltage_sensor_sub_id(1)[0]
+        expected_mib = {
+            2: (ValueType.OCTET_STRING, "voltage1"),
+            4: (ValueType.INTEGER, CHASSIS_MGMT_SUB_ID),
+            5: (ValueType.INTEGER, PhysicalClass.SENSOR),
+            6: (ValueType.INTEGER, 1),
+            7: (ValueType.OCTET_STRING, "voltage1"), 
+            16: (ValueType.INTEGER, 2)
+        }
+        self._check_getpdu(sub_id, expected_mib)
+
+    def test_getpdu_current_info(self):
+        sub_id = get_chassis_current_sensor_sub_id(1)[0]
+        expected_mib = {
+            2: (ValueType.OCTET_STRING, "current1"),
+            4: (ValueType.INTEGER, CHASSIS_MGMT_SUB_ID),
+            5: (ValueType.INTEGER, PhysicalClass.SENSOR),
+            6: (ValueType.INTEGER, 1),
+            7: (ValueType.OCTET_STRING, "current1"), 
             16: (ValueType.INTEGER, 2)
         }
         self._check_getpdu(sub_id, expected_mib)
