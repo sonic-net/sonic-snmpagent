@@ -6,12 +6,12 @@
     "state": "Established"
   },
   "BUFFER_MAX_PARAM_TABLE|Ethernet-BP16": {
-    "max_queues": "16"
+    "max_priority_groups": "8"
   },
   "BUFFER_MAX_PARAM_TABLE|Ethernet-BP20": {
-    "max_queues": "16"
+    "max_priority_groups": "8"
   },
   "BUFFER_MAX_PARAM_TABLE|Ethernet40": {
-    "max_queues": "16"
+    "max_priority_groups": "8"
   }
 }
