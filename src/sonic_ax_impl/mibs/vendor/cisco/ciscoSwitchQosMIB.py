@@ -136,9 +136,8 @@ class QueueStatUpdater(MIBUpdater):
 
             # The first half of queue id is for ucast, and second half is for mcast
             # To simulate vendor OID, we wrap queues by max priority groups
-            port_max_queues = Namespace.dbs_get_all(self.db_conn, mibs.STATE_DB,
-                                                    mibs.buffer_max_parm_table(self.oid_name_map[if_index]))['max_queues']
-            pq_count = math.ceil(int(port_max_queues) / 2)
+            pq_count = int(Namespace.dbs_get_all(self.db_conn, mibs.STATE_DB,
+                                                    mibs.buffer_max_parm_table(self.oid_name_map[if_index]))['max_priority_groups'])
 
             for queue in if_queues:
                 # Get queue type and statistics

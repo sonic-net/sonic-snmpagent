@@ -35,12 +35,12 @@
     "state": "Active"
   },
   "BUFFER_MAX_PARAM_TABLE|Ethernet0": {
-    "max_queues": "16"
+    "max_priority_groups": "8"
   },
   "BUFFER_MAX_PARAM_TABLE|Ethernet4": {
-    "max_queues": "16"
+    "max_priority_groups": "8"
   },
   "BUFFER_MAX_PARAM_TABLE|Ethernet24": {
-    "max_queues": "16"
+    "max_priority_groups": "8"
   }
 }
