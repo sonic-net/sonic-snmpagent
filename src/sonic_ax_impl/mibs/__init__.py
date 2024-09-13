@@ -33,15 +33,15 @@ HOST_NAMESPACE_DB_IDX = 0
 RIF_COUNTERS_AGGR_MAP = {
     "SAI_PORT_STAT_IF_IN_OCTETS": "SAI_ROUTER_INTERFACE_STAT_IN_OCTETS",
     "SAI_PORT_STAT_IF_IN_UCAST_PKTS": "SAI_ROUTER_INTERFACE_STAT_IN_PACKETS",
-    "SAI_PORT_STAT_IF_IN_ERRORS": "SAI_ROUTER_INTERFACE_STAT_IN_ERROR_PACKETS",
+    "SAI_PORT_STAT_IF_IN_DISCARDS": "SAI_ROUTER_INTERFACE_STAT_IN_ERROR_PACKETS",
     "SAI_PORT_STAT_IF_OUT_OCTETS": "SAI_ROUTER_INTERFACE_STAT_OUT_OCTETS",
     "SAI_PORT_STAT_IF_OUT_UCAST_PKTS": "SAI_ROUTER_INTERFACE_STAT_OUT_PACKETS",
-    "SAI_PORT_STAT_IF_OUT_ERRORS": "SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS"
+    "SAI_PORT_STAT_IF_OUT_DISCARDS": "SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS"
 }
 
 RIF_DROPS_AGGR_MAP = {
-    "SAI_PORT_STAT_IF_IN_ERRORS": "SAI_ROUTER_INTERFACE_STAT_IN_ERROR_PACKETS",
-    "SAI_PORT_STAT_IF_OUT_ERRORS": "SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS"
+    "SAI_PORT_STAT_IF_IN_DISCARDS": "SAI_ROUTER_INTERFACE_STAT_IN_ERROR_PACKETS",
+    "SAI_PORT_STAT_IF_OUT_DISCARDS": "SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS"
 }
 
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
@@ -231,7 +231,7 @@ def init_db():
     :return: db_conn
     """
     Namespace.init_sonic_db_config()
-    
+
     # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
     # Redis PubSub objects (such as those within swsscommon) are NOT thread-safe.
     db_conn = SonicV2Connector(**redis_kwargs)
@@ -575,7 +575,7 @@ class Namespace:
         db_conn = []
         Namespace.init_sonic_db_config()
         host_namespace_idx = 0
-        for idx, namespace in enumerate(SonicDBConfig.get_ns_list()): 
+        for idx, namespace in enumerate(SonicDBConfig.get_ns_list()):
             if namespace == multi_asic.DEFAULT_NAMESPACE:
                 host_namespace_idx = idx
             db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)
