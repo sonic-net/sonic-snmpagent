@@ -148,6 +148,27 @@
     "temperature": "20.5",
     "is_replaceable": "False"
   },
+  "MOUNT_POINTS|/dev": {
+    "Filesystem": "/host",
+    "Type": "ext4",
+    "1K-blocks": "52829740",
+    "Used": "0",
+    "Available": "52829740"
+  },
+  "MOUNT_POINTS|/dev2": {
+    "Filesystem": "/host2",
+    "Type": "ext3",
+    "1K-blocks": "12345",
+    "Used": "10",
+    "Available": "12335"
+  },
+"MOUNT_POINTS|/dev3": {
+"Filesystem": "/host3",
+"Type": "nfs",
+"1K-blocks": "1000",
+"Used": "100",
+"Available": "900"
+},
   "NEIGH_STATE_TABLE|10.0.0.57": {
     "state" : "6402"
   },
