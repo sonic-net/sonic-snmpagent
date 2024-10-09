@@ -21,7 +21,6 @@ class TestQueueCounters(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.lut = MIBTable(ciscoSwitchQosMIB.csqIfQosGroupStatsTable)
-
         # Update MIBs
         for updater in cls.lut.updater_instances:
             updater.reinit_data()
@@ -49,6 +48,10 @@ class TestQueueCounters(TestCase):
     # Ethernet16 is created on mock_tables\counters_db.json with only counters for UC 0,1,2,3,4,6
     # Ethernet24 is created on mock_tables\counters_db.json with only counters for MC 0,2,3,5,6,7
     # Ethernet32 is created on mock_tables\counters_db.json with only counters for UC 1,2,4,6,7 and MC 0,1,3,5,6
+    # Test issue https://github.com/sonic-net/sonic-snmpagent/pull/330
+    # Ethernet78 is created on mock_tables\counters_db.json with counters for UC 0,1,2,3,4,5,6,7,8,9,10 and MC 2,3,4,5,6,7
+    # It is important there are more UC queues than half of the total number of queues.
+    # A total of 16 queues for Ethernet78 is defined in mock_tables\state_db.json
     def test_getQueueCountersForPortWithAllCounters(self):
         tested_ports_counters_data = {
             17: { 1: {1:1, 2:23492723984237432, 5:3,6:0}, 2: {1:1, 2:2, 5:3, 6:0},
@@ -63,11 +66,17 @@ class TestQueueCounters(TestCase):
                   3: {1:1, 2:2, 5:3, 6:0}, 4: {3:1, 4:2, 7:3, 8:0},
                   5: {1:1, 2:2, 5:3, 6:0}, 6: {3:1, 4:2, 7:3, 8:0},
                   7: {1:1, 2:2, 3:1, 4:2, 5:3, 6:0, 7:3,8:0}, 8: {1:1, 2:2, 5:3, 6:0}
+                  },
+            79: { 1: {1:1, 2:2, 5:3, 6:0}, 2: {1:1, 2:2, 3:1, 4:2, 5:3, 6:0, 7:3, 8:0},
+                  3: {1:1, 2:2, 3:1, 4:2, 5:3, 6:0, 7:3, 8:0}, 4: {1:1, 2:2, 3:1, 4:2, 5:3, 6:0, 7:3, 8:0},
+                  5: {1:1, 2:2, 3:1, 4:2, 5:3, 6:0, 7:3, 8:0}, 6: {1:1, 2:2, 3:1, 4:2, 5:3, 6:0, 7:3, 8:0},
+                  7: {1:1, 2:2, 3:1, 4:2, 5:3, 6:0, 7:3, 8:0}, 8: {1:1, 2:2, 5:3, 6:0},
+                  9: {1:1, 2:2, 5:3, 6:0}, 10: {1:1, 2:2, 5:3, 6:0}
                   }
         }
 
         for port, configured_queues in tested_ports_counters_data.items():
-            for queue_id in range(1, 8):
+            for queue_id in range(1, sorted(configured_queues.keys(), reverse=True)[0]):
                 for counter_id in range(1, 8):
                     oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 580, 1, 5, 5, 1, 4, port, 2, queue_id, counter_id))
                     get_pdu = GetPDU(

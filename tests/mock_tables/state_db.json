@@ -213,5 +213,8 @@
   },
   "BUFFER_MAX_PARAM_TABLE|Ethernet32": {
     "max_queues": "16"
+  },
+  "BUFFER_MAX_PARAM_TABLE|Ethernet78": {
+    "max_queues": "16"
   }
 }
