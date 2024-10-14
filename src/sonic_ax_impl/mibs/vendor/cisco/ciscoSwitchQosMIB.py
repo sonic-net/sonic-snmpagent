@@ -134,11 +134,20 @@ class QueueStatUpdater(MIBUpdater):
             if_queues = self.port_queue_list_map[if_index]
             namespace = self.port_index_namespace[if_index]
 
-            # The first half of queue id is for ucast, and second half is for mcast
+            # Count number of unicast queues
+            pq_count = 0
+            for queue in if_queues:
+                queue_sai_oid = self.port_queues_map[mibs.queue_key(if_index, queue)]
+                if self.queue_type_map[namespace].get(queue_sai_oid) == 'SAI_QUEUE_TYPE_UNICAST':
+                   pq_count = pq_count + 1
+
+            # If there are fewer unicast queues than half of max queues, we use the old assumption of second half mcast
             # To simulate vendor OID, we wrap queues by max priority groups
             port_max_queues = Namespace.dbs_get_all(self.db_conn, mibs.STATE_DB,
                                                     mibs.buffer_max_parm_table(self.oid_name_map[if_index]))['max_queues']
-            pq_count = math.ceil(int(port_max_queues) / 2)
+            max_queues_half = math.ceil(int(port_max_queues) / 2)
+            if pq_count < max_queues_half:
+                pq_count = max_queues_half
 
             for queue in if_queues:
                 # Get queue type and statistics
