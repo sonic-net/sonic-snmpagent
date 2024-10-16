@@ -60,6 +60,7 @@ DEVICE_TYPE_MULTIPLE = 10000
 DEVICE_INDEX_MULTIPLE = 100
 DEVICE_TYPE_PS = 1 * DEVICE_TYPE_MULTIPLE
 DEVICE_TYPE_FAN = 2 * DEVICE_TYPE_MULTIPLE
+DEVICE_TYPE_PSU_THERMAL = 98 * DEVICE_TYPE_MULTIPLE
 DEVICE_TYPE_CHASSIS_THERMAL = 99 * DEVICE_TYPE_MULTIPLE
 DEVICE_TYPE_POWER_MONITOR = 24 * DEVICE_TYPE_MULTIPLE
 
@@ -95,6 +96,15 @@ def get_chassis_thermal_sub_id(position):
     :return: sub OID of the thermal
     """
     return (CHASSIS_MGMT_SUB_ID + DEVICE_TYPE_CHASSIS_THERMAL + position * DEVICE_INDEX_MULTIPLE + SENSOR_TYPE_TEMP, )
+
+def get_psu_thermal_sub_id(position):
+    """
+    Returns sub OID for thermals that belong to PSU. Sub OID is calculated as follows:
+    sub OID = CHASSIS_MGMT_SUB_ID + DEVICE_TYPE_PSU_THERMAL + position * DEVICE_INDEX_MULTIPLE + SENSOR_TYPE_TEMP, 
+    :param position: thermal position
+    :return: sub OID of the thermal
+    """
+    return (CHASSIS_MGMT_SUB_ID + DEVICE_TYPE_PSU_THERMAL + position * DEVICE_INDEX_MULTIPLE + SENSOR_TYPE_TEMP, )
 
 def get_fan_sub_id(parent_id, position):
     """
