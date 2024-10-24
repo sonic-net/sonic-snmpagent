@@ -735,6 +735,22 @@ class sysNameUpdater(MIBUpdater):
         """
         Subclass update interface information
         """
+        # If hostname is already set to dot notation
+        if "." in self.hostname:
+            return self.hostname
+
+        try:
+            with open('/etc/resolv.conf', 'r') as fd_resolv:
+                for line in fd_resolv.readlines():
+                    if 'search' in line:
+                        domain = line.split()[1]
+                        return "{}.{}".format(self.hostname, domain)
+
+        except Exception:
+            # If error in reading data from file
+            mibs.logger.warning("Cannot read domain from /etc/resolv.conf Using"
+                                " {} in sysName".format(self.hostname))
+
         return self.hostname
 
 
