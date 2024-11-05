@@ -9,6 +9,7 @@ modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from unittest import TestCase
+from unittest.mock import patch, mock_open
 
 from ax_interface import ValueType
 from ax_interface.pdu import PDU
@@ -222,7 +223,8 @@ class TestGetNextPDU(TestCase):
         self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 1, 10001))))
         self.assertEqual(str(value0.data), 'mgmt1')
 
-    def test_mgmt_iface_speed(self):
+    @patch("builtins.open", new_callable=mock_open, read_data="1000\n")
+    def test_mgmt_iface_speed(self, mock_file):
         """
         Test that mgmt port speed is 1000
         """
