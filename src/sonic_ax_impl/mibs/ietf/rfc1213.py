@@ -530,7 +530,12 @@ class InterfacesUpdater(MIBUpdater):
         :param sub_id: The 1-based sub-identifier query.
         :return: oper state value for the respective sub_id.
         """
-        return self._get_status(sub_id, "oper_status")
+        if self.get_oid(sub_id) in self.vlan_oid_name_map:
+            # VLAN interfaces don't have an operational status, so return admin status for them
+            key = "admin_status"
+        else:
+            key = "oper_status"
+        return self._get_status(sub_id, key)
 
     def get_mtu(self, sub_id):
         """

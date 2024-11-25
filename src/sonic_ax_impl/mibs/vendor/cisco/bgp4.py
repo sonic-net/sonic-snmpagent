@@ -39,7 +39,13 @@ class BgpSessionUpdater(MIBUpdater):
             neigh_info = self.db_conn[db_index].get_all(mibs.STATE_DB, neigh_key, blocking=False)
             if neigh_info:
                 state = neigh_info['state']
-                ip = ipaddress.ip_address(neigh_str)
+                try:
+                    ip = ipaddress.ip_address(neigh_str)
+                except ValueError:
+                    # In case of unnumbered BGP, the neighbor is an interface.
+                    # That can't be represented here, so just skip the neighbor.
+                    continue
+
                 if type(ip) is ipaddress.IPv4Address:
                     oid_head = (1, 4)
                 else:
