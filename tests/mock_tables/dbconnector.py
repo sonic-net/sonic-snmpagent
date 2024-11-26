@@ -9,6 +9,7 @@ from swsssdk import SonicV2Connector
 from swsssdk import SonicDBConfig
 from swsssdk.interface import DBInterface
 from swsscommon import swsscommon
+from swsscommon.swsscommon import Table, DBConnector
 from sonic_py_common import multi_asic
 
 
@@ -71,6 +72,23 @@ def connect_SonicV2Connector(self, db_name, retry_on=True):
 def _subscribe_keyspace_notification(self, db_name):
     pass
 
+#FIXME: Mock DBConnector.__init__ and DBConnector.Table
+_old___init__DBConnector = DBConnector.__init__
+
+def __init__DBConnector(self, *args):
+    # print("### __init__DBConnector self: {}, args: {}".format(self, args))
+    pass
+    # _old___init__DBConnector(self, *args)
+    # mock_appdb_conn = {"mock_conn": "appl_db"}
+    # return mock_appdb_conn
+
+def Table_DBConnector(self, *args):
+    # print("### Table_DBConnector self: {}, args: {}".format(self, args))
+    # _old___init__DBConnector(self, *args)
+    # fvs = swsscommon.FieldValuePairs([("admin_status", "up"), ("mtu", "9100")])
+    mock_kfvt = swsscommon.TableMap({"11.0.0.11": [("nexthop", "111.0.0.111"),("ifname", "Ethernet11")], "22.0.0.22": [("nexthop", "222.0.0.222"),("ifname", "Ethernet22")]})
+
+    return mock_kfvt
 
 def config_set(self, *args):
     pass
@@ -141,6 +159,9 @@ DBInterface._subscribe_keyspace_notification = _subscribe_keyspace_notification
 mockredis.MockRedis.config_set = config_set
 redis.StrictRedis = SwssSyncClient
 SonicV2Connector.connect = connect_SonicV2Connector
+swsscommon.DBConnector = __init__DBConnector
+#FIXME: Mock DBConnector.__init__ and DBConnector.Table
+# swsscommon.Table = Table_DBConnector
 swsscommon.SonicV2Connector = SonicV2Connector
 swsscommon.SonicDBConfig = SonicDBConfig
 swsscommon.SonicDBConfig.isGlobalInit = mock_SonicDBConfig_isGlobalInit
