@@ -149,6 +149,16 @@ class QueueStatUpdater(MIBUpdater):
             if pq_count < max_queues_half:
                 pq_count = max_queues_half
 
+            # Check number of priority groups (We may use this value if create_db_buffers_only removes intermediary queues eg. Ethernet0[3-4])
+            pg_max = 0;
+            buffer_parms = Namespace.dbs_get_all(self.db_conn, mibs.STATE_DB,
+                                                    mibs.buffer_max_parm_table(self.oid_name_map[if_index]))
+            if 'max_priority_groups' in buffer_parms:
+                pg_max = int(buffer_parms['max_priority_groups'])
+
+            if(pq_count < pg_max):
+                pq_count = pg_max
+
             for queue in if_queues:
                 # Get queue type and statistics
                 queue_sai_oid = self.port_queues_map[mibs.queue_key(if_index, queue)]
