@@ -331,7 +331,6 @@ class PhysicalTableMIBUpdater(MIBUpdater):
             try:
                 updater.reinit_data()
             except BaseException as e:
-                mibs.logger.error(f"Jianquan {e}, type{type(e)}")
                 if isinstance(e, RuntimeError):
                     has_runtime_err = True
                 # Log traceback so that we know the original error details
