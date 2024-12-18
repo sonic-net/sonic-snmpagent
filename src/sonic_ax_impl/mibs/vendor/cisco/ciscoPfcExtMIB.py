@@ -121,7 +121,9 @@ class PfcUpdater(MIBUpdater):
         if oid in self.oid_lag_name_map:
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
-                counter_value += self._get_counter(mibs.get_index_from_str(lag_member), counter_name)
+                member_counter = self._get_counter(mibs.get_index_from_str(lag_member), counter_name)
+                if member_counter:
+                    counter_value += member_counter
 
             return counter_value
         else:
@@ -143,7 +145,9 @@ class PfcUpdater(MIBUpdater):
         if oid in self.oid_lag_name_map:
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
-                counter_value += self._get_counter(mibs.get_index_from_str(lag_member), counter_name)
+                member_counter = self._get_counter(mibs.get_index_from_str(lag_member), counter_name)
+                if member_counter:
+                    counter_value += member_counter
 
             return counter_value
         else:
@@ -215,7 +219,9 @@ class PfcPrioUpdater(PfcUpdater):
         if port_oid in self.oid_lag_name_map:
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[port_oid]]:
-                counter_value += self._get_counter(mibs.get_index_from_str(lag_member), counter_name)
+                member_counter = self._get_counter(mibs.get_index_from_str(lag_member), counter_name)
+                if member_counter:
+                    counter_value += member_counter
 
             return counter_value
         else:
@@ -245,7 +251,9 @@ class PfcPrioUpdater(PfcUpdater):
         if port_oid in self.oid_lag_name_map:
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[port_oid]]:
-                counter_value += self._get_counter(mibs.get_index_from_str(lag_member), counter_name)
+                member_counter = self._get_counter(mibs.get_index_from_str(lag_member), counter_name)
+                if member_counter:
+                    counter_value += member_counter
 
             return counter_value
         else:
