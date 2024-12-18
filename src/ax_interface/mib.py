@@ -49,7 +49,7 @@ class MIBUpdater:
                 redis_exception_happen = False
             except RuntimeError:
                 # Any unexpected exception or error, log it and keep running
-                logger.exception("MIBUpdater.start() caught an unexpected exception during update_data()")
+                logger.exception("MIBUpdater.start() caught a RuntimeError during update_data(), will reinitialize the connections")
                 # When redis server restart, swsscommon will throw swsscommon.RedisError, redis connection need re-initialize in reinit_data()
                 # TODO: change to swsscommon.RedisError
                 redis_exception_happen = True
