@@ -496,6 +496,21 @@ def get_redis_pubsub(db_conn, db_name, pattern):
     return pubsub
 
 
+def cancel_redis_pubsub(pubsub, db_conn, db_name, pattern):
+    db = db_conn.get_dbid(db_name)
+    logger.debug(f"Cancel subscription {db} {pattern}")
+    pubsub.punsubscribe("__keyspace@{}__:{}".format(db, pattern))
+    return pubsub
+
+
+def clear_pubsub_msg(pubsub):
+    while True:
+        msg = pubsub.get_message()
+        logger.debug("Clearing pubsub {}, get and drop message {}".format(pubsub, msg))
+        if not msg:
+            break
+
+
 class RedisOidTreeUpdater(MIBUpdater):
     def __init__(self, prefix_str):
         super().__init__()
