@@ -289,6 +289,15 @@ class InterfaceMIBUpdater(MIBUpdater):
 
         return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=True)
 
+    def _get_mgmt_speed(self, oid):
+        interface = self.mgmt_oid_name_map[oid]
+        try:
+            with open(f'/sys/class/net/{interface}/speed', 'r') as f:
+                speed = int(f.read().strip())
+                return speed
+        except:
+            return 0
+
     def get_high_speed(self, sub_id):
         """
         :param sub_id: The 1-based sub-identifier query.
@@ -297,6 +306,9 @@ class InterfaceMIBUpdater(MIBUpdater):
         oid = self.get_oid(sub_id)
         if not oid:
             return
+
+        if oid in self.mgmt_oid_name_map:
+            return self._get_mgmt_speed(oid)
 
         if oid in self.oid_lag_name_map:
             speed = 0
