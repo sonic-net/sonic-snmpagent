@@ -21,6 +21,17 @@ class TestUtil(TestCase):
         self.assertNotIn("update_frequency", args)
         self.assertNotIn("enable_dynamic_frequency", args)
 
+    # Given: Pass --port=aaa
+    # When: Parse args
+    # Then: Print valure error
+    @patch('builtins.print')
+    @patch('sys.argv', ['sonic_ax_impl', '--port=aaa'])
+    def test_valid_options_value_error(self, mock_print):
+        with pytest.raises(SystemExit) as excinfo:
+            process_options("sonic_ax_impl")
+        assert excinfo.value.code == 1
+        mock_print.assert_called_with("Invalid option for --port: invalid literal for int() with base 10: 'aaa'")
+
     # Given: Pass -h
     # When: Parse args
     # Then: Print help logs
@@ -110,18 +121,18 @@ class TestUtil(TestCase):
     # Given: Pass -t
     # When: Parse args
     # Then: Parse host
-    @patch('sys.argv', ['sonic_ax_impl', '-ttest.snmp.com'])
+    @patch('sys.argv', ['sonic_ax_impl', '-tsnmp.com'])
     def test_valid_options_host(self):
         args = process_options("sonic_ax_impl")
-        self.assertEqual(args["host"], 'test.snmp.com')
+        self.assertEqual(args["host"], 'snmp.com')
 
     # Given: Pass --host
     # When: Parse args
     # Then: Parse host
-    @patch('sys.argv', ['sonic_ax_impl', '--host=test.snmp.com'])
+    @patch('sys.argv', ['sonic_ax_impl', '--host=snmp.com'])
     def test_valid_options_host_long(self):
         args = process_options("sonic_ax_impl")
-        self.assertEqual(args["host"], 'test.snmp.com')
+        self.assertEqual(args["host"], 'snmp.com')
 
     # Given: Pass -d
     # When: Parse args
