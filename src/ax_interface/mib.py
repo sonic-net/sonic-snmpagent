@@ -311,7 +311,9 @@ class MIBTable(dict):
     Simplistic LUT for Get/GetNext OID. Interprets iterables as keys and implements the same interfaces as dict's.
     """
 
-    def __init__(self, mib_cls, enable_dynamic_frequency, update_frequency=DEFAULT_UPDATE_FREQUENCY):
+    def __init__(self, mib_cls,
+                 enable_dynamic_frequency=DEFAULT_ENABLE_DYNAMIC_FREQUENCY,
+                 update_frequency=DEFAULT_UPDATE_FREQUENCY):
         if type(mib_cls) is not MIBMeta:
             raise ValueError("Supplied object is not a MIB class instance.")
         super().__init__(getattr(mib_cls, MIBMeta.KEYSTORE))
