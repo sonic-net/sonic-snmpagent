@@ -8,7 +8,7 @@ BACKGROUND_WAIT_TIMEOUT = 10  # seconds
 
 
 class Agent:
-    def __init__(self, mib_cls, update_frequency, loop):
+    def __init__(self, mib_cls, enable_dynamic_frequency, update_frequency, loop):
         if not type(mib_cls) is MIBMeta:
             raise ValueError("Expected a class with type: {}".format(MIBMeta))
 
@@ -20,7 +20,7 @@ class Agent:
         self.stopped = asyncio.Event()
 
         # Initialize our MIB
-        self.mib_table = MIBTable(mib_cls, update_frequency)
+        self.mib_table = MIBTable(mib_cls, enable_dynamic_frequency, update_frequency)
 
         # containers
         self.socket_mgr = SocketManager(self.mib_table, self.run_enabled, self.loop)
