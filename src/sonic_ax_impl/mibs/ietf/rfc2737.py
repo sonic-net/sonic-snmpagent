@@ -318,8 +318,33 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_name_map[chassis_mgmt_sub_id] = name
         self.physical_fru_map[chassis_mgmt_sub_id] = self.NOT_REPLACEABLE
 
+        exceptions = []
+        has_runtime_err = False
+        # Catch exception in the iteration
+        # This makes sure if any exception is raised in the mid of loop
+        # every updater's reinit_data function will be always called
+        # So that the redis subscriptions always get chance to be cleaned,
+        # Otherwise if the exception never recover,
+        # the redis subscription keeps increasing but never got consumed,
+        # this causes redis memory leak.
         for updater in self.physical_entity_updaters:
-            updater.reinit_data()
+            try:
+                updater.reinit_data()
+            except BaseException as e:
+                if isinstance(e, RuntimeError):
+                    has_runtime_err = True
+                # Log traceback so that we know the original error details
+                mibs.logger.error(e, exc_info=True)
+                exceptions.append(e)
+
+        # The RuntimeError will be considered as Redis connection error
+        # And will trigger re-init connection, if the exceptions contain any RuntimeError
+        # We raise runtime error
+        if exceptions:
+            if has_runtime_err:
+                raise RuntimeError(exceptions)
+            else:
+                raise Exception(exceptions)
 
     def update_data(self):
         # This code is not executed in unit test, since mockredis
@@ -648,6 +673,21 @@ class PhysicalEntityCacheUpdater(object):
         self.entity_to_oid_map = {}
 
     def reinit_data(self):
+
+        # Redis subscriptions are established and consumed in update_data,
+        # but if there's stable exception during update logic,
+        # the reinit_data will be called, but the update_data is never called.
+        # The message is sent into subscription queue, but never got consumed,
+        # this causes Redis memory leaking.
+        # Hence clear the message in the subscription and cancel the subscription during reinit_data
+        for db_index in list(self.pub_sub_dict):
+            pubsub = self.pub_sub_dict[db_index]
+            db_conn = self.mib_updater.statedb[db_index]
+            # clear message in the subscription and cancel the subscription
+            mibs.clear_pubsub_msg(pubsub)
+            mibs.cancel_redis_pubsub(pubsub, db_conn, db_conn.STATE_DB, self.get_key_pattern())
+            del self.pub_sub_dict[db_index]
+
         self.entity_to_oid_map.clear()
         # retrieve the initial list of entity in db
         key_info = Namespace.dbs_keys(self.mib_updater.statedb, mibs.STATE_DB, self.get_key_pattern())
