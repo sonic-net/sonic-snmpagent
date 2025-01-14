@@ -54,14 +54,14 @@ def shutdown(signame, agent):
     shutdown_task = event_loop.create_task(agent.shutdown())
 
 
-def main(update_frequency=None):
+def main(enable_dynamic_frequency=False, update_frequency=None):
     global event_loop
 
     try:
         Namespace.init_sonic_db_config()
 
         # initialize handler and set update frequency (or use the default)
-        agent = ax_interface.Agent(SonicMIB, update_frequency or DEFAULT_UPDATE_FREQUENCY, event_loop)
+        agent = ax_interface.Agent(SonicMIB, enable_dynamic_frequency, update_frequency or DEFAULT_UPDATE_FREQUENCY, event_loop)
 
         # add "shutdown" signal handlers
         # https://docs.python.org/3.5/library/asyncio-eventloop.html#set-signal-handlers-for-sigint-and-sigterm
