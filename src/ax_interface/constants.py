@@ -90,3 +90,8 @@ class PduTypes(int, Enum):
 
 
 DEFAULT_PDU_TIMEOUT = 5
+
+# MIBUpdater rate: Interval/Execution time
+UPDATE_FREQUENCY_RATE = 10
+# MIBUpdater max update interval
+MAX_UPDATE_INTERVAL = 60
