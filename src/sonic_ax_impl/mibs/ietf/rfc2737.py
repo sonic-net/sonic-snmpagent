@@ -220,7 +220,6 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         super().__init__()
 
         self.statedb = Namespace.init_namespace_dbs()
-        Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
 
         # List of available sub OIDs.
         self.physical_entities = []
