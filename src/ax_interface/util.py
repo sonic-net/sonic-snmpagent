@@ -1,4 +1,5 @@
 import ipaddress
+import math
 import re
 
 from ax_interface import constants
@@ -108,3 +109,31 @@ def ip2byte_tuple(ip):
     """
     return tuple(i for i in ipaddress.ip_address(ip).packed)
 
+
+def get_next_update_interval(execution_time, static_frequency):
+    """
+    >>> get_next_update_interval(0.4, 5)
+    5
+    >>> get_next_update_interval(0.87, 5)
+    9
+    >>> get_next_update_interval(18.88, 5)
+    60
+
+
+    :param static_frequency: Static frequency, generally use default value 5
+    :param execution_time: The execution time of the updater
+    :return: the interval before next update
+
+    We expect the rate of 'update interval'/'update execution time' >= UPDATE_FREQUENCY_RATE(10)
+    Because we're using asyncio/Coroutines, the update execution blocks SNMP proxy service and other updaters.
+    Generally we expect the update to be quick and the execution time/interval time < 0.25
+    Given the static_frequency == 5,
+    if the execution_time < 0.5,
+    the update interval is(for example) 1.1s
+    It sleeps 1.1s * 10 = 11s before run next update
+
+    """
+    frequency_based_on_execution_time = math.ceil(execution_time * constants.UPDATE_FREQUENCY_RATE)
+    frequency_based_on_execution_time = min(frequency_based_on_execution_time, constants.MAX_UPDATE_INTERVAL)
+
+    return max(static_frequency, frequency_based_on_execution_time)
