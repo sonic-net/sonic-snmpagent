@@ -1,10 +1,12 @@
 import asyncio
 import bisect
 import random
+from datetime import datetime
 
 from . import logger, util
 from .constants import ValueType
 from .encodings import ValueRepresentation
+from .util import get_next_update_interval
 
 """
 Update interval between update runs (in seconds).
@@ -16,6 +18,11 @@ Interval between reinit runs (in seconds).
 """
 DEFAULT_REINIT_RATE = 60
 
+"""
+Disable dynamic frequency by default
+"""
+DEFAULT_ENABLE_DYNAMIC_FREQUENCY = False
+
 
 class MIBUpdater:
     """
@@ -25,6 +32,7 @@ class MIBUpdater:
     def __init__(self):
         self.run_event = asyncio.Event()
         self.frequency = DEFAULT_UPDATE_FREQUENCY
+        self.enable_dynamic_frequency = DEFAULT_ENABLE_DYNAMIC_FREQUENCY
         self.reinit_rate = DEFAULT_REINIT_RATE // DEFAULT_UPDATE_FREQUENCY
         self.update_counter = self.reinit_rate + 1  # reinit_data when init
 
@@ -32,6 +40,7 @@ class MIBUpdater:
         # Run the update while we are allowed
         redis_exception_happen = False
         while self.run_event.is_set():
+            start = datetime.now()
             try:
                 # reinit internal structures
                 if self.update_counter > self.reinit_rate:
@@ -57,9 +66,36 @@ class MIBUpdater:
                 # Any unexpected exception or error, log it and keep running
                 logger.exception("MIBUpdater.start() caught an unexpected exception during update_data()")
 
+            if self.enable_dynamic_frequency:
+                """
+                On SONiC device with huge interfaces
+                  for example RP card on ethernet chassis, including backend ports, 600+ interfaces
+                The update_data function could be very slow, especially when 100% CPU utilization.
+                  for example ciscoSwitchQosMIB.QueueStatUpdater, uses 1-3 seconds on normal state.
+                                                                  uses 3-8 seconds on 100% CPU utilization state.
+                We use Asyncio/Coroutine as the basic framework,
+                  the mib updaters share the same asyncio event loop with the SNMP agent client.
+                  Hence during the updaters executing, the agent client can't receive/respond to new requests,
+
+                The high frequency and the long execution time
+                  causes the SNMP request to be timed out on High CPU utilization.
+                The stable frequency(generally with default value 5s)
+                  doesn't works well on this huge interfaces situation.
+                when the execution time is long,
+                  wait for longer time to give back the control of asyncio event loop to SNMP agent
+                """
+                execution_time = (datetime.now() - start).total_seconds()
+                next_frequency = get_next_update_interval(execution_time, self.frequency)
+
+                if next_frequency > self.frequency:
+                    logger.debug(f"MIBUpdater type[{type(self)}] slow update detected, "
+                                 f"update execution time[{execution_time}], next_frequency[{next_frequency}]")
+            else:
+                next_frequency = self.frequency
+
             # wait based on our update frequency before executing again.
             # randomize to avoid concurrent update storms.
-            await asyncio.sleep(self.frequency + random.randint(-2, 2))
+            await asyncio.sleep(next_frequency + random.randint(-2, 2))
 
     def reinit_data(self):
         """
@@ -275,10 +311,13 @@ class MIBTable(dict):
     Simplistic LUT for Get/GetNext OID. Interprets iterables as keys and implements the same interfaces as dict's.
     """
 
-    def __init__(self, mib_cls, update_frequency=DEFAULT_UPDATE_FREQUENCY):
+    def __init__(self, mib_cls,
+                 enable_dynamic_frequency=DEFAULT_ENABLE_DYNAMIC_FREQUENCY,
+                 update_frequency=DEFAULT_UPDATE_FREQUENCY):
         if type(mib_cls) is not MIBMeta:
             raise ValueError("Supplied object is not a MIB class instance.")
         super().__init__(getattr(mib_cls, MIBMeta.KEYSTORE))
+        self.enable_dynamic_frequency = enable_dynamic_frequency
         self.update_frequency = update_frequency
         self.updater_instances = getattr(mib_cls, MIBMeta.UPDATERS)
         self.prefixes = getattr(mib_cls, MIBMeta.PREFIXES)
@@ -296,6 +335,7 @@ class MIBTable(dict):
         tasks = []
         for updater in self.updater_instances:
             updater.frequency = self.update_frequency
+            updater.enable_dynamic_frequency = self.enable_dynamic_frequency
             updater.run_event = event
             fut = asyncio.ensure_future(updater.start())
             fut.add_done_callback(MIBTable._done_background_task_callback)
