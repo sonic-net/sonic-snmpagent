@@ -251,8 +251,10 @@ class InterfaceMIBUpdater(MIBUpdater):
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
                 member_counter = self._get_counter(mibs.get_index_from_str(lag_member), table_name, mask)
-                if member_counter:
-                    counter_value += member_counter 
+                if member_counter is not None:
+                    counter_value += member_counter
+                else:
+                    return None
 
             return counter_value & mask
 

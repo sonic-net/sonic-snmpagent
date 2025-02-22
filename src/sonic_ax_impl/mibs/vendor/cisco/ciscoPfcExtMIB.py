@@ -122,8 +122,12 @@ class PfcUpdater(MIBUpdater):
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
                 member_counter = self._get_counter(mibs.get_index_from_str(lag_member), counter_name)
-                if member_counter:
+                member_counter = self._get_counter(mibs.get_index_from_str(lag_member), counter_name)
+                if member_counter is not None:
                     counter_value += member_counter
+                else:
+                    mibs.logger.warning("SyncD 'COUNTERS_DB' missing attribute '{}' for lag member '{}'.".format(counter_name, lag_member))
+                    return None
 
             return counter_value
         else:
@@ -146,8 +150,12 @@ class PfcUpdater(MIBUpdater):
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
                 member_counter = self._get_counter(mibs.get_index_from_str(lag_member), counter_name)
-                if member_counter:
+                member_counter = self._get_counter(mibs.get_index_from_str(lag_member), counter_name)
+                if member_counter is not None:
                     counter_value += member_counter
+                else:
+                    mibs.logger.warning("SyncD 'COUNTERS_DB' missing attribute '{}' for lag member '{}'.".format(counter_name, lag_member))
+                    return None
 
             return counter_value
         else:
@@ -220,8 +228,11 @@ class PfcPrioUpdater(PfcUpdater):
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[port_oid]]:
                 member_counter = self._get_counter(mibs.get_index_from_str(lag_member), counter_name)
-                if member_counter:
+                if member_counter is not None:
                     counter_value += member_counter
+                else:
+                    mibs.logger.warning("SyncD 'COUNTERS_DB' missing attribute '{}' for lag member '{}'.".format(counter_name, lag_member))
+                    return None
 
             return counter_value
         else:
@@ -252,8 +263,11 @@ class PfcPrioUpdater(PfcUpdater):
             counter_value = 0
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[port_oid]]:
                 member_counter = self._get_counter(mibs.get_index_from_str(lag_member), counter_name)
-                if member_counter:
+                if member_counter is not None:
                     counter_value += member_counter
+                else:
+                    mibs.logger.warning("SyncD 'COUNTERS_DB' missing attribute '{}' for lag member '{}'.".format(counter_name, lag_member))
+                    return None
 
             return counter_value
         else:
