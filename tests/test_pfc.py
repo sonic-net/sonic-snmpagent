@@ -161,7 +161,7 @@ class TestPfcPortCounters(TestCase):
         self.assertEqual(str(value0.name), str(oid))
         self.assertEqual(value0.data, 1)
 
-    def test_getPduIndicationLagMemberCounterNotAvailable(self):
+    def test_getPduPrioIndicationLagMemberCounterNotAvailable(self):
         oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 813, 1, 2, 1, 3, 1004, 0))
         get_pdu = GetPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
@@ -177,7 +177,7 @@ class TestPfcPortCounters(TestCase):
         self.assertEqual(value0.data, None)
 
 
-    def test_getPduRequestsLagMemberCounterNotAvailable(self):
+    def test_getPduPrioRequestsLagMemberCounterNotAvailable(self):
         oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 813, 1, 2, 1, 2, 1004, 0))
         get_pdu = GetPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
@@ -193,7 +193,7 @@ class TestPfcPortCounters(TestCase):
         self.assertEqual(value0.data, None)
 
     def test_getPduifIndicationLagMemberCounterNotAvailable(self):
-        oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 813, 1, 1, 1, 1, 1004))
+        oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 813, 1, 1, 1, 2, 1004))
         get_pdu = GetPDU(
             header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
             oids=[oid]
