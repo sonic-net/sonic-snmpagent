@@ -201,7 +201,7 @@ class TestPfcPortCounters(TestCase):
 
         with mock.patch('ax_interface.logger.exception') as mock_logger:
             encoded = get_pdu.encode()
-            response = get_pdu.make_response(self.lut_prio)
+            response = get_pdu.make_response(self.lut_port)
             mock_logger.assert_not_called()
         print(response)
         value0 = response.values[0]
@@ -216,7 +216,7 @@ class TestPfcPortCounters(TestCase):
 
         with mock.patch('ax_interface.logger.exception') as mock_logger:
             encoded = get_pdu.encode()
-            response = get_pdu.make_response(self.lut_prio)
+            response = get_pdu.make_response(self.lut_port)
             mock_logger.assert_not_called()
         print(response)
         value0 = response.values[0]
