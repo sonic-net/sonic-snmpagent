@@ -85,7 +85,6 @@ class TestInterfaceMIBUpdater(TestCase):
                 return updater._get_counter(oid, table_name, mask)
 
         try:
-            import pdb; pdb.set_trace()
             counter = updater.get_counter64((1103,), DbTables64(6))
         except TypeError:
             self.fail("Caught Type error")
