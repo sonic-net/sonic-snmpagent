@@ -12,6 +12,7 @@ modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from sonic_ax_impl.mibs.ietf.rfc2863 import InterfaceMIBUpdater
+from sonic_ax_impl.mibs.ietf.rfc2863 import DbTables64
 
 class TestInterfaceMIBUpdater(TestCase):
 
@@ -66,3 +67,26 @@ class TestInterfaceMIBUpdater(TestCase):
             speed = updater.get_high_speed((1999,))
             print("999 speed: {}".format(speed))
             self.assertTrue(speed == 0)
+
+
+    @mock.patch('sonic_ax_impl.mibs.Namespace.get_sync_d_from_all_namespace', mock_get_sync_d_from_all_namespace)
+    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all', mock_dbs_get_all)
+    @mock.patch('sonic_ax_impl.mibs.lag_entry_table', mock_lag_entry_table)
+    @mock.patch('sonic_ax_impl.mibs.init_mgmt_interface_tables', mock_init_mgmt_interface_tables)
+    def test_InterfaceMIBUpdater_get_counters(self):
+        updater = InterfaceMIBUpdater()
+
+        updater.reinit_data()
+        updater.update_data()
+        def mock_get_counter(oid, table_name, mask):
+            if oid == 121:
+                return None
+            else:
+                return updater._get_counter(oid, table_name, mask)
+
+        try:
+            counter = updater.get_counter64((1103,), DbTables64(6))
+        except TypeError:
+            self.fail("Caught Type error")
+        self.assertTrue(counter == None)
+
