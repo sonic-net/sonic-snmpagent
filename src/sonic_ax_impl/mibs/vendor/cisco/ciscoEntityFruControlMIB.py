@@ -72,8 +72,7 @@ class PowerStatusHandler:
         :return: the presence of particular PSU
         """
         psu_keys = natsorted(self.statedb.keys(self.statedb.STATE_DB, "PSU_INFO|*"))
-        psu_name = psu_keys[psu_index-1].removeprefix("PSU_INFO|")
-        psu_info = self.statedb.get_all(self.statedb.STATE_DB, mibs.psu_info_table(psu_name))
+        psu_info = self.statedb.get_all(self.statedb.STATE_DB, psu_keys[psu_index-1])
         presence, status = get_psu_data(psu_info)
 
         return presence == PSU_PRESENCE_OK
@@ -84,8 +83,7 @@ class PowerStatusHandler:
         :return: the status of particular PSU
         """
         psu_keys = natsorted(self.statedb.keys(self.statedb.STATE_DB, "PSU_INFO|*"))
-        psu_name = psu_keys[psu_index-1].removeprefix("PSU_INFO|")
-        psu_info = self.statedb.get_all(self.statedb.STATE_DB, mibs.psu_info_table(psu_name))
+        psu_info = self.statedb.get_all(self.statedb.STATE_DB, psu_keys[psu_index-1])
         presence, status = get_psu_data(psu_info)
 
         return status == PSU_STATUS_OK
