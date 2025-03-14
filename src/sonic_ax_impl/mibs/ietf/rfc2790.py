@@ -114,7 +114,6 @@ class hrFSTable(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.25.3.8'):
     fsMountpoint = SubtreeMIBEntry('1.2', handler, ValueType.OCTET_STRING, handler.get_fs_mount)
     fsType = SubtreeMIBEntry('1.4', handler, ValueType.OCTET_STRING, handler.get_fs_type)
 
-
 # =======================
 @unique
 class hrStorageInfoDB(str, Enum):
