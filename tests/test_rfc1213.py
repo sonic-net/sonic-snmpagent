@@ -77,7 +77,7 @@ class TestNextHopUpdaterRedisException(TestCase):
 
                 # check warning
                 expected = [
-                    mock.call("MIBUpdater.start() caught an unexpected exception during update_data()")
+                    mock.call("MIBUpdater.start() caught a RuntimeError during update_data(), will reinitialize the connections")
                 ]
                 mocked_exception.assert_has_calls(expected)
 

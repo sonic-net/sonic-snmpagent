@@ -5,11 +5,12 @@ import os
 import shutil
 import sys
 
-import sonic_py_common.util
 from swsscommon import swsscommon
 
 import ax_interface
 import sonic_ax_impl
+
+from .utils.arg_parser import process_options
 from . import mibs
 
 LOG_FORMAT = "snmp-subagent [%(name)s] %(levelname)s: %(message)s"
@@ -70,7 +71,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     # import command line arguments
-    args = sonic_py_common.util.process_options("sonic_ax_impl")
+    args = process_options("sonic_ax_impl")
 
     # configure logging. If debug '-d' is specified, logs to stdout at designated level. syslog/INFO otherwise.
     log_level = log_level_sdk = args.get('log_level')
@@ -110,4 +111,4 @@ if __name__ == "__main__":
 
     from .main import main
 
-    main(update_frequency=args.get('update_frequency'))
+    main(enable_dynamic_frequency=args.get('enable_dynamic_frequency'), update_frequency=args.get('update_frequency'))

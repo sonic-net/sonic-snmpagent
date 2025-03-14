@@ -1,6 +1,12 @@
 import os
 import sys
 import importlib
+import pytest
+
+if sys.version_info.major == 3:
+    from unittest import mock
+else:
+    import mock
 
 # noinspection PyUnresolvedReferences
 import tests.mock_tables.dbconnector
@@ -154,6 +160,126 @@ class TestPfcPortCounters(TestCase):
         self.assertEqual(value0.type_, ValueType.COUNTER_64)
         self.assertEqual(str(value0.name), str(oid))
         self.assertEqual(value0.data, 1)
+
+    def test_getPduPrioIndicationLagMemberCounterNotAvailable(self):
+        oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 813, 1, 2, 1, 3, 1004, 0))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        with mock.patch('ax_interface.logger.exception') as mock_logger:
+            encoded = get_pdu.encode()
+            response = get_pdu.make_response(self.lut_prio)
+            mock_logger.assert_not_called()
+        print(response)
+        value0 = response.values[0]
+        self.assertEqual(value0.data, None)
+
+    def test_getPduPrioIndicationLag(self):
+        oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 813, 1, 2, 1, 3, 1003, 0))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        with mock.patch('ax_interface.logger.exception') as mock_logger:
+            encoded = get_pdu.encode()
+            response = get_pdu.make_response(self.lut_prio)
+            mock_logger.assert_not_called()
+        print(response)
+        value0 = response.values[0]
+        self.assertEqual(value0.data, 1)
+
+    def test_getPduPrioRequestsLagMemberCounterNotAvailable(self):
+        oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 813, 1, 2, 1, 2, 1004, 0))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        with mock.patch('ax_interface.logger.exception') as mock_logger:
+            encoded = get_pdu.encode()
+            response = get_pdu.make_response(self.lut_prio)
+            mock_logger.assert_not_called()
+        print(response)
+        value0 = response.values[0]
+        self.assertEqual(value0.data, None)
+
+    def test_getPduPrioRequestsLag(self):
+        oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 813, 1, 2, 1, 2, 1003, 1))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        with mock.patch('ax_interface.logger.exception') as mock_logger:
+            encoded = get_pdu.encode()
+            response = get_pdu.make_response(self.lut_prio)
+            mock_logger.assert_not_called()
+        print(response)
+        value0 = response.values[0]
+        self.assertEqual(value0.data, 2)
+
+    def test_getPduifIndicationLagMemberCounterNotAvailable(self):
+        oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 813, 1, 1, 1, 2, 1004))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        with mock.patch('ax_interface.logger.exception') as mock_logger:
+            encoded = get_pdu.encode()
+            response = get_pdu.make_response(self.lut_port)
+            mock_logger.assert_not_called()
+        print(response)
+        value0 = response.values[0]
+        self.assertEqual(value0.data, None)
+
+    def test_getPduifIndicationLag(self):
+        oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 813, 1, 1, 1, 2, 1003))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        with mock.patch('ax_interface.logger.exception') as mock_logger:
+            encoded = get_pdu.encode()
+            response = get_pdu.make_response(self.lut_port)
+            mock_logger.assert_not_called()
+        print(response)
+        value0 = response.values[0]
+        self.assertEqual(value0.data, 4)
+
+    def test_getPduifRequestLagMemberCounterNotAvailable(self):
+        oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 813, 1, 1, 1, 1, 1004))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        with mock.patch('ax_interface.logger.exception') as mock_logger:
+            encoded = get_pdu.encode()
+            response = get_pdu.make_response(self.lut_port)
+            mock_logger.assert_not_called()
+        print(response)
+        value0 = response.values[0]
+        self.assertEqual(value0.data, None)
+
+    def test_getPduifRequestLag(self):
+        oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 813, 1, 1, 1, 1, 1003))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        with mock.patch('ax_interface.logger.exception') as mock_logger:
+            encoded = get_pdu.encode()
+            response = get_pdu.make_response(self.lut_port)
+            mock_logger.assert_not_called()
+        print(response)
+        value0 = response.values[0]
+        self.assertEqual(value0.data, 4)
 
     def test_getNextPduindicationForPriority(self):
         oid = ObjectIdentifier(8, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 813, 1, 2, 1, 3, 1, 0))
