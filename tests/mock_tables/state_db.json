@@ -162,13 +162,16 @@
     "Used": "10",
     "Available": "12335"
   },
-"MOUNT_POINTS|/dev3": {
-"Filesystem": "/host3",
-"Type": "nfs",
-"1K-blocks": "1000",
-"Used": "100",
-"Available": "900"
-},
+  "MOUNT_POINTS|/dev3": {
+    "Filesystem": "/host3",
+    "Type": "nfs",
+    "1K-blocks": "1000",
+    "Used": "100",
+    "Available": "900"
+  },
+  "MOUNT_POINTS|LastUpdateTime": {
+    "lastupdate": "2024-09-06 17:28:22.959412"
+  },
   "NEIGH_STATE_TABLE|10.0.0.57": {
     "state" : "6402"
   },

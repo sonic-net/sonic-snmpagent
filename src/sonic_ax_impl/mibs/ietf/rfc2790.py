@@ -38,8 +38,16 @@ class fsHandler:
         if not fs_entries:
             mibs.logger.debug('No mount point found in {}'.format(fs_entries))
             return None
-        fs_entries = sorted(fs_entries)
-        self.fs_entries = fs_entries
+
+        sorted_fs_entries = sorted(fs_entries)
+
+        for entry in fs_entries:
+            fs_info = self.statedb.get_all(self.statedb.STATE_DB, entry)
+            fs_type, fs_mount = get_FS_data(fs_info)
+            if fs_type == "" and fs_mount == "":
+                sorted_fs_entries.remove(entry) 
+
+        self.fs_entries = sorted_fs_entries
 
     def get_next(self, sub_id):
         """
@@ -150,8 +158,16 @@ class hrStorageHandler:
         if not hr_storage_entries:
             mibs.logger.debug('No mount point found in {}'.format(hr_storage_entries))
             return None
-        hr_storage_entries = sorted(hr_storage_entries)
-        self.hr_storage_entries = hr_storage_entries 
+
+        sorted_hr_storage_entries = sorted(hr_storage_entries)
+
+        for entry in hr_storage_entries:
+            hr_info = self.statedb.get_all(self.statedb.STATE_DB, entry)
+            hr_block, hr_used, hr_fs = get_hrStorage_data(hr_info)
+            if hr_block == "" and hr_used == "" and hr_fs == "":
+                sorted_hr_storage_entries.remove(entry)
+
+        self.hr_storage_entries = sorted_hr_storage_entries 
 
     def get_next(self, sub_id):
         """
