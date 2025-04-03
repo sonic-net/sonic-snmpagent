@@ -1,6 +1,7 @@
 from enum import Enum, unique
 from sonic_ax_impl import mibs
 from ax_interface import MIBMeta, ValueType, SubtreeMIBEntry
+from natsort import natsorted
 
 CHASSIS_INFO_KEY_TEMPLATE = 'chassis {}'
 PSU_INFO_KEY_TEMPLATE = 'PSU {}'
@@ -70,8 +71,8 @@ class PowerStatusHandler:
         Get PSU presence
         :return: the presence of particular PSU
         """
-        psu_name = PSU_INFO_KEY_TEMPLATE.format(psu_index)
-        psu_info = self.statedb.get_all(self.statedb.STATE_DB, mibs.psu_info_table(psu_name))
+        psu_keys = natsorted(self.statedb.keys(self.statedb.STATE_DB, "PSU_INFO|*"))
+        psu_info = self.statedb.get_all(self.statedb.STATE_DB, psu_keys[psu_index-1])
         presence, status = get_psu_data(psu_info)
 
         return presence == PSU_PRESENCE_OK
@@ -81,8 +82,8 @@ class PowerStatusHandler:
         Get PSU status
         :return: the status of particular PSU
         """
-        psu_name = PSU_INFO_KEY_TEMPLATE.format(psu_index)
-        psu_info = self.statedb.get_all(self.statedb.STATE_DB, mibs.psu_info_table(psu_name))
+        psu_keys = natsorted(self.statedb.keys(self.statedb.STATE_DB, "PSU_INFO|*"))
+        psu_info = self.statedb.get_all(self.statedb.STATE_DB, psu_keys[psu_index-1])
         presence, status = get_psu_data(psu_info)
 
         return status == PSU_STATUS_OK
