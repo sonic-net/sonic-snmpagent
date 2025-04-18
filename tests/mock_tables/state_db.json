@@ -172,6 +172,30 @@
   "MOUNT_POINTS|LastUpdateTime": {
     "lastupdate": "2024-09-06 17:28:22.959412"
   },
+  "MEMORY_STATS|Physical": {
+    "1K-blocks": "100000",
+    "Used": "1000"
+  },
+  "MEMORY_STATS|Virtual": {
+    "1K-blocks": "100000",
+    "Used": "0"
+  },
+  "MEMORY_STATS|Swap": {
+    "1K-blocks": "0",
+    "Used": "0"
+  },
+  "MEMORY_STATS|Cached": {
+    "1K-blocks": "0",
+    "Used": "0"
+  },
+  "MEMORY_STATS|Shared": {
+    "1K-blocks": "200",
+    "Used": "200"
+  },
+  "MEMORY_STATS|Buffer": {
+    "1K-blocks": "678",
+    "Used": "300"
+  },
   "NEIGH_STATE_TABLE|10.0.0.57": {
     "state" : "6402"
   },

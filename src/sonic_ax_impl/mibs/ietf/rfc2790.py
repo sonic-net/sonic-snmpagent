@@ -47,6 +47,10 @@ class fsHandler:
             if fs_type == "" and fs_mount == "":
                 sorted_fs_entries.remove(entry) 
 
+        physical_memory_entries = self.statedb.keys(self.statedb.STATE_DB, 
+                'MEMORY_STATS' + mibs.TABLE_NAME_SEPARATOR_VBAR + '*')
+
+        sorted_fs_entries += physical_memory_entries
         self.fs_entries = sorted_fs_entries
 
     def get_next(self, sub_id):
@@ -101,6 +105,10 @@ class fsHandler:
         mount_str = fs_name.split('|')[1]
         mibs.logger.debug('fs storage info {} name {} mountpoint {}'.format(oid, fs_name, mount_str))
         ret_str = mount_str.encode('utf-8')
+
+        if fs_name.split('|')[0] == "MEMORY_STATS":
+            ret_str = ""
+
         return ret_str
 
     def get_fs_mount(self, sub_id):
@@ -167,6 +175,10 @@ class hrStorageHandler:
             if hr_block == "" and hr_used == "" and hr_fs == "":
                 sorted_hr_storage_entries.remove(entry)
 
+        physical_memory_entries = self.statedb.keys(self.statedb.STATE_DB, 
+                'MEMORY_STATS' + mibs.TABLE_NAME_SEPARATOR_VBAR + '*')
+
+        sorted_hr_storage_entries += physical_memory_entries
         self.hr_storage_entries = sorted_hr_storage_entries 
 
     def get_next(self, sub_id):
@@ -249,9 +261,12 @@ class hrStorageHandler:
         """
         hrstorage_name = self.hr_storage_entries[oid]
         hrstorage_info = self.statedb.get_all(self.statedb.STATE_DB, hrstorage_name)
-        kblocks, used, filesystem = get_hrStorage_data(hrstorage_info)
-        mibs.logger.debug('hr storage info {} name {} filesystem {}'.format(oid, hrstorage_name, filesystem))
-        return filesystem 
+        kblocks, used, fs_descr = get_hrStorage_data(hrstorage_info)
+        mibs.logger.debug('hr storage info {} name {} filesystem {}'.format(oid, hrstorage_name, fs_descr))
+        if not fs_descr:
+            fs_descr = hrstorage_name.split('|')[1] + " Memory"
+
+        return fs_descr 
 
     def get_hrstorage_descr (self, sub_id):
         """
