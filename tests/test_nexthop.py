@@ -60,6 +60,7 @@ class TestForwardMIB(TestCase):
         n = len(response.values)
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.IP_ADDRESS)
+        self.assertEqual(type(ipaddress.ip_address(value0.data.string)), ipaddress.IPv4Address)
         self.assertEqual(str(value0.data), ipaddress.ip_address("10.0.0.1").packed.decode())
 
     def test_getnextpdu_exactmatch(self):
