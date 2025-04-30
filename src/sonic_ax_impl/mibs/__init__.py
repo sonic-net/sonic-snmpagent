@@ -96,6 +96,12 @@ def psu_info_table(psu_name):
 
     return "PSU_INFO" + TABLE_NAME_SEPARATOR_VBAR + psu_name
 
+def chassis_module_table(module_name):
+    """
+    :param module_name: module name
+    :return chassis module table entry for this module
+    """
+    return "CHASSIS_MODULE_TABLE" + TABLE_NAME_SEPARATOR_VBAR + module_name
 
 def physical_entity_info_table(name):
     """

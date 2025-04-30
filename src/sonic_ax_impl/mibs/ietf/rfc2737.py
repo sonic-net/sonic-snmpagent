@@ -18,6 +18,7 @@ from .physical_entity_sub_oid_generator import get_fan_sub_id
 from .physical_entity_sub_oid_generator import get_fan_drawer_sub_id
 from .physical_entity_sub_oid_generator import get_fan_tachometers_sub_id
 from .physical_entity_sub_oid_generator import get_psu_sub_id
+from .physical_entity_sub_oid_generator import get_fabric_card_sub_id
 from .physical_entity_sub_oid_generator import get_psu_sensor_sub_id
 from .physical_entity_sub_oid_generator import get_transceiver_sub_id
 from .physical_entity_sub_oid_generator import get_transceiver_sensor_sub_id
@@ -928,6 +929,48 @@ class PsuCacheUpdater(PhysicalEntityCacheUpdater):
         self.mib_updater.set_phy_contained_in(psu_current_sub_id, psu_sub_id)
         self.mib_updater.set_phy_fru(psu_current_sub_id, False)
 
+@physical_entity_updater()
+class FabricCardCacheUpdater(PhysicalEntityCacheUpdater):
+    KEY_PATTERN = mibs.chassis_module_table("FABRIC-CARD*")
+
+    def __init__(self, mib_updater):
+        super(FabricCardCacheUpdater, self).__init__(mib_updater)
+
+    def get_key_pattern(self):
+        return FabricCardCacheUpdater.KEY_PATTERN
+
+    def _update_entity_cache(self, fc_name):
+        fc_info = Namespace.dbs_get_all(self.mib_updater.statedb, mibs.STATE_DB,
+                                         mibs.chassis_module_table(fc_name))
+
+        if not fc_info:
+            return
+
+        model, presence, serial, replaceable = get_db_data(fc_info, FanDrawerInfoDB)
+        if presence.lower() != 'true':
+            self._remove_entity_cache(fc_name)
+            return
+
+        fc_relation_info = self.get_physical_relation_info(fc_name)
+        if fc_relation_info:
+            fc_position, fc_parent_name = get_db_data(fc_relation_info, PhysicalRelationInfoDB)
+            fc_position = int(fc_position)
+            fc_sub_id = get_fabric_card_sub_id(fc_position)
+            self._add_entity_related_oid(fc_name, fc_sub_id)
+            self.mib_updater.update_name_to_oid_map(fc_name, fc_sub_id)
+
+            # add fabric card to available OID list
+            self.mib_updater.add_sub_id(fc_sub_id)
+            self.mib_updater.set_phy_class(fc_sub_id, PhysicalClass.MODULE)
+            self.mib_updater.set_phy_descr(fc_sub_id, fc_name)
+            self.mib_updater.set_phy_name(fc_sub_id, fc_name)
+            self.mib_updater.set_phy_parent_relative_pos(fc_sub_id, fc_position)
+            self.mib_updater.set_phy_contained_in(fc_sub_id, fc_parent_name)
+            if model and not is_null_str(model):
+                self.mib_updater.set_phy_model_name(fc_sub_id, model)
+            if serial and not is_null_str(serial):
+                self.mib_updater.set_phy_serial_num(fc_sub_id, serial)
+            self.mib_updater.set_phy_fru(fc_sub_id, replaceable)
 
 @physical_entity_updater()
 class FanDrawerCacheUpdater(PhysicalEntityCacheUpdater):
