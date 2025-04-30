@@ -14,6 +14,7 @@ from .physical_entity_sub_oid_generator import CHASSIS_SUB_ID
 from .physical_entity_sub_oid_generator import get_transceiver_sensor_sub_id
 from .physical_entity_sub_oid_generator import get_fan_drawer_sub_id
 from .physical_entity_sub_oid_generator import get_fan_sub_id
+from .physical_entity_sub_oid_generator import get_fabric_card_sub_id
 from .physical_entity_sub_oid_generator import get_fan_tachometers_sub_id
 from .physical_entity_sub_oid_generator import get_psu_sub_id
 from .physical_entity_sub_oid_generator import get_psu_sensor_sub_id
@@ -23,6 +24,7 @@ from .sensor_data import ThermalSensorData, FANSensorData, PSUSensorData, Transc
 NOT_AVAILABLE = 'N/A'
 CHASSIS_NAME_SUB_STRING = 'chassis'
 PSU_NAME_SUB_STRING = 'PSU'
+FABRIC_CARD_NAME_SUB_STRING = 'FABRIC-CARD'
 RJ45_PORT_TYPE = 'RJ45'
 
 def is_null_empty_str(value):
@@ -536,6 +538,8 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
 
                     if PSU_NAME_SUB_STRING in fan_parent_name:
                         fan_parent_sub_id = get_psu_sub_id(fan_parent_position)
+                    elif FABRIC_CARD_NAME_SUB_STRING in fan_parent_name:
+                        fan_parent_sub_id = get_fabric_card_sub_id(fan_parent_position)
                     else:
                         fan_parent_sub_id = get_fan_drawer_sub_id(fan_parent_position)
                 else:
