@@ -4,7 +4,7 @@ from unittest import TestCase
 
 import pytest
 from sonic_ax_impl.mibs.ietf.rfc2737 import PhysicalTableMIBUpdater
-
+from sonic_ax_impl.mibs.ietf.rfc2737 import FabricCardCacheUpdater
 
 if sys.version_info.major == 3:
     from unittest import mock
@@ -30,6 +30,7 @@ class TestPhysicalTableMIBUpdater(TestCase):
               mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.FanDrawerCacheUpdater.reinit_data') as mocked_fan_drawer_reinit_data,
               mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.FanCacheUpdater.reinit_data') as mocked_fan_cache_reinit_data,
               mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.ThermalCacheUpdater.reinit_data') as mocked_thermal_reinit_data,
+              mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.FabricCardCacheUpdater.reinit_data') as mocked_fc_reinit_data,
               mock.patch('sonic_ax_impl.mibs.cancel_redis_pubsub') as mocked_cancel_redis_pubsub):
             updater.reinit_data()
             mocked_xcvr_reinit_data.assert_called()
@@ -37,6 +38,7 @@ class TestPhysicalTableMIBUpdater(TestCase):
             mocked_fan_drawer_reinit_data.assert_called()
             mocked_fan_cache_reinit_data.assert_called()
             mocked_thermal_reinit_data.assert_called()
+            mocked_fc_reinit_data.assert_called()
             mocked_cancel_redis_pubsub.assert_called()
         assert str(excinfo.value) == "[Exception('mocked error')]"
 
@@ -53,6 +55,7 @@ class TestPhysicalTableMIBUpdater(TestCase):
               mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.PsuCacheUpdater.reinit_data') as mocked_psu_reinit_data,
               mock.patch(
                   'sonic_ax_impl.mibs.ietf.rfc2737.FanDrawerCacheUpdater.reinit_data') as mocked_fan_drawer_reinit_data,
+              mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.FabricCardCacheUpdater.reinit_data') as mocked_fc_reinit_data,
               mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.FanCacheUpdater.reinit_data') as mocked_fan_cache_reinit_data,
               mock.patch('sonic_ax_impl.mibs.cancel_redis_pubsub') as mocked_cancel_redis_pubsub):
             updater.reinit_data()
@@ -60,6 +63,7 @@ class TestPhysicalTableMIBUpdater(TestCase):
             mocked_psu_reinit_data.assert_called()
             mocked_fan_drawer_reinit_data.assert_called()
             mocked_fan_cache_reinit_data.assert_called()
+            mocked_fc_reinit_data.assert_called()
             mocked_thermal_reinit_data.assert_called()
             mocked_cancel_redis_pubsub.assert_called()
         assert str(excinfo.value) == "[Exception('mocked error')]"
@@ -79,6 +83,7 @@ class TestPhysicalTableMIBUpdater(TestCase):
                   'sonic_ax_impl.mibs.ietf.rfc2737.FanDrawerCacheUpdater.reinit_data') as mocked_fan_drawer_reinit_data,
               mock.patch(
                   'sonic_ax_impl.mibs.ietf.rfc2737.FanCacheUpdater.reinit_data') as mocked_fan_cache_reinit_data,
+              mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.FabricCardCacheUpdater.reinit_data') as mocked_fc_reinit_data,
               mock.patch('sonic_ax_impl.mibs.cancel_redis_pubsub') as mocked_cancel_redis_pubsub):
             updater.reinit_data()
             mocked_thermal_reinit_data.assert_called()
@@ -86,6 +91,7 @@ class TestPhysicalTableMIBUpdater(TestCase):
             mocked_psu_reinit_data.assert_called()
             mocked_fan_drawer_reinit_data.assert_called()
             mocked_fan_cache_reinit_data.assert_called()
+            mocked_fc_reinit_data.assert_called()
             mocked_cancel_redis_pubsub.assert_called()
         assert str(excinfo.value) == "[RuntimeError('mocked runtime error')]"
 
@@ -102,6 +108,7 @@ class TestPhysicalTableMIBUpdater(TestCase):
               mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.FanDrawerCacheUpdater.reinit_data') as mocked_fan_drawer_reinit_data,
               mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.FanCacheUpdater.reinit_data') as mocked_fan_cache_reinit_data,
               mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.ThermalCacheUpdater.reinit_data') as mocked_thermal_reinit_data,
+              mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.FabricCardCacheUpdater.reinit_data') as mocked_fc_reinit_data,
               mock.patch('sonic_ax_impl.mibs.cancel_redis_pubsub') as mocked_cancel_redis_pubsub):
             updater.reinit_data()
             mocked_xcvr_reinit_data.assert_called()
@@ -109,6 +116,7 @@ class TestPhysicalTableMIBUpdater(TestCase):
             mocked_fan_drawer_reinit_data.assert_called()
             mocked_fan_cache_reinit_data.assert_called()
             mocked_thermal_reinit_data.assert_called()
+            mocked_fc_reinit_data.assert_called()
             mocked_cancel_redis_pubsub.assert_called()
         assert str(exc_info.value) == "[RuntimeError('mocked runtime error')]"
 
@@ -127,12 +135,29 @@ class TestPhysicalTableMIBUpdater(TestCase):
               mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.PsuCacheUpdater.reinit_data') as mocked_psu_reinit_data,
               mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.FanDrawerCacheUpdater.reinit_data') as mocked_fan_drawer_reinit_data,
               mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.FanCacheUpdater.reinit_data') as mocked_fan_cache_reinit_data,
+              mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.FabricCardCacheUpdater.reinit_data') as mocked_fc_reinit_data,
               mock.patch('sonic_ax_impl.mibs.cancel_redis_pubsub') as mocked_cancel_redis_pubsub):
             updater.reinit_data()
             mocked_xcvr_reinit_data.assert_called()
             mocked_psu_reinit_data.assert_called()
             mocked_fan_drawer_reinit_data.assert_called()
             mocked_fan_cache_reinit_data.assert_called()
+            mocked_fc_reinit_data.assert_called()
             mocked_thermal_reinit_data.assert_called()
             mocked_cancel_redis_pubsub.assert_called()
         assert str(exc_info.value) == "[RuntimeError('mocked runtime error'), Exception('mocked error')]"
+
+
+class TestFabricCardCacheUpdater(TestCase):
+    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all', mock.MagicMock(return_value=({"model": "Model000", "presence": "True", "serial" : "Serial000", "is_replaceable" : "False"})))
+    @mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.PhysicalEntityCacheUpdater.get_physical_relation_info', mock.MagicMock(return_value=({"position_in_parent" : 0, "parent_name" : "Chassis 1"})))
+    def test_update_entity_cache(self):
+        updater = PhysicalTableMIBUpdater()
+        fc_updater = FabricCardCacheUpdater(updater)
+        update_entity_cache = getattr(fc_updater, '_update_entity_cache')
+
+        with (mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.PhysicalTableMIBUpdater.set_phy_contained_in') as mocked_phy_contained_in,
+              mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.PhysicalTableMIBUpdater.set_phy_fru') as mocked_set_phy_fru):
+            update_entity_cache('N/A')
+            mocked_phy_contained_in.assert_called()
+            mocked_set_phy_fru.assert_called()

@@ -37,3 +37,14 @@ class TestPhysicalSensorTableMIBUpdater(TestCase):
 
             # check re-init
             connect_all_dbs.assert_called()
+
+    @mock.patch('swsscommon.swsscommon.SonicV2Connector.get_all', mock.MagicMock(return_value=({"position_in_parent" : '0', "parent_name" : "FABRIC-CARD0"})))
+    def test_PhysicalSensorTableMIBUpdater_fabriccard_update_fan_sensor_data(self):
+        updater = PhysicalSensorTableMIBUpdater()
+        updater.fan_sensor = ['FABRIC_MODULE|FAN']
+
+        with mock.patch('sonic_ax_impl.mibs.ietf.rfc3433.get_fabric_card_sub_id') as mocked_get_fc_subid:
+            updater.update_fan_sensor_data()
+
+            # check fabric card subid function is called to get parent's sub id
+            mocked_get_fc_subid.assert_called()
