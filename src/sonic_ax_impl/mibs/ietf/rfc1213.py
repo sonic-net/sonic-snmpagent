@@ -413,7 +413,11 @@ class InterfacesUpdater(MIBUpdater):
             # mibs.get_index_from_str('Ethernet112') = 113 (because Ethernet N = N + 1)
             # self._get_counter retrieves the counter per oid and table.
             for lag_member in self.lag_name_if_name_map[self.oid_lag_name_map[oid]]:
-                counter_value += self._get_counter(mibs.get_index_from_str(lag_member), table_name)
+                member_counter = self._get_counter(mibs.get_index_from_str(lag_member), table_name)
+                if member_counter is not None:
+                    counter_value += member_counter
+                else:
+                    return None
             # Check if we need to add a router interface count.
             # Example:
             # self.lag_sai_map = {'PortChannel01': '2000000000006', 'PortChannel02': '2000000000005', 'PortChannel03': '2000000000004'}
