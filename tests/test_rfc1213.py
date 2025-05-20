@@ -3,6 +3,8 @@ import os
 import sonic_ax_impl
 import sys
 from unittest import TestCase
+import pytest
+from unittest.mock import MagicMock             
 
 if sys.version_info.major == 3:
     from unittest import mock
@@ -12,8 +14,7 @@ else:
 modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
-from sonic_ax_impl.mibs.ietf.rfc1213 import NextHopUpdater, InterfacesUpdater, DbTables
-
+from sonic_ax_impl.mibs.ietf.rfc1213 import NextHopUpdater, InterfacesUpdater, DbTables, NetmaskUpdater
 
 class TestNextHopUpdater(TestCase):
 
@@ -163,3 +164,39 @@ class TestNextHopUpdaterRedisException(TestCase):
         except TypeError:
             self.fail("Caught Type error")
         self.assertTrue(counter == None)
+
+# Mock return values
+mock_interfaces = [
+    "INTF_TABLE:Ethernet0:192.168.1.1/24",
+    "INTF_TABLE:Ethernet1:10.0.0.1/16"
+]
+
+@pytest.fixture
+def updater():
+    return NetmaskUpdater()
+
+@mock.patch("sonic_ax_impl.mibs.Namespace.init_namespace_dbs", return_value="mock_db_conn")
+@mock.patch("sonic_ax_impl.mibs.Namespace.dbs_keys", return_value=mock_interfaces)
+@mock.patch("sonic_ax_impl.mibs.get_index_from_str", return_value=2)
+@mock.patch("ax_interface.util.ip2byte_tuple", side_effect=lambda ip: tuple(map(int, ip.split('.'))))
+@mock.patch("os.popen")
+def test_update_data(mock_popen, mock_ip2byte_tuple, mock_get_index, mock_dbs_keys, mock_init_db, updater):
+    # Simulate shell command outputs
+    mock_popen.side_effect = [
+        MagicMock(read=lambda: "172.17.0.1/16\n"),  # mgmt_ip
+        MagicMock(read=lambda: "172.18.0.1/24\n"),  # docker_inet
+        MagicMock(read=lambda: "172.18.0.255\n")    # docker_brd
+    ]
+
+    updater.update_data()
+
+    # Validate internal structures
+    assert len(updater.netmask_list) > 0
+    for subid in updater.netmask_list:
+        assert updater.get_netmask_oid(subid) is not None
+
+def test_get_next(updater):
+    updater.netmask_list = [(4, 192, 168, 1, 1), (4, 192, 168, 1, 2)]
+    assert updater.get_next((4, 192, 168, 1, 1)) == (4, 192, 168, 1, 2)
+    assert updater.get_next((4, 192, 168, 1, 2)) is None
+
