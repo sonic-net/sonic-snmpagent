@@ -246,6 +246,8 @@ class InterfaceMIBUpdater(MIBUpdater):
             # TODO: mgmt counters not available through SNMP right now
             # COUNTERS DB does not have support for generic linux (mgmt) interface counters
             return 0
+        if oid in self.vlan_oid_name_map:
+            return 0
 
         if oid in self.oid_lag_name_map:
             counter_value = 0
