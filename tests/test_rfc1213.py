@@ -3,6 +3,9 @@ import os
 import sonic_ax_impl
 import sys
 from unittest import TestCase
+import pytest
+from unittest.mock import MagicMock
+from sonic_ax_impl.mibs.ietf.rfc1213 import NetmaskUpdater
 
 if sys.version_info.major == 3:
     from unittest import mock
@@ -12,7 +15,7 @@ else:
 modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(modules_path, 'src'))
 
-from sonic_ax_impl.mibs.ietf.rfc1213 import NextHopUpdater, InterfacesUpdater, DbTables
+from sonic_ax_impl.mibs.ietf.rfc1213 import NextHopUpdater, InterfacesUpdater, DbTables, NetmaskUpdater
 
 
 class TestNextHopUpdater(TestCase):
@@ -163,3 +166,53 @@ class TestNextHopUpdaterRedisException(TestCase):
         except TypeError:
             self.fail("Caught Type error")
         self.assertTrue(counter == None)
+
+class TestNetmaskUpdater(TestCase):
+    @mock.patch("sonic_ax_impl.mibs.Namespace.init_namespace_dbs", return_value="mock_db_conn")
+    @mock.patch('sonic_ax_impl.mibs.get_index_from_str', return_value=1)
+    @mock.patch('ax_interface.util.ip2byte_tuple', side_effect=lambda ip: tuple(map(int, ip.split('.'))))
+    def test_update_netmask_info(self, mock_ip2byte, mock_get_index, mock_namespace):
+        updater = NetmaskUpdater()
+        updater._update_netmask_info("eth0", "192.168.1.1/24")
+
+        expected_key = (4, 192, 168, 1, 1)
+        self.assertIn(expected_key, updater.netmask_map)
+        self.assertIn(expected_key, updater.netmask_list)
+
+    @mock.patch("ax_interface.util.ip2byte_tuple", side_effect=lambda ip: tuple(map(int, ip.split('.'))))
+    @mock.patch("sonic_ax_impl.mibs.get_index_from_str", return_value=2)
+    @mock.patch("sonic_ax_impl.mibs.ietf.rfc1213.Namespace.init_namespace_dbs", return_value="mock_db_conn")
+    @mock.patch("sonic_ax_impl.mibs.ietf.rfc1213.os.popen")
+    def test_update_data(self, mock_popen, mock_init_ns, mock_get_index, mock_ip2byte):
+        mock_dbs_keys = mock.MagicMock(return_value=[
+            "INTF_TABLE:Eth0:192.168.1.1/24",
+            "INTF_TABLE:Docker0:10.0.0.1/8"
+        ])
+        mock_init_ns.return_value = "mock_db_conn"
+
+        with mock.patch("sonic_ax_impl.mibs.ietf.rfc1213.Namespace.dbs_keys", mock_dbs_keys):
+            def popen_side_effect(cmd):
+                mock_proc = MagicMock()
+                if "Eth0" in cmd and "print $2" in cmd:
+                    mock_proc.read.return_value = "192.168.1.1/24\n"
+                elif "docker0" in cmd and "print $2" in cmd:
+                    mock_proc.read.return_value = "172.17.0.1/24\n"
+                elif "docker0" in cmd and "print $4" in cmd:
+                    mock_proc.read.return_value = "172.17.255.255/24\n"
+                else:
+                    mock_proc.read.return_value = "192.168.1.1/24\n"
+                return mock_proc
+
+            mock_popen.side_effect = popen_side_effect
+
+            updater = NetmaskUpdater()
+            updater.update_data()
+
+            self.assertGreater(len(updater.netmask_map), 0)
+            self.assertTrue(all(isinstance(k, tuple) for k in updater.netmask_list))
+
+    def test_get_next(self):
+        updater = NetmaskUpdater()
+        updater.netmask_list = [(4, 10, 0, 0, 1), (4, 192, 168, 1, 1), (4, 192, 168, 1, 2)]
+        self.assertEqual(updater.get_next((4, 10, 0, 0, 1)), (4, 192, 168, 1, 1))
+        self.assertEqual(updater.get_next((4, 192, 168, 1, 2)), None)
