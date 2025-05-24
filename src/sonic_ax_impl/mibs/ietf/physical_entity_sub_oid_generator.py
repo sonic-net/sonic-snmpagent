@@ -16,6 +16,7 @@ Module Type describes below:
 2 - Management
 5 - Fan Drawer
 6 - PSU
+7 - Fabric Card
 Device Type describes below:
 01 - PS
 02 - Fan
@@ -53,6 +54,7 @@ MODULE_INDEX_MULTIPLE = 1000000
 MODULE_TYPE_MGMT = 2 * MODULE_TYPE_MULTIPLE
 MODULE_TYPE_FAN_DRAWER = 5 * MODULE_TYPE_MULTIPLE
 MODULE_TYPE_PSU = 6 * MODULE_TYPE_MULTIPLE
+MODULE_TYPE_FABRIC_CARD = 7 * MODULE_TYPE_MULTIPLE
 MODULE_TYPE_PORT = 1000000000
 
 # Device Type Definition
@@ -119,6 +121,15 @@ def get_fan_drawer_sub_id(position):
     :return: sub OID of the fan drawer
     """
     return (MODULE_TYPE_FAN_DRAWER + position * MODULE_INDEX_MULTIPLE, )
+
+def get_fabric_card_sub_id(position):
+    """
+    Returns sub OID for fabric card. Sub OID is calculated as follows:
+    sub OID = MODULE_TYPE_FABRIC_CARD + position * MODULE_INDEX_MULTIPLE
+    :param position: fabric card position
+    :return: sub OID of the fabric card
+    """
+    return (MODULE_TYPE_FABRIC_CARD + position * MODULE_INDEX_MULTIPLE, )
 
 def get_fan_tachometers_sub_id(parent_id):
     """

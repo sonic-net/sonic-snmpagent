@@ -18,6 +18,7 @@ from .physical_entity_sub_oid_generator import get_fan_sub_id
 from .physical_entity_sub_oid_generator import get_fan_drawer_sub_id
 from .physical_entity_sub_oid_generator import get_fan_tachometers_sub_id
 from .physical_entity_sub_oid_generator import get_psu_sub_id
+from .physical_entity_sub_oid_generator import get_fabric_card_sub_id
 from .physical_entity_sub_oid_generator import get_psu_sensor_sub_id
 from .physical_entity_sub_oid_generator import get_transceiver_sub_id
 from .physical_entity_sub_oid_generator import get_transceiver_sensor_sub_id
@@ -338,8 +339,33 @@ class PhysicalTableMIBUpdater(MIBUpdater):
         self.physical_name_map[chassis_mgmt_sub_id] = name
         self.physical_fru_map[chassis_mgmt_sub_id] = self.NOT_REPLACEABLE
 
+        exceptions = []
+        has_runtime_err = False
+        # Catch exception in the iteration
+        # This makes sure if any exception is raised in the mid of loop
+        # every updater's reinit_data function will be always called
+        # So that the redis subscriptions always get chance to be cleaned,
+        # Otherwise if the exception never recover,
+        # the redis subscription keeps increasing but never got consumed,
+        # this causes redis memory leak.
         for updater in self.physical_entity_updaters:
-            updater.reinit_data()
+            try:
+                updater.reinit_data()
+            except BaseException as e:
+                if isinstance(e, RuntimeError):
+                    has_runtime_err = True
+                # Log traceback so that we know the original error details
+                mibs.logger.error(e, exc_info=True)
+                exceptions.append(e)
+
+        # The RuntimeError will be considered as Redis connection error
+        # And will trigger re-init connection, if the exceptions contain any RuntimeError
+        # We raise runtime error
+        if exceptions:
+            if has_runtime_err:
+                raise RuntimeError(exceptions)
+            else:
+                raise Exception(exceptions)
 
     def update_data(self):
         # This code is not executed in unit test, since mockredis
@@ -668,6 +694,21 @@ class PhysicalEntityCacheUpdater(object):
         self.entity_to_oid_map = {}
 
     def reinit_data(self):
+
+        # Redis subscriptions are established and consumed in update_data,
+        # but if there's stable exception during update logic,
+        # the reinit_data will be called, but the update_data is never called.
+        # The message is sent into subscription queue, but never got consumed,
+        # this causes Redis memory leaking.
+        # Hence clear the message in the subscription and cancel the subscription during reinit_data
+        for db_index in list(self.pub_sub_dict):
+            pubsub = self.pub_sub_dict[db_index]
+            db_conn = self.mib_updater.statedb[db_index]
+            # clear message in the subscription and cancel the subscription
+            mibs.clear_pubsub_msg(pubsub)
+            mibs.cancel_redis_pubsub(pubsub, db_conn, db_conn.STATE_DB, self.get_key_pattern())
+            del self.pub_sub_dict[db_index]
+
         self.entity_to_oid_map.clear()
         # retrieve the initial list of entity in db
         key_info = Namespace.dbs_keys(self.mib_updater.statedb, mibs.STATE_DB, self.get_key_pattern())
@@ -908,6 +949,48 @@ class PsuCacheUpdater(PhysicalEntityCacheUpdater):
         self.mib_updater.set_phy_contained_in(psu_current_sub_id, psu_sub_id)
         self.mib_updater.set_phy_fru(psu_current_sub_id, False)
 
+@physical_entity_updater()
+class FabricCardCacheUpdater(PhysicalEntityCacheUpdater):
+    KEY_PATTERN = mibs.chassis_module_table("FABRIC-CARD*")
+
+    def __init__(self, mib_updater):
+        super(FabricCardCacheUpdater, self).__init__(mib_updater)
+
+    def get_key_pattern(self):
+        return FabricCardCacheUpdater.KEY_PATTERN
+
+    def _update_entity_cache(self, fc_name):
+        fc_info = Namespace.dbs_get_all(self.mib_updater.statedb, mibs.STATE_DB,
+                                         mibs.chassis_module_table(fc_name))
+
+        if not fc_info:
+            return
+
+        model, presence, serial, replaceable = get_db_data(fc_info, FanDrawerInfoDB)
+        if presence.lower() != 'true':
+            self._remove_entity_cache(fc_name)
+            return
+
+        fc_relation_info = self.get_physical_relation_info(fc_name)
+        if fc_relation_info:
+            fc_position, fc_parent_name = get_db_data(fc_relation_info, PhysicalRelationInfoDB)
+            fc_position = int(fc_position)
+            fc_sub_id = get_fabric_card_sub_id(fc_position)
+            self._add_entity_related_oid(fc_name, fc_sub_id)
+            self.mib_updater.update_name_to_oid_map(fc_name, fc_sub_id)
+
+            # add fabric card to available OID list
+            self.mib_updater.add_sub_id(fc_sub_id)
+            self.mib_updater.set_phy_class(fc_sub_id, PhysicalClass.MODULE)
+            self.mib_updater.set_phy_descr(fc_sub_id, fc_name)
+            self.mib_updater.set_phy_name(fc_sub_id, fc_name)
+            self.mib_updater.set_phy_parent_relative_pos(fc_sub_id, fc_position)
+            self.mib_updater.set_phy_contained_in(fc_sub_id, fc_parent_name)
+            if model and not is_null_str(model):
+                self.mib_updater.set_phy_model_name(fc_sub_id, model)
+            if serial and not is_null_str(serial):
+                self.mib_updater.set_phy_serial_num(fc_sub_id, serial)
+            self.mib_updater.set_phy_fru(fc_sub_id, replaceable)
 
 @physical_entity_updater()
 class FanDrawerCacheUpdater(PhysicalEntityCacheUpdater):

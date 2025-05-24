@@ -33,15 +33,15 @@ HOST_NAMESPACE_DB_IDX = 0
 RIF_COUNTERS_AGGR_MAP = {
     "SAI_PORT_STAT_IF_IN_OCTETS": "SAI_ROUTER_INTERFACE_STAT_IN_OCTETS",
     "SAI_PORT_STAT_IF_IN_UCAST_PKTS": "SAI_ROUTER_INTERFACE_STAT_IN_PACKETS",
-    "SAI_PORT_STAT_IF_IN_ERRORS": "SAI_ROUTER_INTERFACE_STAT_IN_ERROR_PACKETS",
+    "SAI_PORT_STAT_IF_IN_DISCARDS": "SAI_ROUTER_INTERFACE_STAT_IN_ERROR_PACKETS",
     "SAI_PORT_STAT_IF_OUT_OCTETS": "SAI_ROUTER_INTERFACE_STAT_OUT_OCTETS",
     "SAI_PORT_STAT_IF_OUT_UCAST_PKTS": "SAI_ROUTER_INTERFACE_STAT_OUT_PACKETS",
-    "SAI_PORT_STAT_IF_OUT_ERRORS": "SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS"
+    "SAI_PORT_STAT_IF_OUT_DISCARDS": "SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS"
 }
 
 RIF_DROPS_AGGR_MAP = {
-    "SAI_PORT_STAT_IF_IN_ERRORS": "SAI_ROUTER_INTERFACE_STAT_IN_ERROR_PACKETS",
-    "SAI_PORT_STAT_IF_OUT_ERRORS": "SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS"
+    "SAI_PORT_STAT_IF_IN_DISCARDS": "SAI_ROUTER_INTERFACE_STAT_IN_ERROR_PACKETS",
+    "SAI_PORT_STAT_IF_OUT_DISCARDS": "SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS"
 }
 
 redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
@@ -96,6 +96,12 @@ def psu_info_table(psu_name):
 
     return "PSU_INFO" + TABLE_NAME_SEPARATOR_VBAR + psu_name
 
+def chassis_module_table(module_name):
+    """
+    :param module_name: module name
+    :return chassis module table entry for this module
+    """
+    return "CHASSIS_MODULE_TABLE" + TABLE_NAME_SEPARATOR_VBAR + module_name
 
 def physical_entity_info_table(name):
     """
@@ -245,7 +251,7 @@ def init_db():
     :return: db_conn
     """
     Namespace.init_sonic_db_config()
-    
+
     # SyncD database connector. THIS MUST BE INITIALIZED ON A PER-THREAD BASIS.
     # Redis PubSub objects (such as those within swsscommon) are NOT thread-safe.
     db_conn = SonicV2Connector(**redis_kwargs)
@@ -510,6 +516,21 @@ def get_redis_pubsub(db_conn, db_name, pattern):
     return pubsub
 
 
+def cancel_redis_pubsub(pubsub, db_conn, db_name, pattern):
+    db = db_conn.get_dbid(db_name)
+    logger.debug(f"Cancel subscription {db} {pattern}")
+    pubsub.punsubscribe("__keyspace@{}__:{}".format(db, pattern))
+    return pubsub
+
+
+def clear_pubsub_msg(pubsub):
+    while True:
+        msg = pubsub.get_message()
+        logger.debug("Clearing pubsub {}, get and drop message {}".format(pubsub, msg))
+        if not msg:
+            break
+
+
 class RedisOidTreeUpdater(MIBUpdater):
     def __init__(self, prefix_str):
         super().__init__()
@@ -589,7 +610,7 @@ class Namespace:
         db_conn = []
         Namespace.init_sonic_db_config()
         host_namespace_idx = 0
-        for idx, namespace in enumerate(SonicDBConfig.get_ns_list()): 
+        for idx, namespace in enumerate(SonicDBConfig.get_ns_list()):
             if namespace == multi_asic.DEFAULT_NAMESPACE:
                 host_namespace_idx = idx
             db = SonicV2Connector(use_unix_socket_path=True, namespace=namespace)

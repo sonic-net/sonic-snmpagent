@@ -136,3 +136,4 @@ fabric.properties
 
 gh-release.patch
 tests/test_cpuUtilizationHandler.py
+tests/test-results.xml
