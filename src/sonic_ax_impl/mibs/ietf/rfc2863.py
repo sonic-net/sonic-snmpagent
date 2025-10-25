@@ -326,6 +326,7 @@ class InterfaceMIBUpdater(MIBUpdater):
                 entry = self._get_if_entry(mibs.get_index_from_str(lag_member))
                 if entry:
                     speed += int(entry.get("speed", 0))
+            return speed
 
         if oid in self.mgmt_oid_name_map:
             entry = self._get_if_entry_state_db(oid)
