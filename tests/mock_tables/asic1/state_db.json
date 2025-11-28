@@ -39,5 +39,16 @@
   },
   "BUFFER_MAX_PARAM_TABLE|Ethernet32": {
     "max_queues": "16"
+  },
+  "MGMT_PORT_TABLE:Ethernet8": {
+    "description": "snowflake",
+    "alias": "etp5",
+    "role": "Ext",
+    "speed": 100000
+  },
+  "MGMT_PORT_TABLE:Ethernet12": {
+    "speed": 1000,
+    "role": "Ext",
+    "alias": "etp6"
   }
 }

@@ -279,3 +279,77 @@ class TestGetNextPDU(TestCase):
         self.assertEqual(value0.type_, ValueType.COUNTER_64)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(12, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 6, 5))))
         self.assertEqual(value0.data, 654321)
+
+    def test_mgmt_iface_ifMIB(self):
+        """
+            Test that mgmt port is present in the ifMIB OID path of the MIB
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 10000))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.OCTET_STRING)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 18, 10001))))
+        self.assertEqual(str(value0.data), "snowflake")
+
+    def test_mgmt_iface_speed_eth2(self):
+        """
+        Test that mgmt port speed is 1000
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 10001))
+        get_pdu = GetPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.GAUGE_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 10001))))
+        self.assertEqual(value0.data, 2000)
+
+    def test_mgmt_iface_speed_getnext_eth0(self):
+        """
+        Test that mgmt port speed is 1000
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 10000))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.GAUGE_32)
+        self.assertEqual(str(value0.name), str(ObjectIdentifier(11, 0, 1, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 10001))))
+        self.assertEqual(value0.data, 2000)
+
+    def test_mgmt_iface_speed_getnext_eth1(self):
+        """
+        Test that mgmt port speed is 1000
+        """
+        oid = ObjectIdentifier(11, 0, 0, 0, (1, 3, 6, 1, 2, 1, 31, 1, 1, 1, 15, 10001))
+        get_pdu = GetNextPDU(
+            header=PDUHeader(1, PduTypes.GET, 16, 0, 42, 0, 0, 0),
+            oids=[oid]
+        )
+
+        encoded = get_pdu.encode()
+        response = get_pdu.make_response(self.lut)
+        print(response)
+
+        value0 = response.values[0]
+        self.assertEqual(value0.type_, ValueType.END_OF_MIB_VIEW)

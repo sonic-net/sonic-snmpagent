@@ -201,6 +201,24 @@ class InterfaceMIBUpdater(MIBUpdater):
 
         return result
     
+    def _get_if_entry_state_db(self, oid):
+        """
+        :param oid: The 1-based sub-identifier query.
+        :return: the DB entry for the respective sub_id.
+        """
+        if not oid:
+            return
+
+        if_table = ""
+        db = mibs.STATE_DB
+        if oid in self.mgmt_oid_name_map:
+            mgmt_if_name = self.mgmt_oid_name_map[oid]
+            if_table = mibs.mgmt_if_entry_table_state_db(mgmt_if_name)
+        else:
+            return None
+
+        return Namespace.dbs_get_all(self.db_conn, db, if_table, blocking=False)
+
     def interface_alias(self, sub_id):
         """
         ifAlias specific - this is not the "Alias map".
@@ -310,11 +328,15 @@ class InterfaceMIBUpdater(MIBUpdater):
                     speed += int(entry.get("speed", 0))
             return speed
 
-        entry = self._get_if_entry(oid)
+        if oid in self.mgmt_oid_name_map:
+            entry = self._get_if_entry_state_db(oid)
+        else:
+            entry = self._get_if_entry(oid)
+
         if not entry:
             return
 
-        return int(entry.get("speed", 40000))
+        return int(entry.get("speed", 40000)) 
 
 
 class InterfaceMIBObjects(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.31.1'):
