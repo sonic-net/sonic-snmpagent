@@ -64,7 +64,10 @@ class PowerStatusHandler:
         chassis_info = self.statedb.get_all(self.statedb.STATE_DB, mibs.chassis_info_table(chassis_name))
         num_psus = get_chassis_data(chassis_info)
 
-        return int(num_psus[0])
+        try:
+            return int(num_psus[0])
+        except (TypeError, ValueError):
+            return 0
 
     def _get_psu_presence(self, psu_index):
         """
