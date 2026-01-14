@@ -130,7 +130,11 @@ class ArpUpdater(MIBUpdater):
 class NextHopUpdater(MIBUpdater):
     def __init__(self):
         super().__init__()
-        self.db_conn = Namespace.init_namespace_dbs()
+
+        # self.db_conn = Namespace.init_namespace_dbs()
+        # FIXME: [ISU2023080229051] Use swsscommon Table obj instead of DbInterface obj
+        self.appl_db = Namespace.init_appl_db()
+
         self.nexthop_map = {}
         self.route_list = []
 
@@ -145,27 +149,49 @@ class NextHopUpdater(MIBUpdater):
         self.nexthop_map = {}
         self.route_list = []
 
-        route_entries = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "ROUTE_TABLE:*")
+        # route_entries = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "ROUTE_TABLE:*")
+        # FIXME: [ISU2023080229051] Use swsscommon Table obj instead of DbInterface obj
+        app_route_table = Namespace.db_keys_app_route_table(self.appl_db, "ROUTE_TABLE")
+        if app_route_table is None:
+            mibs.logger.warning("Cannot get 'ROUTE_TABLE' in appl_db")
+            return
+
+        route_entries = app_route_table.getKeys()
+
         if not route_entries:
             return
 
         for route_entry in route_entries:
             routestr = route_entry
-            ipnstr = routestr[len("ROUTE_TABLE:"):]
+            # ipnstr = routestr[len("ROUTE_TABLE:"):]
+            # FIXME: [ISU2023080229051] Use swsscommon Table obj instead of DbInterface obj
+            if "ROUTE_TABLE" in routestr:
+                ipnstr = routestr[len("ROUTE_TABLE:"):]
+            else:
+                ipnstr = routestr
+            # mibs.logger.info("ROUTE_TABLE ipnstr: {}".format(ipnstr))
+
             if ipnstr == "0.0.0.0/0":
                 ipn = ipaddress.ip_network(ipnstr)
-                ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, routestr, blocking=False)
-                if ent:
-                    nexthops = ent.get("nexthop", None)
-                    if nexthops is None:
-                        mibs.logger.warning("Route has no nexthop: {} {}".format(routestr, str(ent)))
-                        continue
-                    for nh in nexthops.split(','):
-                        # TODO: if ipn contains IP range, create more sub_id here
-                        sub_id = ip2byte_tuple(ipn.network_address)
-                        self.route_list.append(sub_id)
-                        self.nexthop_map[sub_id] = ipaddress.ip_address(nh).packed
-                        break # Just need the first nexthop
+                # ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, routestr, blocking=False)
+                # if ent:
+                #     nexthops = ent.get("nexthop", None)
+                (status, fvp) = app_route_table.get(route_entry)
+                route_table_dict = dict(fvp)
+                if "nexthop" in route_table_dict:
+                    nexthops = route_table_dict["nexthop"]
+                if "ifname" in route_table_dict:
+                    ifnames = route_table_dict["ifname"]
+
+                if nexthops is None:
+                    mibs.logger.warning("Route has no nexthop: {} {}".format(routestr, str(ent)))
+                    continue
+                for nh in nexthops.split(','):
+                    # TODO: if ipn contains IP range, create more sub_id here
+                    sub_id = ip2byte_tuple(ipn.network_address)
+                    self.route_list.append(sub_id)
+                    self.nexthop_map[sub_id] = ipaddress.ip_address(nh).packed
+                    break # Just need the first nexthop
 
         self.route_list.sort()
 
