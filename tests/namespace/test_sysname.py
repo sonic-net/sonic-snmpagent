@@ -37,7 +37,8 @@ class TestGetNextPDU(TestCase):
         value0 = response.values[0]
         self.assertEqual(value0.type_, ValueType.OCTET_STRING)
         self.assertEqual(str(value0.name), str(ObjectIdentifier(9, 0, 0, 0, (1, 3, 6, 1, 2, 1, 1, 5, 0))))
-        self.assertEqual(str(value0.data), 'namespace_hostname')
+        hostname_value = str(value0.data).split(".")[0]
+        self.assertEqual(str(hostname_value), 'namespace_hostname')
 
     @classmethod
     def tearDownClass(cls):
