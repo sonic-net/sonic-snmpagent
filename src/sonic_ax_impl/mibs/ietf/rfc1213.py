@@ -3,6 +3,7 @@ import re
 import ipaddress
 import python_arptable
 import socket
+import subprocess
 from enum import unique, Enum
 from bisect import bisect_right
 
