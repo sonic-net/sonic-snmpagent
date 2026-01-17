@@ -194,10 +194,19 @@ class NetmaskUpdater(MIBUpdater):
         if_index = mibs.get_index_from_str(dev)
         if if_index is None: return
 
-        netip = ipaddress.ip_network(ip, False)
+        try:
+           netip = ipaddress.ip_network(ip, False)
+        except (ValueError, ipaddress.AddressValueError):
+           return
+
         netip = str(netip)
 
-        netmask = ip.split('/')[1]
+        if '/' in ip:
+          netmask = ip.split('/')[1]
+        else:
+         mibs.logger.warning("IP '%s' missing prefix length for dev '%s'", ip, dev)
+         return
+
         netmask = int(netmask)
         ip = ip.split('/')[0]
         netip = netip.split('/')[0]
@@ -206,7 +215,7 @@ class NetmaskUpdater(MIBUpdater):
         iptuple = ip2byte_tuple(ip)
         subid = (4,) + iptuple
 
-        # Create map beteen subid and OID
+        # Create map between subid and OID
         oid_tuple = (1, 3, 6, 1, 2, 1, 4, 32, 1, 5)
         self.netmask_map[subid] = oid_tuple + (if_index,) + (1, 4)  + netiptuple + (netmask,)
         self.netmask_list.append(subid)
@@ -217,33 +226,47 @@ class NetmaskUpdater(MIBUpdater):
 
         interfaces = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "INTF_TABLE:*")
         for interface in interfaces:
-            ethTablePrefix = re.search(r"INTF_TABLE\:[A-Z][a-z0-9]+\:[0-9./]+", interface)
-            if ethTablePrefix is None:
+            eth_table_prefix = re.search(
+                r"INTF_TABLE:([A-Za-z][A-Za-z0-9]+):([0-9./]+)",
+                interface
+            )
+            if eth_table_prefix is None:
                 continue
-            else:
-                dev = ethTablePrefix.group().split(':')[1]
-                ip = ethTablePrefix.group().split(':')[2]
 
-            if ip.find(".") != -1:
+            dev = eth_table_prefix.group().split(':')[1]
+            ip = eth_table_prefix.group().split(':')[2]
+
+            if "." in ip:
                 self._update_netmask_info(dev, ip)
 
-        process = os.popen('ip addr show eth0 | grep "\<inet\>" | awk \'{ print $2 }\' | awk -F "/" \'{ print $1 }\'')
-        mgmt_ip = process.read().strip()
-        if (len(mgmt_ip) != 0):
+        result = subprocess.run(
+            ["ip", "addr", "show", "eth0"],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+
+        match = re.search(r"inet (\d+\.\d+\.\d+\.\d+)", result.stdout)
+        mgmt_ip = match.group(1) if match else ""
+        if mgmt_ip:
             self._update_netmask_info("eth0", mgmt_ip)
-        process.close()
 
-        process = os.popen('ip addr show docker0 | grep "\<inet\>" | awk \'{ print $2 }\' | awk -F "/" \'{ print $1 }\'')
-        docker_inet = process.read().strip()
-        if (len(docker_inet) != 0):
+        result = subprocess.run(
+            ["ip", "addr", "show", "docker0"],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+
+        match = re.search(r"inet (\d+\.\d+\.\d+\.\d+)", result.stdout)
+        docker_inet = match.group(1) if match else ""
+        if docker_inet:
             self._update_netmask_info("docker0", docker_inet)
-        process.close()
 
-        process = os.popen('ip addr show docker0 | grep "\<inet\>" | awk \'{ print $4 }\' | awk -F "/" \'{ print $1 }\'')
-        docker_brd = process.read().strip()
-        if (len(docker_brd) != 0):
+        match = re.search(r"brd (\d+\.\d+\.\d+\.\d+)", result.stdout)
+        docker_brd = match.group(1) if match else ""
+        if docker_brd:
             self._update_netmask_info("docker0", docker_brd)
-        process.close()
 
         self.netmask_list.sort()
 

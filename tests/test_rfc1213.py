@@ -3,9 +3,7 @@ import os
 import sonic_ax_impl
 import sys
 from unittest import TestCase
-import pytest
 from unittest.mock import MagicMock
-from sonic_ax_impl.mibs.ietf.rfc1213 import NetmaskUpdater
 
 if sys.version_info.major == 3:
     from unittest import mock
@@ -216,3 +214,27 @@ class TestNetmaskUpdater(TestCase):
         updater.netmask_list = [(4, 10, 0, 0, 1), (4, 192, 168, 1, 1), (4, 192, 168, 1, 2)]
         self.assertEqual(updater.get_next((4, 10, 0, 0, 1)), (4, 192, 168, 1, 1))
         self.assertEqual(updater.get_next((4, 192, 168, 1, 2)), None)
+
+    @mock.patch('sonic_ax_impl.mibs.get_index_from_str', return_value=1)
+    @mock.patch('ax_interface.util.ip2byte_tuple', side_effect=lambda ip: tuple(map(int, ip.split('.'))))
+    def test_update_netmask_info_invalid_ip(self, mock_ip2byte, mock_get_index):
+        updater = NetmaskUpdater()
+
+        # IP missing prefix length
+        updater._update_netmask_info("eth0", "192.168.1.1")
+        self.assertEqual(len(updater.netmask_map), 0)
+        self.assertEqual(len(updater.netmask_list), 0)
+
+        # Malformed IP
+        updater._update_netmask_info("eth0", "300.168.1.1/24")
+        self.assertEqual(len(updater.netmask_map), 0)
+        self.assertEqual(len(updater.netmask_list), 0)
+
+    @mock.patch("sonic_ax_impl.mibs.ietf.rfc1213.os.popen", side_effect=OSError("popen failed"))
+    def test_update_data_popen_fail(self, mock_popen):
+        updater = NetmaskUpdater()
+        # Should handle popen failure gracefully without exception
+        updater.update_data()
+        self.assertEqual(len(updater.netmask_map), 0)
+        self.assertEqual(len(updater.netmask_list), 0)
+
