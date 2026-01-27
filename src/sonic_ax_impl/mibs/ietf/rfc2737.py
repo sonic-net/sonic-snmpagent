@@ -842,9 +842,14 @@ class XcvrCacheUpdater(PhysicalEntityCacheUpdater):
         ifalias = self.if_alias_map.get(interface, "")
         ifindex = port_util.get_index_from_str(interface)
 
-        # get transceiver sensors from transceiver dom entry in STATE DB
+        # Try to get transceiver sensors from new TRANSCEIVER_DOM_TEMPERATURE table first
         transceiver_dom_entry = Namespace.dbs_get_all(self.mib_updater.statedb, mibs.STATE_DB,
-                                                      mibs.transceiver_dom_table(interface))
+                                                      mibs.transceiver_dom_temperature_table(interface))
+
+        # Fall back to legacy TRANSCEIVER_DOM_SENSOR table if new table is not available
+        if not transceiver_dom_entry:
+            transceiver_dom_entry = Namespace.dbs_get_all(self.mib_updater.statedb, mibs.STATE_DB,
+                                                          mibs.transceiver_dom_table(interface))
 
         if not transceiver_dom_entry:
             return

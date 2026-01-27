@@ -5,6 +5,7 @@ from unittest import TestCase
 import pytest
 from sonic_ax_impl.mibs.ietf.rfc2737 import PhysicalTableMIBUpdater
 from sonic_ax_impl.mibs.ietf.rfc2737 import FabricCardCacheUpdater
+from sonic_ax_impl.mibs.ietf.rfc2737 import XcvrCacheUpdater
 
 if sys.version_info.major == 3:
     from unittest import mock
@@ -161,3 +162,127 @@ class TestFabricCardCacheUpdater(TestCase):
             update_entity_cache('N/A')
             mocked_phy_contained_in.assert_called()
             mocked_set_phy_fru.assert_called()
+
+
+class TestXcvrCacheUpdater(TestCase):
+    """Test cases for XcvrCacheUpdater transceiver sensor cache with TRANSCEIVER_DOM_TEMPERATURE fallback"""
+
+    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all')
+    @mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.port_util.get_index_from_str')
+    def test_update_transceiver_sensor_cache_with_new_temperature_table(self, mock_get_index, mock_dbs_get_all):
+        """
+        Given: TRANSCEIVER_DOM_TEMPERATURE table exists in STATE_DB with sensor data
+        When: _update_transceiver_sensor_cache is called
+        Then: Should use TRANSCEIVER_DOM_TEMPERATURE table and skip fallback to TRANSCEIVER_DOM_SENSOR
+        """
+        mock_get_index.return_value = 1
+
+        # Mock the dbs_get_all to return TRANSCEIVER_DOM_TEMPERATURE data
+        mock_dbs_get_all.return_value = {
+            'temperature': '35.0',
+            'warn_threshold': '50.0',
+            'crit_threshold': '60.0'
+        }
+
+        updater = PhysicalTableMIBUpdater()
+        xcvr_updater = XcvrCacheUpdater(updater)
+        xcvr_updater.if_alias_map = {'Ethernet0': 'etp1'}
+
+        # Mock the mib_updater methods to track calls
+        with (mock.patch.object(updater, 'add_sub_id'),
+              mock.patch.object(updater, 'set_phy_class'),
+              mock.patch.object(updater, 'set_phy_descr'),
+              mock.patch.object(updater, 'set_phy_name'),
+              mock.patch.object(updater, 'set_phy_contained_in'),
+              mock.patch.object(updater, 'set_phy_parent_relative_pos'),
+              mock.patch.object(updater, 'set_phy_fru'),
+              mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.TransceiverSensorData.create_sensor_data') as mock_create_sensor_data,
+              mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.TransceiverSensorData.sort_sensor_data') as mock_sort_sensor_data):
+
+            # Create mock sensor data
+            mock_sensor = mock.MagicMock()
+            mock_sensor.get_oid_offset.return_value = 1
+            mock_sensor.get_name.return_value = "Temperature"
+            mock_sensor.get_lane_number.return_value = 0
+            mock_create_sensor_data.return_value = [mock_sensor]
+            mock_sort_sensor_data.return_value = [mock_sensor]
+
+            xcvr_updater._update_transceiver_sensor_cache('Ethernet0', 1)
+
+            # Verify that dbs_get_all was called with TRANSCEIVER_DOM_TEMPERATURE table first
+            calls = mock_dbs_get_all.call_args_list
+            # First call should be for TRANSCEIVER_DOM_TEMPERATURE
+            assert any('TRANSCEIVER_DOM_TEMPERATURE' in str(call) for call in calls), \
+                "Expected call with TRANSCEIVER_DOM_TEMPERATURE table"
+
+    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all')
+    @mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.port_util.get_index_from_str')
+    def test_update_transceiver_sensor_cache_fallback_to_legacy(self, mock_get_index, mock_dbs_get_all):
+        """
+        Given: TRANSCEIVER_DOM_TEMPERATURE table is empty but TRANSCEIVER_DOM_SENSOR table exists
+        When: _update_transceiver_sensor_cache is called
+        Then: Should fallback to TRANSCEIVER_DOM_SENSOR table for sensor data
+        """
+        mock_get_index.return_value = 1
+
+        # Mock the dbs_get_all to return empty for TRANSCEIVER_DOM_TEMPERATURE,
+        # then return data for TRANSCEIVER_DOM_SENSOR
+        mock_dbs_get_all.side_effect = [
+            {},  # Empty response for TRANSCEIVER_DOM_TEMPERATURE
+            {    # Data for TRANSCEIVER_DOM_SENSOR
+                'temperature': '35.0',
+                'warn_threshold': '50.0',
+                'crit_threshold': '60.0'
+            }
+        ]
+
+        updater = PhysicalTableMIBUpdater()
+        xcvr_updater = XcvrCacheUpdater(updater)
+        xcvr_updater.if_alias_map = {'Ethernet0': 'etp1'}
+
+        with (mock.patch.object(updater, 'add_sub_id'),
+              mock.patch.object(updater, 'set_phy_class'),
+              mock.patch.object(updater, 'set_phy_descr'),
+              mock.patch.object(updater, 'set_phy_name'),
+              mock.patch.object(updater, 'set_phy_contained_in'),
+              mock.patch.object(updater, 'set_phy_parent_relative_pos'),
+              mock.patch.object(updater, 'set_phy_fru'),
+              mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.TransceiverSensorData.create_sensor_data') as mock_create_sensor_data,
+              mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.TransceiverSensorData.sort_sensor_data') as mock_sort_sensor_data):
+
+            mock_sensor = mock.MagicMock()
+            mock_sensor.get_oid_offset.return_value = 1
+            mock_sensor.get_name.return_value = "Temperature"
+            mock_sensor.get_lane_number.return_value = 0
+            mock_create_sensor_data.return_value = [mock_sensor]
+            mock_sort_sensor_data.return_value = [mock_sensor]
+
+            xcvr_updater._update_transceiver_sensor_cache('Ethernet0', 1)
+
+            # Verify that dbs_get_all was called twice (once for each table)
+            assert mock_dbs_get_all.call_count == 2, \
+                "Expected dbs_get_all to be called twice (once for TRANSCEIVER_DOM_TEMPERATURE, once for TRANSCEIVER_DOM_SENSOR)"
+
+    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all')
+    @mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.port_util.get_index_from_str')
+    def test_update_transceiver_sensor_cache_no_data(self, mock_get_index, mock_dbs_get_all):
+        """
+        Given: Neither TRANSCEIVER_DOM_TEMPERATURE nor TRANSCEIVER_DOM_SENSOR tables have data
+        When: _update_transceiver_sensor_cache is called
+        Then: Should return early without setting any sensor data
+        """
+        mock_get_index.return_value = 1
+        mock_dbs_get_all.return_value = {}  # Empty for both tables
+
+        updater = PhysicalTableMIBUpdater()
+        xcvr_updater = XcvrCacheUpdater(updater)
+        xcvr_updater.if_alias_map = {'Ethernet0': 'etp1'}
+
+        with (mock.patch.object(updater, 'add_sub_id') as mock_add_sub_id,
+              mock.patch.object(updater, 'set_phy_class') as mock_set_phy_class):
+
+            xcvr_updater._update_transceiver_sensor_cache('Ethernet0', 1)
+
+            # Verify that no sensor OIDs were added since no data was available
+            mock_add_sub_id.assert_not_called()
+            mock_set_phy_class.assert_not_called()

@@ -345,6 +345,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
     Updater for sensors.
     """
 
+    TRANSCEIVER_DOM_TEMPERATURE_KEY_PATTERN = mibs.transceiver_dom_temperature_table("*")
     TRANSCEIVER_DOM_KEY_PATTERN = mibs.transceiver_dom_table("*")
     PSU_SENSOR_KEY_PATTERN = mibs.psu_info_table("*")
     FAN_SENSOR_KEY_PATTERN = mibs.fan_info_table("*")
@@ -378,7 +379,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
 
     def reinit_connection(self):
         Namespace.connect_all_dbs(self.statedb, mibs.STATE_DB)
-    
+
     def reinit_data(self):
         """
         Reinit data, clear cache
@@ -390,7 +391,11 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         self.ent_phy_sensor_precision_map = {}
         self.ent_phy_sensor_value_map = {}
         self.ent_phy_sensor_oper_state_map = {}
-        transceiver_dom_encoded = Namespace.dbs_keys(self.statedb, mibs.STATE_DB, self.TRANSCEIVER_DOM_KEY_PATTERN)
+
+        # Try new TRANSCEIVER_DOM_TEMPERATURE table first, fallback to legacy TRANSCEIVER_DOM_SENSOR
+        transceiver_dom_encoded = Namespace.dbs_keys(self.statedb, mibs.STATE_DB, self.TRANSCEIVER_DOM_TEMPERATURE_KEY_PATTERN)
+        if not transceiver_dom_encoded:
+            transceiver_dom_encoded = Namespace.dbs_keys(self.statedb, mibs.STATE_DB, self.TRANSCEIVER_DOM_KEY_PATTERN)
         if transceiver_dom_encoded:
             self.transceiver_dom = [entry for entry in transceiver_dom_encoded]
 
@@ -441,8 +446,12 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
             if  transceiver_info_entry_data['type'] == RJ45_PORT_TYPE:
                 continue
 
-            # get transceiver sensors from transceiver dom entry in STATE DB
-            transceiver_dom_entry_data = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB, transceiver_dom_entry)
+            # Try new TRANSCEIVER_DOM_TEMPERATURE table first, fallback to legacy TRANSCEIVER_DOM_SENSOR
+            transceiver_dom_entry_data = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB,
+                                                               mibs.transceiver_dom_temperature_table(interface))
+            if not transceiver_dom_entry_data:
+                transceiver_dom_entry_data = Namespace.dbs_get_all(self.statedb, mibs.STATE_DB,
+                                                                   mibs.transceiver_dom_table(interface))
             if not transceiver_dom_entry_data:
                 continue
 
@@ -631,7 +640,7 @@ class PhysicalSensorTableMIBUpdater(MIBUpdater):
         self.sub_ids = []
 
         self.update_xcvr_dom_data()
-        
+
         self.update_psu_sensor_data()
 
         self.update_fan_sensor_data()
