@@ -11,7 +11,7 @@ import sys
 import ax_interface
 from sonic_ax_impl.mibs import ieee802_1ab, Namespace
 from . import logger
-from .mibs.ietf import rfc1213, rfc2737, rfc2863, rfc3433, rfc4292, rfc4363
+from .mibs.ietf import rfc1213, rfc2737, rfc2863, rfc3433, rfc4292, rfc4363, link_up_down_trap, psu_fan_trap
 from .mibs.vendor import dell, cisco
 
 # Background task update frequency ( in seconds )
@@ -46,6 +46,7 @@ class SonicMIB(
     If SONiC was to create custom MIBEntries, they may be specified here.
     """
 
+trap_handlers = [link_up_down_trap.linkUpDownTrap, psu_fan_trap.psuFanTrap]
 
 def shutdown(signame, agent):
     # FIXME: If the Agent dies, the background tasks will zombie.
@@ -61,7 +62,7 @@ def main(enable_dynamic_frequency=False, update_frequency=None):
         Namespace.init_sonic_db_config()
 
         # initialize handler and set update frequency (or use the default)
-        agent = ax_interface.Agent(SonicMIB, enable_dynamic_frequency, update_frequency or DEFAULT_UPDATE_FREQUENCY, event_loop)
+        agent = ax_interface.Agent(SonicMIB, enable_dynamic_frequency, update_frequency or DEFAULT_UPDATE_FREQUENCY, event_loop, trap_handlers)
 
         # add "shutdown" signal handlers
         # https://docs.python.org/3.5/library/asyncio-eventloop.html#set-signal-handlers-for-sigint-and-sigterm
@@ -74,7 +75,8 @@ def main(enable_dynamic_frequency=False, update_frequency=None):
         event_loop.run_until_complete(agent.run_in_event_loop())
 
     except Exception:
-        logger.exception("Uncaught exception in {}".format(__name__))
+        if shutdown_task is None:
+            logger.exception("Uncaught exception in {}".format(__name__))
         sys.exit(1)
     finally:
         if shutdown_task is not None:
