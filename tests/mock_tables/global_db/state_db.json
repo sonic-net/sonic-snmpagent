@@ -65,10 +65,22 @@
     "tx4power": -5.4
   },
   "MGMT_PORT_TABLE|eth0": {
-    "oper_status": "down"
+    "description": "snowflake",
+    "oper_status": "down",
+    "speed": 1000
   },
   "MGMT_PORT_TABLE|eth1": {
-    "oper_status": "up"
+    "description": "snowflake",
+    "admin_status": "up",
+    "oper_status": "up",
+    "alias": "mgmt1",
+    "speed": 1000
+  },
+  "MGMT_PORT_TABLE|eth2": {
+    "description": "NotExistInStateDB",
+    "admin_status": "up",
+    "alias": "mgmt2",
+    "speed": 1000
   },
   "PHYSICAL_ENTITY_INFO|PSU 1": {
     "position_in_parent": 1,
