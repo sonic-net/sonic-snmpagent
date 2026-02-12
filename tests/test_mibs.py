@@ -74,3 +74,15 @@ class TestGetNextPDU(TestCase):
         self.assertTrue(vlan_name_map == {})
         self.assertTrue(vlan_oid_sai_map == {})
         self.assertTrue(vlan_oid_name_map == {})
+
+    def test_transceiver_dom_temperature_table(self):
+        """Test the new transceiver_dom_temperature_table function"""
+        port_name = "Ethernet0"
+        result = mibs.transceiver_dom_temperature_table(port_name)
+        self.assertEqual(result, "TRANSCEIVER_DOM_TEMPERATURE|Ethernet0")
+
+    def test_transceiver_dom_table(self):
+        """Test the legacy transceiver_dom_table function"""
+        port_name = "Ethernet0"
+        result = mibs.transceiver_dom_table(port_name)
+        self.assertEqual(result, "TRANSCEIVER_DOM_SENSOR|Ethernet0")

@@ -144,6 +144,14 @@ def transceiver_dom_table(port_name):
 
     return "TRANSCEIVER_DOM_SENSOR" + TABLE_NAME_SEPARATOR_VBAR + port_name
 
+def transceiver_dom_temperature_table(port_name):
+    """
+    :param port_name: port name
+    :return: transceiver dom temperature entry for this port
+    """
+
+    return "TRANSCEIVER_DOM_TEMPERATURE" + TABLE_NAME_SEPARATOR_VBAR + port_name
+
 def thermal_info_table(thermal_name):
     """
     :param: port_name: port name
