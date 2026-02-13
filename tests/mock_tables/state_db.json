@@ -122,10 +122,32 @@
     "position_in_parent": "1",
     "parent_name": "PSU 2"
   },
+  "FAN_DRAWER_INFO|drawer0": {
+    "model": "DRAWERMODEL",
+    "serial": "DRAWERSERIAL0",
+    "presence": "True",
+    "status": "True",
+    "is_replaceable": "True"
+  },
   "FAN_DRAWER_INFO|drawer1": {
     "model": "DRAWERMODEL",
     "serial": "DRAWERSERIAL",
     "presence": "True",
+    "status": "False",
+    "is_replaceable": "True"
+  },
+  "FAN_DRAWER_INFO|drawer2": {
+    "model": "DRAWERMODEL",
+    "serial": "DRAWERSERIAL2",
+    "presence": "True",
+    "status": "True",
+    "is_replaceable": "True"
+  },
+  "FAN_DRAWER_INFO|drawer3": {
+    "model": "DRAWERMODEL",
+    "serial": "DRAWERSERIAL3",
+    "presence": "False",
+    "status": "False",
     "is_replaceable": "True"
   },
   "FAN_INFO|fan1": {
