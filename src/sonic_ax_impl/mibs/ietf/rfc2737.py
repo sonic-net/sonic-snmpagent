@@ -888,6 +888,8 @@ class PsuCacheUpdater(PhysicalEntityCacheUpdater):
             return
 
         psu_relation_info = self.get_physical_relation_info(psu_name)
+        if not psu_relation_info:
+            return
         psu_position, psu_parent_name = get_db_data(psu_relation_info, PhysicalRelationInfoDB)
         psu_position = int(psu_position)
         psu_sub_id = get_psu_sub_id(psu_position)
@@ -1039,6 +1041,8 @@ class FanCacheUpdater(PhysicalEntityCacheUpdater):
             return
 
         fan_relation_info = self.get_physical_relation_info(fan_name)
+        if not fan_relation_info:
+            return
         fan_position, fan_parent_name = get_db_data(fan_relation_info, PhysicalRelationInfoDB)
         fan_position = int(fan_position)
         if fan_parent_name in self.mib_updater.physical_name_to_oid_map:
