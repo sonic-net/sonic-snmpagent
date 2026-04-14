@@ -1,4 +1,3 @@
-import os
 import sys
 import importlib
 
@@ -10,8 +9,6 @@ else:
 # noinspection PyUnresolvedReferences
 import tests.mock_tables.dbconnector
 
-modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from unittest import TestCase
 
