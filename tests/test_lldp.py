@@ -1,4 +1,5 @@
 
+import importlib
 # noinspection PyUnresolvedReferences
 import tests.mock_tables.dbconnector
 from tests.mock_tables.dbconnector import SonicV2Connector
@@ -23,6 +24,9 @@ def mock_poll_lldp_notif(mock_lldp_polled_entries):
 class TestLLDPMIB(TestCase):
     @classmethod
     def setUpClass(cls):
+        tests.mock_tables.dbconnector.load_database_config()
+        importlib.reload(ieee802_1ab)
+
         class LLDPMIB(ieee802_1ab.LLDPLocalSystemData,
                       ieee802_1ab.LLDPLocalSystemData.LLDPLocPortTable,
                       ieee802_1ab.LLDPLocalSystemData.LLDPLocManAddrTable,
