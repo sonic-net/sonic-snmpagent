@@ -16,6 +16,7 @@ from sonic_ax_impl.mibs.vendor.cisco import ciscoSwitchQosMIB
 class TestQueueCounters(TestCase):
     @classmethod
     def setUpClass(cls):
+        tests.mock_tables.dbconnector.load_database_config()
         cls.lut = MIBTable(ciscoSwitchQosMIB.csqIfQosGroupStatsTable)
         # Update MIBs
         for updater in cls.lut.updater_instances:
