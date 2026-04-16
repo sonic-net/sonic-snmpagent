@@ -1,5 +1,4 @@
 import asyncio
-import os
 import sonic_ax_impl
 import sys
 from unittest import TestCase
@@ -9,8 +8,6 @@ if sys.version_info.major == 3:
 else:
     import mock
 
-modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from sonic_ax_impl.mibs.ietf.rfc1213 import NextHopUpdater, InterfacesUpdater, DbTables
 
