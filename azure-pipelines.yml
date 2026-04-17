@@ -64,6 +64,9 @@ stages:
 
         sudo python3 -m pip install dist/asyncsnmp-2.1.0-py3-none-any.whl
         python3 -m pytest
+        # Generate diff-cover report for [Auto] pipeline extension
+        sudo python3 -m pip install diff-cover
+        diff-cover coverage.xml --compare-branch=origin/master --html-report .diff-coverage/diff-cover.html --json-report .diff-coverage/diff-cover.json --markdown-report .diff-coverage/diff-cover.md --diff-range-notation='..' || true
       displayName: "Unit tests"
 
     - script: |
