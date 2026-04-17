@@ -65,6 +65,12 @@ stages:
         sudo python3 -m pip install dist/asyncsnmp-2.1.0-py3-none-any.whl
         # Ensure /usr/bin/python exists for [Auto] pipeline coverage extension
         sudo ln -sf /usr/bin/python3 /usr/bin/python
+        # Install diff-cover for [Auto] pipeline coverage extension
+        if [ -n "$(which pip3)" ]; then
+          sudo pip3 install diff-cover > /dev/null
+        else
+          sudo pip install diff-cover > /dev/null
+        fi
         python3 -m pytest
       displayName: "Unit tests"
 
