@@ -63,6 +63,8 @@ stages:
         set -ex
 
         sudo python3 -m pip install dist/asyncsnmp-2.1.0-py3-none-any.whl
+        # Ensure /usr/bin/python exists for [Auto] pipeline coverage extension
+        sudo ln -sf /usr/bin/python3 /usr/bin/python
         python3 -m pytest
       displayName: "Unit tests"
 
