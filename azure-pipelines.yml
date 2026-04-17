@@ -63,24 +63,10 @@ stages:
         set -ex
 
         sudo python3 -m pip install dist/asyncsnmp-2.1.0-py3-none-any.whl
-        # Ensure /usr/bin/python exists for [Auto] pipeline coverage extension
-        sudo ln -sf /usr/bin/python3 /usr/bin/python
         # Install diff-cover for [Auto] pipeline coverage extension
-        sudo apt-get install -y diff-cover
+        sudo pip3 install --break-system-packages --ignore-installed diff-cover
         python3 -m pytest
       displayName: "Unit tests"
-
-    - script: |
-        set -ex
-        echo "=== Debug: diff-cover availability ==="
-        which diff-cover || echo "diff-cover not in PATH"
-        python3 -m pip show diff-cover || echo "diff-cover not installed"
-        ls -la /usr/bin/python* || true
-        ls -la .diff-coverage/ || echo ".diff-coverage/ does not exist"
-        ls -la coverage.xml || echo "coverage.xml does not exist"
-        python3 --version
-        python --version || echo "python not found"
-      displayName: "Debug: check diff-cover and coverage state"
 
     - script: |
         set -ex
