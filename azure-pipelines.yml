@@ -63,7 +63,8 @@ stages:
 
         sudo python3 -m pip install dist/asyncsnmp-2.1.0-py3-none-any.whl
         # Install diff-cover for [Auto] pipeline coverage extension
-        sudo pip3 install --break-system-packages --ignore-installed diff-cover
+        sudo apt-get update
+        sudo apt-get install -y diff-cover
         python3 -m pytest
       displayName: "Unit tests"
 
