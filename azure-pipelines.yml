@@ -26,7 +26,7 @@ stages:
       vmImage: ubuntu-latest
 
     container:
-      image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm:latest
+      image: sonicdev-microsoft.azurecr.io:443/sonic-slave-trixie:latest
 
     steps:
     - checkout: self
@@ -49,11 +49,11 @@ stages:
 
     - script: |
         set -ex
-        sudo apt-get -y purge libhiredis-dev libnl-3-dev libnl-route-3-dev
-        sudo apt-get -y install libhiredis0.14
-        sudo dpkg -i ../target/debs/bookworm/{libyang_1.0.73_amd64.deb,libswsscommon_1.0.0_amd64.deb,python3-swsscommon_1.0.0_amd64.deb,libnl-3-200_*.deb,libnl-genl-3-200_*.deb,libnl-nf-3-200_*.deb,libnl-route-3-200_*.deb}
-        sudo python3 -m pip install ../target/python-wheels/bookworm/swsssdk*-py3-*.whl
-        sudo python3 -m pip install ../target/python-wheels/bookworm/sonic_py_common-1.0-py3-none-any.whl
+        sudo apt-get -y purge libnl-3-dev libnl-route-3-dev
+        sudo dpkg -i ../target/debs/trixie/libpcre3_*.deb
+        sudo dpkg -i ../target/debs/trixie/{libyang_1.0.73_amd64.deb,libswsscommon_1.0.0_amd64.deb,python3-swsscommon_1.0.0_amd64.deb,libnl-3-200_*.deb,libnl-genl-3-200_*.deb,libnl-nf-3-200_*.deb,libnl-route-3-200_*.deb}
+        sudo python3 -m pip install ../target/python-wheels/trixie/swsssdk*-py3-*.whl
+        sudo python3 -m pip install ../target/python-wheels/trixie/sonic_py_common-1.0-py3-none-any.whl
         python3 setup.py bdist_wheel
         cp dist/*.whl $(Build.ArtifactStagingDirectory)/
       displayName: "Build"
@@ -62,14 +62,18 @@ stages:
         set -ex
 
         sudo python3 -m pip install dist/asyncsnmp-2.1.0-py3-none-any.whl
-        python3 setup.py test
+        # Install diff-cover for [Auto] pipeline coverage extension
+        sudo apt-get update
+        sudo apt-get install -y diff-cover
+        python3 -m pytest
       displayName: "Unit tests"
 
     - script: |
         set -ex
         # Install .NET CORE
-        curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-        sudo apt-add-repository https://packages.microsoft.com/debian/12/prod
+        sudo mkdir -p /etc/apt/keyrings
+        curl -sSL https://packages.microsoft.com/keys/microsoft-2025.asc | sudo gpg --dearmor -o /etc/apt/keyrings/microsoft-prod.gpg
+        echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/13/prod trixie main" | sudo tee /etc/apt/sources.list.d/microsoft-prod.list
         sudo apt-get update
         sudo apt-get install -y dotnet-sdk-8.0
       displayName: "Install .NET CORE"

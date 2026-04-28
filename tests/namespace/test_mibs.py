@@ -1,13 +1,9 @@
-import os
-import sys
 from unittest import TestCase
 
 import tests.mock_tables.dbconnector
 from sonic_ax_impl.mibs import Namespace
 from sonic_ax_impl import mibs
 
-modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from sonic_ax_impl import mibs
 from sonic_py_common.port_util import BaseIdx

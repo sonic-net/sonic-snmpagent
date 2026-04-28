@@ -1,11 +1,3 @@
-import os
-import sys
-
-INPUT_DIR = os.path.dirname(os.path.abspath(__file__))
-modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(modules_path, 'src'))
-sys.path.insert(0, os.path.join(modules_path, 'tests'))
-
 from unittest import TestCase
 from unittest.mock import patch, mock_open
 
