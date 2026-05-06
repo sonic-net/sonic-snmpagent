@@ -14,21 +14,21 @@ from sonic_ax_impl.mibs.ietf.rfc1213 import NextHopUpdater, InterfacesUpdater, D
 
 class TestNextHopUpdater(TestCase):
 
-    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_keys', mock.MagicMock(return_value=(["ROUTE_TABLE:0.0.0.0/0"])))
     @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all', mock.MagicMock(return_value=({"nexthop": "10.0.0.1,10.0.0.3", "ifname": "Ethernet0,Ethernet4"})))
     def test_NextHopUpdater_route_has_next_hop(self):
         updater = NextHopUpdater()
 
-        with mock.patch('sonic_ax_impl.mibs.logger.warning') as mocked_warning:
+        with mock.patch('sonic_ax_impl.mibs.Namespace.dbs_keys') as mocked_dbs_keys, \
+             mock.patch('sonic_ax_impl.mibs.logger.warning') as mocked_warning:
             updater.update_data()
             
             # check warning
             mocked_warning.assert_not_called()
+            mocked_dbs_keys.assert_not_called()
 
         self.assertTrue(len(updater.route_list) == 1)
         self.assertTrue(updater.route_list[0] == (0,0,0,0))
 
-    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_keys', mock.MagicMock(return_value=(["ROUTE_TABLE:0.0.0.0/0"])))
     @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all', mock.MagicMock(return_value=({"ifname": "Ethernet0,Ethernet4"})))
     def test_NextHopUpdater_route_no_next_hop(self):
         updater = NextHopUpdater()
@@ -44,6 +44,22 @@ class TestNextHopUpdater(TestCase):
 
         self.assertTrue(len(updater.route_list) == 0)
 
+    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all', mock.MagicMock(return_value=({"nexthop": "bad-ip,10.0.0.1", "ifname": "Ethernet0,Ethernet4"})))
+    def test_NextHopUpdater_route_invalid_first_nexthop(self):
+        updater = NextHopUpdater()
+
+        with mock.patch('sonic_ax_impl.mibs.logger.warning') as mocked_warning:
+            updater.update_data()
+
+            expected = [
+                mock.call("Invalid nexthop 'bad-ip': ROUTE_TABLE:0.0.0.0/0 {'nexthop': 'bad-ip,10.0.0.1', 'ifname': 'Ethernet0,Ethernet4'}")
+            ]
+            mocked_warning.assert_has_calls(expected)
+
+        self.assertTrue(len(updater.route_list) == 1)
+        self.assertTrue(updater.route_list[0] == (0, 0, 0, 0))
+        self.assertTrue(updater.nexthop((0, 0, 0, 0)) == b'\n\x00\x00\x01')
+
 
 class TestNextHopUpdaterRedisException(TestCase):
     def __init__(self, name):
@@ -52,17 +68,16 @@ class TestNextHopUpdaterRedisException(TestCase):
         self.updater = NextHopUpdater()
     
     # setup mock method, throw exception when first time call it
-    def mock_dbs_keys(self, *args, **kwargs):
+    def mock_dbs_get_all(self, *args, **kwargs):
         if self.throw_exception:
             self.throw_exception = False
             raise RuntimeError
 
         self.updater.run_event.clear()
-        return None
+        return {"ifname": "Ethernet0,Ethernet4"}
 
-    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all', mock.MagicMock(return_value=({"ifname": "Ethernet0,Ethernet4"})))
     def test_NextHopUpdater_redis_exception(self):
-        with mock.patch('sonic_ax_impl.mibs.Namespace.dbs_keys', self.mock_dbs_keys):
+        with mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all', self.mock_dbs_get_all):
             with mock.patch('ax_interface.logger.exception') as mocked_exception:
                 self.updater.run_event.set()
                 self.updater.frequency = 1
