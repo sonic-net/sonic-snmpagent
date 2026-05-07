@@ -5,6 +5,8 @@ from unittest import TestCase
 import pytest
 from sonic_ax_impl.mibs.ietf.rfc2737 import PhysicalTableMIBUpdater
 from sonic_ax_impl.mibs.ietf.rfc2737 import FabricCardCacheUpdater
+from sonic_ax_impl.mibs.ietf.rfc2737 import FanCacheUpdater
+from sonic_ax_impl.mibs.ietf.rfc2737 import PsuCacheUpdater
 
 if sys.version_info.major == 3:
     from unittest import mock
@@ -161,3 +163,31 @@ class TestFabricCardCacheUpdater(TestCase):
             update_entity_cache('N/A')
             mocked_phy_contained_in.assert_called()
             mocked_set_phy_fru.assert_called()
+
+
+class TestPsuCacheUpdater(TestCase):
+    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all', mock.MagicMock(return_value=({"model": "PSU0", "serial": "S000", "current": "1.0", "power": "100.0", "presence": "True", "voltage": "12.0", "temp": "30.0", "is_replaceable": "True"})))
+    @mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.PhysicalEntityCacheUpdater.get_physical_relation_info', mock.MagicMock(return_value=None))
+    def test_update_entity_cache_no_relation_info(self):
+        updater = PhysicalTableMIBUpdater()
+        psu_updater = PsuCacheUpdater(updater)
+
+        with (mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.PhysicalTableMIBUpdater.add_sub_id') as mocked_add_sub_id,
+              mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.PhysicalTableMIBUpdater.set_phy_contained_in') as mocked_set_phy_contained_in):
+            psu_updater._update_entity_cache('PSU 0')
+            mocked_add_sub_id.assert_not_called()
+            mocked_set_phy_contained_in.assert_not_called()
+
+
+class TestFanCacheUpdater(TestCase):
+    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all', mock.MagicMock(return_value=({"model": "FAN0", "presence": "True", "serial": "S000", "speed": "10000", "is_replaceable": "True"})))
+    @mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.PhysicalEntityCacheUpdater.get_physical_relation_info', mock.MagicMock(return_value=None))
+    def test_update_entity_cache_no_relation_info(self):
+        updater = PhysicalTableMIBUpdater()
+        fan_updater = FanCacheUpdater(updater)
+
+        with (mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.PhysicalTableMIBUpdater.add_sub_id') as mocked_add_sub_id,
+              mock.patch('sonic_ax_impl.mibs.ietf.rfc2737.PhysicalTableMIBUpdater.set_phy_contained_in') as mocked_set_phy_contained_in):
+            fan_updater._update_entity_cache('FAN 0')
+            mocked_add_sub_id.assert_not_called()
+            mocked_set_phy_contained_in.assert_not_called()
