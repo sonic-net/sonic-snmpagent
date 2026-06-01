@@ -849,5 +849,195 @@ class LLDPRemManAddrTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.4.2'):
     lldpRemManAddrIfId = SubtreeMIBEntry('1.4', updater, ValueType.INTEGER,
                                          updater.lookup, updater.man_addr_if_id)
 
-    lldpRemManAddrOID = SubtreeMIBEntry('1.5', updater, ValueType.OBJECT_IDENTIFIER,
-                                        updater.lookup, updater.man_addr_OID)
+
+# ---------------------------------------------------------------------------
+# New: lldpPortConfigTable + lldpStatistics (previously unimplemented)
+# Data source: LLDP_ENTRY_TABLE per-port fields in APPL_DB
+# Port indexing mirrors LocPortUpdater: (if_index,) tuples via oid_name_map
+# ---------------------------------------------------------------------------
+
+_LLDP_ADMIN_STATUS_MAP = {
+    "RX and TX": 4,
+    "TX only":   2,
+    "RX only":   3,
+    "disabled":  1,
+}
+
+
+class LLDPPortStatsConfigUpdater(MIBUpdater):
+    """
+    Reads per-port LLDP stats and admin config from LLDP_ENTRY_TABLE in APPL_DB.
+    Uses the same (if_index,) sub_id space as LocPortUpdater so that
+    lldpPortConfigTable, lldpStatsTxPortTable and lldpStatsRxPortTable share
+    identical row indices with lldpLocPortTable.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.db_conn = Namespace.init_namespace_dbs()
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
+        self.if_range    = []    # sorted list of (if_index,) tuples
+        self.oid_name_map = {}   # if_index -> port name
+        self._lldp_data  = {}    # port name -> field dict
+
+    def reinit_data(self):
+        _, _, _, self.oid_name_map = Namespace.get_sync_d_from_all_namespace(
+            mibs.init_sync_d_interface_tables, self.db_conn)
+
+    def update_data(self):
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
+        if not self.oid_name_map:
+            self.reinit_data()
+
+        lldp_data = {}
+        for db in self.db_conn:
+            for if_index, if_name in self.oid_name_map.items():
+                key = 'LLDP_ENTRY_TABLE:' + if_name
+                entry = db.get_all(mibs.APPL_DB, key, blocking=False)
+                if entry:
+                    lldp_data[if_name] = {
+                        (k.decode() if isinstance(k, bytes) else k):
+                        (v.decode() if isinstance(v, bytes) else v)
+                        for k, v in entry.items()
+                    }
+        self._lldp_data = lldp_data
+
+        self.if_range = sorted(
+            [(if_index,) for if_index in self.oid_name_map
+             if self.oid_name_map[if_index] in lldp_data],
+        )
+
+    def get_next(self, sub_id):
+        right = bisect_right(self.if_range, sub_id)
+        if right == len(self.if_range):
+            return None
+        return self.if_range[right]
+
+    def _entry(self, sub_id):
+        if_index = sub_id[0] if isinstance(sub_id, tuple) else sub_id
+        if_name = self.oid_name_map.get(if_index)
+        return self._lldp_data.get(if_name) if if_name else None
+
+    def _int_field(self, sub_id, field):
+        entry = self._entry(sub_id)
+        if not entry:
+            return 0
+        try:
+            return int(entry.get(field, 0))
+        except (ValueError, TypeError):
+            return 0
+
+    def admin_status(self, sub_id):
+        entry = self._entry(sub_id)
+        if not entry:
+            return 4
+        return _LLDP_ADMIN_STATUS_MAP.get(entry.get("lldp_if_status", "RX and TX"), 4)
+
+    def tx_frames_total(self, sub_id):
+        return self._int_field(sub_id, "lldp_if_frame_out")
+
+    def rx_frames_discarded(self, sub_id):
+        return self._int_field(sub_id, "lldp_if_frame_discard")
+
+    def rx_frames_errors(self, sub_id):
+        return self._int_field(sub_id, "lldp_if_frame_error_in")
+
+    def rx_frames_total(self, sub_id):
+        return self._int_field(sub_id, "lldp_if_frame_in")
+
+    def rx_tlvs_discarded(self, sub_id):
+        return self._int_field(sub_id, "lldp_if_tlv_unknown")
+
+    def rx_tlvs_unrecognized(self, sub_id):
+        return self._int_field(sub_id, "lldp_if_tlv_unknown")
+
+    def rx_ageouts(self, sub_id):
+        return self._int_field(sub_id, "lldp_if_ageout")
+
+
+class LLDPStatsScalarsUpdater(MIBUpdater):
+    """Reads lldpStatistics scalars from LLDP_LOC_COUNTERS in APPL_DB."""
+
+    def __init__(self):
+        super().__init__()
+        self.db_conn = Namespace.init_namespace_dbs()
+        self._data = {}
+
+    def reinit_data(self):
+        self.db_conn = Namespace.init_namespace_dbs()
+
+    def update_data(self):
+        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
+        data = {}
+        for db in self.db_conn:
+            entry = db.get_all(mibs.APPL_DB, "LLDP_LOC_COUNTERS", blocking=False)
+            if entry:
+                for k, v in entry.items():
+                    data[k.decode() if isinstance(k, bytes) else k] = \
+                        v.decode() if isinstance(v, bytes) else v
+        self._data = data
+
+    def _int(self, field):
+        try:
+            return int(self._data.get(field, 0))
+        except (ValueError, TypeError):
+            return 0
+
+    def last_change_time(self, sub_id):
+        return self._int("lldp_table_last_change_time")
+
+    def rem_inserts(self, sub_id):
+        return self._int("lldp_table_inserts")
+
+    def rem_deletes(self, sub_id):
+        return self._int("lldp_table_deletes")
+
+    def rem_drops(self, sub_id):
+        return self._int("lldp_table_drops")
+
+    def rem_ageouts(self, sub_id):
+        return self._int("lldp_table_ageouts")
+
+
+class LLDPStatisticsGroup(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.2'):
+    """lldpStatistics group — scalars at 1.0.8802.1.1.2.1.2.{1-5}.0"""
+
+    _stats_upd = LLDPStatsScalarsUpdater()
+
+    lldpStatsRemTablesLastChangeTime = MIBEntry('1.0', ValueType.TIME_TICKS,
+                                                _stats_upd.last_change_time, None)
+    lldpStatsRemTablesInserts        = MIBEntry('2.0', ValueType.GAUGE_32,
+                                                _stats_upd.rem_inserts, None)
+    lldpStatsRemTablesDeletes        = MIBEntry('3.0', ValueType.GAUGE_32,
+                                                _stats_upd.rem_deletes, None)
+    lldpStatsRemTablesDrops          = MIBEntry('4.0', ValueType.GAUGE_32,
+                                                _stats_upd.rem_drops, None)
+    lldpStatsRemTablesAgeouts        = MIBEntry('5.0', ValueType.GAUGE_32,
+                                                _stats_upd.rem_ageouts, None)
+
+    class LLDPStatsTxPortTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.2.6'):
+        port_upd = LLDPPortStatsConfigUpdater()
+        lldpStatsTxPortFramesTotal = SubtreeMIBEntry('1.2', port_upd, ValueType.COUNTER_32,
+                                                     port_upd.tx_frames_total)
+
+    class LLDPStatsRxPortTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.2.7'):
+        port_upd = LLDPPortStatsConfigUpdater()
+        lldpStatsRxPortFramesDiscardedTotal  = SubtreeMIBEntry('1.2', port_upd, ValueType.COUNTER_32,
+                                                               port_upd.rx_frames_discarded)
+        lldpStatsRxPortFramesErrors          = SubtreeMIBEntry('1.3', port_upd, ValueType.COUNTER_32,
+                                                               port_upd.rx_frames_errors)
+        lldpStatsRxPortFramesTotal           = SubtreeMIBEntry('1.4', port_upd, ValueType.COUNTER_32,
+                                                               port_upd.rx_frames_total)
+        lldpStatsRxPortTLVsDiscardedTotal    = SubtreeMIBEntry('1.5', port_upd, ValueType.COUNTER_32,
+                                                               port_upd.rx_tlvs_discarded)
+        lldpStatsRxPortTLVsUnrecognizedTotal = SubtreeMIBEntry('1.6', port_upd, ValueType.COUNTER_32,
+                                                               port_upd.rx_tlvs_unrecognized)
+        lldpStatsRxPortAgeoutsTotal          = SubtreeMIBEntry('1.7', port_upd, ValueType.GAUGE_32,
+                                                               port_upd.rx_ageouts)
+
+
+class LLDPPortConfigTable(metaclass=MIBMeta, prefix='.1.0.8802.1.1.2.1.1.6'):
+    """lldpPortConfigTable — per-port LLDP admin configuration"""
+    port_upd = LLDPPortStatsConfigUpdater()
+    lldpPortConfigAdminStatus = SubtreeMIBEntry('1.2', port_upd, ValueType.INTEGER,
+                                               port_upd.admin_status)
