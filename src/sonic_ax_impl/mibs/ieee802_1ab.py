@@ -956,7 +956,16 @@ class LLDPPortStatsConfigUpdater(MIBUpdater):
 
 
 class LLDPStatsScalarsUpdater(MIBUpdater):
-    """Reads lldpStatistics scalars from LLDP_LOC_COUNTERS in APPL_DB."""
+    """Reads lldpStatistics scalars from LLDP_LOC_COUNTERS in APPL_DB.
+
+    lldpRemTablesChange traps are sent by the snmp-notification daemon
+    (scripts/snmp/snmp_notification_daemon.py in upscale-ai-network/ucli#351),
+    supervised by supervisord inside the snmp container.  The daemon polls
+    LLDP_ENTRY_TABLE every 5s and reads SNMP_NOTIFICATION_CONFIG|lldp from
+    CONFIG_DB to gate trap generation.  Enable/disable via:
+      ucli -c 'configure terminal' -c 'snmp-notification lldp enable'
+      ucli -c 'configure terminal' -c 'no snmp-notification lldp'
+    """
 
     def __init__(self):
         super().__init__()
