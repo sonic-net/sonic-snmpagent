@@ -1,12 +1,9 @@
-import os
-import sys
 
+import importlib
 # noinspection PyUnresolvedReferences
 import tests.mock_tables.dbconnector
 from tests.mock_tables.dbconnector import SonicV2Connector
 
-modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from unittest import TestCase
 
@@ -27,6 +24,9 @@ def mock_poll_lldp_notif(mock_lldp_polled_entries):
 class TestLLDPMIB(TestCase):
     @classmethod
     def setUpClass(cls):
+        tests.mock_tables.dbconnector.load_database_config()
+        importlib.reload(ieee802_1ab)
+
         class LLDPMIB(ieee802_1ab.LLDPLocalSystemData,
                       ieee802_1ab.LLDPLocalSystemData.LLDPLocPortTable,
                       ieee802_1ab.LLDPLocalSystemData.LLDPLocManAddrTable,
@@ -205,13 +205,13 @@ class TestLLDPMIB(TestCase):
     def test_local_port_identification(self):
         mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 3, 7, 1, 3)]
         ret = mib_entry(sub_id=(1,))
-        self.assertEquals(ret, 'etp1')
+        self.assertEqual(ret, 'etp1')
         print(ret)
 
     def test_mgmt_local_port_identification(self):
         mib_entry = self.lut[(1, 0, 8802, 1, 1, 2, 1, 3, 7, 1, 3)]
         ret = mib_entry(sub_id=(10001,))
-        self.assertEquals(ret, 'mgmt1')
+        self.assertEqual(ret, 'mgmt1')
         print(ret)
 
     def test_getnextpdu_local_port_identification(self):

@@ -1,11 +1,8 @@
-import os
-import sys
 
+import importlib
 # noinspection PyUnresolvedReferences
 import tests.mock_tables.dbconnector
 
-modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from unittest import TestCase
 
@@ -15,11 +12,18 @@ from ax_interface.encodings import ObjectIdentifier
 from ax_interface.constants import PduTypes
 from ax_interface.pdu import PDU, PDUHeader
 from ax_interface.mib import MIBTable
+from sonic_ax_impl import mibs
 from sonic_ax_impl.mibs.vendor.cisco import ciscoSwitchQosMIB
 
 class TestQueueCounters(TestCase):
     @classmethod
     def setUpClass(cls):
+        tests.mock_tables.dbconnector.load_database_config()
+        # Reset Namespace cache and reload modules to clear any
+        # multi-namespace state left by previously-run namespace tests
+        # (pytest 8+ does not guarantee test file ordering).
+        mibs.Namespace.db_config_loaded = False
+        importlib.reload(ciscoSwitchQosMIB)
         cls.lut = MIBTable(ciscoSwitchQosMIB.csqIfQosGroupStatsTable)
         # Update MIBs
         for updater in cls.lut.updater_instances:

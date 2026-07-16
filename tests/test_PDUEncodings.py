@@ -1,8 +1,4 @@
-import os
-import sys
 
-modules_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(modules_path, 'src'))
 import struct
 from unittest import TestCase
 from ax_interface.encodings import ObjectIdentifier, OctetString, SearchRange, ValueRepresentation
