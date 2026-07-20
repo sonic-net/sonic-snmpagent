@@ -88,35 +88,46 @@ class TransceiverSensorData(BaseSensorData):
             'name': 'Temperature',
             'oid_offset_base': SENSOR_TYPE_TEMP,
             'sort_factor': 0,
-            'lane_based_sensor': False
+            'lane_based_sensor': False,
+            'highalarmkey' : 'temphighalarm',
+            'lowalarmkey' : 'templowalarm'
+            
         },
         'voltage': {
             'pattern': 'voltage',
             'name': 'Voltage',
             'oid_offset_base': SENSOR_TYPE_VOLTAGE,
             'sort_factor': 9000,
-            'lane_based_sensor': False
+            'lane_based_sensor': False,
+            'highalarmkey':'vcchighalarm',
+            'lowalarmkey':'vcclowalarm'
         },
         'rxpower': {
             'pattern': r'rx(\d+)power',
             'name': 'RX Power',
             'oid_offset_base': SENSOR_TYPE_PORT_RX_POWER,
             'sort_factor': 2000,
-            'lane_based_sensor': True
+            'lane_based_sensor': True,
+            'highalarmkey':'rxpowerhighalarm',
+            'lowalarmkey':'rxpowerlowalarm'
         },
         'txpower': {
             'pattern': r'tx(\d+)power',
             'name': 'TX Power',
             'oid_offset_base': SENSOR_TYPE_PORT_TX_POWER,
             'sort_factor': 1000,
-            'lane_based_sensor': True
+            'lane_based_sensor': True,
+            'highalarmkey':'txpowerhighalarm',
+            'lowalarmkey': 'txpowerlowalarm'
         },
         'txbias': {
             'pattern': r'tx(\d+)bias',
             'name': 'TX Bias',
             'oid_offset_base': SENSOR_TYPE_PORT_TX_BIAS,
             'sort_factor': 3000,
-            'lane_based_sensor': True
+            'lane_based_sensor': True,
+            'highalarmkey':'txbiashighalarm',
+            'lowalarmkey':'txbiaslowalarm'
         }
     }
 
@@ -171,25 +182,34 @@ class PSUSensorData(BaseSensorData):
             'pattern': 'temp',
             'name': 'Temperature',
             'oid_offset_base': SENSOR_TYPE_TEMP,
-            'sort_factor': 0
+            'sort_factor': 0,
+            'highalarmkey':'high_threshold',
+            'lowalarmkey':'low_threshold'
+            
         },
         'voltage': {
             'pattern': 'voltage',
             'name': 'Voltage',
             'oid_offset_base': SENSOR_TYPE_VOLTAGE,
-            'sort_factor': 9000
+            'sort_factor': 9000,
+            'highalarmkey':'voltage_max_threshold',
+            'lowalarmkey':'voltage_min_threshold'
         },
         'power': {
             'pattern': 'power',
             'name': 'Power',
             'oid_offset_base': SENSOR_TYPE_POWER,
-            'sort_factor': 2000
+            'sort_factor': 2000,
+            'highalarmkey':'power_max_threshold',
+            'lowalarmkey':'power_max_threshold'
         },
         'current': {
             'pattern': 'current',
             'name': 'Current',
             'oid_offset_base': SENSOR_TYPE_CURRENT,
-            'sort_factor': 1000
+            'sort_factor': 1000,
+            'highalarmkey':'current_max_threshold',
+            'lowalarmkey':'current'
         }
     }
 
@@ -259,7 +279,9 @@ class ThermalSensorData(BaseSensorData):
             'pattern': 'temperature',
             'name': 'Temperature',
             'oid_offset_base': SENSOR_TYPE_TEMP,
-            'sort_factor': 0
+            'sort_factor': 0,
+            'highalarmkey':'high_threshold',
+            'lowalarmkey':'low_threshold'
         }
     }
 
