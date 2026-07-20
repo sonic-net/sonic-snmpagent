@@ -26,7 +26,6 @@ class BgpSessionUpdater(MIBUpdater):
         self.session_status_list = []
 
     def reinit_data(self):
-        Namespace.connect_all_dbs(self.db_conn, mibs.STATE_DB)
         self.neigh_state_map = Namespace.dbs_keys_namespace(self.db_conn, mibs.STATE_DB, "NEIGH_STATE_TABLE|*")
 
     def update_data(self):
