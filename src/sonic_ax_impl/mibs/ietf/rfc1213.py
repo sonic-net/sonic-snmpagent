@@ -145,27 +145,27 @@ class NextHopUpdater(MIBUpdater):
         self.nexthop_map = {}
         self.route_list = []
 
-        route_entries = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "ROUTE_TABLE:*")
-        if not route_entries:
+        route_key = "ROUTE_TABLE:0.0.0.0/0"
+        ipn = ipaddress.ip_network("0.0.0.0/0")
+        ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, route_key, blocking=False)
+        if not ent:
             return
 
-        for route_entry in route_entries:
-            routestr = route_entry
-            ipnstr = routestr[len("ROUTE_TABLE:"):]
-            if ipnstr == "0.0.0.0/0":
-                ipn = ipaddress.ip_network(ipnstr)
-                ent = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, routestr, blocking=False)
-                if ent:
-                    nexthops = ent.get("nexthop", None)
-                    if nexthops is None:
-                        mibs.logger.warning("Route has no nexthop: {} {}".format(routestr, str(ent)))
-                        continue
-                    for nh in nexthops.split(','):
-                        # TODO: if ipn contains IP range, create more sub_id here
-                        sub_id = ip2byte_tuple(ipn.network_address)
-                        self.route_list.append(sub_id)
-                        self.nexthop_map[sub_id] = ipaddress.ip_address(nh).packed
-                        break # Just need the first nexthop
+        nexthops = ent.get("nexthop", None)
+        if nexthops is None:
+            mibs.logger.warning("Route has no nexthop: {} {}".format(route_key, str(ent)))
+            return
+
+        # TODO: if ipn contains IP range, create more sub_id here
+        sub_id = ip2byte_tuple(ipn.network_address)
+        for nh in nexthops.split(','):
+            try:
+                parsed_nh = ipaddress.ip_address(nh.strip()).packed
+                self.nexthop_map[sub_id] = parsed_nh
+                self.route_list.append(sub_id)
+                break  # Just need the first nexthop
+            except ValueError:
+                mibs.logger.warning("Invalid nexthop '{}': {} {}".format(nh, route_key, str(ent)))
 
         self.route_list.sort()
 
