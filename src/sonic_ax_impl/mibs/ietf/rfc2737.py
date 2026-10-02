@@ -1044,6 +1044,9 @@ class FanCacheUpdater(PhysicalEntityCacheUpdater):
         if not fan_relation_info:
             return
         fan_position, fan_parent_name = get_db_data(fan_relation_info, PhysicalRelationInfoDB)
+        if not fan_position or is_null_str(fan_position):
+            return
+
         fan_position = int(fan_position)
         if fan_parent_name in self.mib_updater.physical_name_to_oid_map:
             self._update_fan_mib_info(fan_parent_name, fan_position, fan_name, serial, model, speed, replaceable)

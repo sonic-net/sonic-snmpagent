@@ -6,6 +6,7 @@ from sonic_ax_impl.mibs.ietf.rfc2737 import PhysicalTableMIBUpdater
 from sonic_ax_impl.mibs.ietf.rfc2737 import FabricCardCacheUpdater
 from sonic_ax_impl.mibs.ietf.rfc2737 import FanCacheUpdater
 from sonic_ax_impl.mibs.ietf.rfc2737 import PsuCacheUpdater
+from sonic_ax_impl.mibs.ietf.physical_entity_sub_oid_generator import get_fan_sub_id
 
 if sys.version_info.major == 3:
     from unittest import mock
@@ -188,3 +189,43 @@ class TestFanCacheUpdater(TestCase):
             fan_updater._update_entity_cache('FAN 0')
             mocked_add_sub_id.assert_not_called()
             mocked_set_phy_contained_in.assert_not_called()
+
+    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all', mock.MagicMock(return_value=({"model": "FAN0", "presence": "True", "serial": "S000", "speed": "10000", "is_replaceable": "True"})))
+    def test_update_entity_cache_invalid_position(self):
+        updater = PhysicalTableMIBUpdater()
+        fan_updater = FanCacheUpdater(updater)
+
+        relation_infos = (
+            {"parent_name": "Chassis 1"},
+            {"position_in_parent": None, "parent_name": "Chassis 1"},
+            {"position_in_parent": "", "parent_name": "Chassis 1"},
+            {"position_in_parent": "N/A", "parent_name": "Chassis 1"},
+            {"position_in_parent": "None", "parent_name": "Chassis 1"},
+        )
+        for relation_info in relation_infos:
+            with (self.subTest(relation_info=relation_info),
+                  mock.patch.object(fan_updater, 'get_physical_relation_info', return_value=relation_info),
+                  mock.patch.object(updater, 'add_sub_id') as mocked_add_sub_id,
+                  mock.patch.object(updater, 'add_pending_entity_name_callback') as mocked_add_pending_callback):
+                fan_updater._update_entity_cache('FAN 0')
+                mocked_add_sub_id.assert_not_called()
+                mocked_add_pending_callback.assert_not_called()
+
+    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all', mock.MagicMock(return_value=({"model": "FAN0", "presence": "True", "serial": "S000", "speed": "10000", "is_replaceable": "True"})))
+    def test_update_entity_cache_valid_position(self):
+        updater = PhysicalTableMIBUpdater()
+        fan_updater = FanCacheUpdater(updater)
+        parent_sub_id = (1,)
+        updater.physical_name_to_oid_map["Chassis 1"] = parent_sub_id
+        relation_info = {
+            "position_in_parent": "1",
+            "parent_name": "Chassis 1",
+        }
+
+        with mock.patch.object(fan_updater, 'get_physical_relation_info', return_value=relation_info):
+            fan_updater._update_entity_cache('FAN 0')
+
+        fan_sub_id = get_fan_sub_id(parent_sub_id, 1)
+        self.assertIn(fan_sub_id, updater.physical_entities)
+        self.assertEqual(updater.physical_name_map[fan_sub_id], 'FAN 0')
+        self.assertEqual(updater.physical_parent_relative_pos_map[fan_sub_id], 1)
