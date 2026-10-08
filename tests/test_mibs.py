@@ -98,6 +98,8 @@ class TestRedisEndpointConfig(TestCase):
         mibs.init_db()
 
         mock_connector.assert_called_once_with(
+            host='redis.example',
+            port=6380,
             use_unix_socket_path=False,
             decode_responses=True,
         )
@@ -110,6 +112,7 @@ class TestRedisEndpointConfig(TestCase):
         mibs.init_db()
 
         mock_connector.assert_called_once_with(
+            unix_socket_path='/var/run/redis/redis.sock',
             use_unix_socket_path=True,
             decode_responses=True,
         )

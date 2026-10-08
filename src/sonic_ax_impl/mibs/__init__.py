@@ -228,9 +228,11 @@ def split_sai_id_key(sai_id_key):
 
 def config(**kwargs):
     global redis_kwargs
-    use_unix_socket_path = 'unix_socket_path' in kwargs or not any(
-        key in kwargs for key in ['host', 'port'])
-    redis_kwargs = {'use_unix_socket_path': use_unix_socket_path}
+    redis_kwargs = {key: value for key, value in kwargs.items()
+                    if key in ['unix_socket_path', 'host', 'port']}
+    redis_kwargs['use_unix_socket_path'] = (
+        'unix_socket_path' in redis_kwargs or
+        not any(key in redis_kwargs for key in ['host', 'port']))
     redis_kwargs['decode_responses'] = True
 
 def init_db():
