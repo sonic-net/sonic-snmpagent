@@ -365,15 +365,16 @@ class MIBTable(dict):
     def _get_nextvalue(self, mib_entry, oid_key):
         sub_id = mib_entry.get_sub_id(oid_key)
         key1 = mib_entry.get_next(sub_id)
-        if key1 is None:
-            return None
-        val1 = mib_entry(key1)
-        if val1 is None:
-            return None
-        oid1 = mib_entry.replace_sub_id(oid_key, key1)
-        # OID found, call the OIDEntry
-        vr = ValueRepresentation.from_typecast(mib_entry.value_type, oid1, val1)
-        return vr
+        while key1 is not None:
+            val1 = mib_entry(key1)
+            if val1 is not None:
+                oid1 = mib_entry.replace_sub_id(oid_key, key1)
+                # OID found, call the OIDEntry
+                vr = ValueRepresentation.from_typecast(mib_entry.value_type, oid1, val1)
+                return vr
+            # Value is None, continue to the next sub_id
+            key1 = mib_entry.get_next(key1)
+        return None
 
     def get(self, sr, d=None):
         oid_key = sr.start.to_tuple()
