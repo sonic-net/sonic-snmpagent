@@ -44,7 +44,7 @@ RIF_DROPS_AGGR_MAP = {
     "SAI_PORT_STAT_IF_OUT_DISCARDS": "SAI_ROUTER_INTERFACE_STAT_OUT_ERROR_PACKETS"
 }
 
-redis_kwargs = {'unix_socket_path': '/var/run/redis/redis.sock'}
+redis_kwargs = {'use_unix_socket_path': True}
 
 def get_neigh_info(neigh_key):
     """
@@ -228,7 +228,11 @@ def split_sai_id_key(sai_id_key):
 
 def config(**kwargs):
     global redis_kwargs
-    redis_kwargs = {k:v for (k,v) in kwargs.items() if k in ['unix_socket_path', 'host', 'port']}
+    redis_kwargs = {key: value for key, value in kwargs.items()
+                    if key in ['unix_socket_path', 'host', 'port']}
+    redis_kwargs['use_unix_socket_path'] = (
+        'unix_socket_path' in redis_kwargs or
+        not any(key in redis_kwargs for key in ['host', 'port']))
     redis_kwargs['decode_responses'] = True
 
 def init_db():
