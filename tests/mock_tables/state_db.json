@@ -89,10 +89,15 @@
     "tx4power": "N/A"
   },
   "MGMT_PORT_TABLE|eth0": {
-    "oper_status": "down"
+    "description": "snowflake",
+    "speed": 1000
   },
   "MGMT_PORT_TABLE|eth1": {
-    "oper_status": "up"
+    "description": "snowflake",
+    "oper_status": "up",
+    "admin_status": "up",
+    "alias": "mgmt1",
+    "speed": 2000
   },
   "PHYSICAL_ENTITY_INFO|PSU 1": {
     "position_in_parent": 1,
