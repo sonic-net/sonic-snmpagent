@@ -71,3 +71,48 @@ class TestGetNextPDU(TestCase):
         self.assertTrue(vlan_name_map == {})
         self.assertTrue(vlan_oid_sai_map == {})
         self.assertTrue(vlan_oid_name_map == {})
+
+
+class TestRedisEndpointConfig(TestCase):
+    def tearDown(self):
+        mibs.config()
+
+    @mock.patch.object(mibs.Namespace, 'init_sonic_db_config')
+    @mock.patch.object(mibs, 'SonicV2Connector')
+    def test_default_endpoint_uses_unix_socket(self, mock_connector, _):
+        mibs.config(log_level=20)
+
+        actual = mibs.init_db()
+
+        self.assertIs(actual, mock_connector.return_value)
+        mock_connector.assert_called_once_with(
+            use_unix_socket_path=True,
+            decode_responses=True,
+        )
+
+    @mock.patch.object(mibs.Namespace, 'init_sonic_db_config')
+    @mock.patch.object(mibs, 'SonicV2Connector')
+    def test_explicit_tcp_selection_is_preserved(self, mock_connector, _):
+        mibs.config(host='redis.example', port=6380)
+
+        mibs.init_db()
+
+        mock_connector.assert_called_once_with(
+            host='redis.example',
+            port=6380,
+            use_unix_socket_path=False,
+            decode_responses=True,
+        )
+
+    @mock.patch.object(mibs.Namespace, 'init_sonic_db_config')
+    @mock.patch.object(mibs, 'SonicV2Connector')
+    def test_explicit_socket_selection_is_preserved(self, mock_connector, _):
+        mibs.config(unix_socket_path='/var/run/redis/redis.sock')
+
+        mibs.init_db()
+
+        mock_connector.assert_called_once_with(
+            unix_socket_path='/var/run/redis/redis.sock',
+            use_unix_socket_path=True,
+            decode_responses=True,
+        )
