@@ -76,6 +76,11 @@ pytest tests/ --cov=sonic_ax_impl --cov-report=term-missing
 - **CLA**: Sign Linux Foundation EasyCLA
 - **RFC compliance**: MIB implementations must strictly follow the relevant RFC
 - **Testing**: Include tests with mock DB data for all new MIB objects
+- **PR description template**: Fill out all sections of the [PR template](.github/pull_request_template.md) when submitting a pull request:
+  - **Description of PR**: Summary of the change, motivation/context, reviewer entry point, and dependencies; reference issues with `fixes #xxxx` / `closes #xxxx`.
+  - **Type of change**: Mark the box(es) that apply — bug fix, new feature, refactor / cleanup, documentation update, test improvement.
+  - **Approach**: Motivation; how you did it; how you verified/tested it; any platform-specific notes.
+  - **Documentation**: Link to wiki / doc updates relevant to new features or test cases.
 
 ## Common Patterns
 
