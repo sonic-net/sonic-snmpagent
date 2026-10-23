@@ -197,7 +197,7 @@ class InterfaceMIBUpdater(MIBUpdater):
         elif oid in self.vlan_oid_name_map:
             result = self.vlan_oid_name_map[oid]
         else:
-            result = self.if_alias_map[self.oid_name_map[oid]]
+            result = self.oid_name_map[oid]
 
         return result
     
