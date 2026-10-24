@@ -18,5 +18,11 @@
   "DEVICE_METADATA|localhost": {
     "chassis_serial_number": "SAMPLETESTSN",
     "hostname" : "test_hostname"
+  },
+  "VLAN_MEMBER|Vlan10|Ethernet10": {
+    "tagging_mode": "untagged"
+  },
+  "VLAN_MEMBER|Vlan10|PortChannel1": {
+    "tagging_mode": "untagged"
   }
 }
