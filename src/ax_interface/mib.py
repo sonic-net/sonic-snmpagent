@@ -313,7 +313,8 @@ class MIBTable(dict):
 
     def __init__(self, mib_cls,
                  enable_dynamic_frequency=DEFAULT_ENABLE_DYNAMIC_FREQUENCY,
-                 update_frequency=DEFAULT_UPDATE_FREQUENCY):
+                 update_frequency=DEFAULT_UPDATE_FREQUENCY,
+                 trap_infra_obj=None):
         if type(mib_cls) is not MIBMeta:
             raise ValueError("Supplied object is not a MIB class instance.")
         super().__init__(getattr(mib_cls, MIBMeta.KEYSTORE))
@@ -321,6 +322,7 @@ class MIBTable(dict):
         self.update_frequency = update_frequency
         self.updater_instances = getattr(mib_cls, MIBMeta.UPDATERS)
         self.prefixes = getattr(mib_cls, MIBMeta.PREFIXES)
+        self.trap_infra_obj = trap_infra_obj
 
     @staticmethod
     def _done_background_task_callback(fut):
@@ -340,6 +342,8 @@ class MIBTable(dict):
             fut = asyncio.ensure_future(updater.start())
             fut.add_done_callback(MIBTable._done_background_task_callback)
             tasks.append(fut)
+        if self.trap_infra_obj:
+            asyncio.create_task(self.trap_infra_obj.db_listener())
         return asyncio.gather(*tasks)
 
     def _find_parent_prefix(self, item):
