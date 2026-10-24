@@ -1,6 +1,9 @@
+import os
+import re
 import ipaddress
 import python_arptable
 import socket
+import subprocess
 from enum import unique, Enum
 from bisect import bisect_right
 
@@ -179,15 +182,118 @@ class NextHopUpdater(MIBUpdater):
 
         return self.route_list[right]
 
+class NetmaskUpdater(MIBUpdater):
+    def __init__(self):
+        super().__init__()
+        self.db_conn = Namespace.init_namespace_dbs()
+        self.netmask_map = {}
+        self.netmask_list = []
+
+    def _update_netmask_info(self, dev, ip):
+        if ip is None: return
+
+        if_index = mibs.get_index_from_str(dev)
+        if if_index is None: return
+
+        try:
+           netip = ipaddress.ip_network(ip, False)
+        except (ValueError, ipaddress.AddressValueError):
+           return
+
+        netip = str(netip)
+
+        if '/' in ip:
+          netmask = ip.split('/')[1]
+        else:
+         mibs.logger.warning("IP '%s' missing prefix length for dev '%s'", ip, dev)
+         return
+
+        netmask = int(netmask)
+        ip = ip.split('/')[0]
+        netip = netip.split('/')[0]
+
+        netiptuple = ip2byte_tuple(netip)
+        iptuple = ip2byte_tuple(ip)
+        subid = (4,) + iptuple
+
+        # Create map between subid and OID
+        oid_tuple = (1, 3, 6, 1, 2, 1, 4, 32, 1, 5)
+        self.netmask_map[subid] = oid_tuple + (if_index,) + (1, 4)  + netiptuple + (netmask,)
+        self.netmask_list.append(subid)
+
+    def update_data(self):
+        self.netmask_map = {}
+        self.netmask_list = []
+
+        interfaces = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "INTF_TABLE:*")
+        for interface in interfaces:
+            eth_table_prefix = re.search(
+                r"INTF_TABLE:([A-Za-z][A-Za-z0-9]+):([0-9./]+)",
+                interface
+            )
+            if eth_table_prefix is None:
+                continue
+
+            dev = eth_table_prefix.group().split(':')[1]
+            ip = eth_table_prefix.group().split(':')[2]
+
+            if "." in ip:
+                self._update_netmask_info(dev, ip)
+
+        result = subprocess.run(
+            ["ip", "addr", "show", "eth0"],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+
+        match = re.search(r"inet (\d+\.\d+\.\d+\.\d+)", result.stdout)
+        mgmt_ip = match.group(1) if match else ""
+        if mgmt_ip:
+            self._update_netmask_info("eth0", mgmt_ip)
+
+        result = subprocess.run(
+            ["ip", "addr", "show", "docker0"],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+
+        match = re.search(r"inet (\d+\.\d+\.\d+\.\d+)", result.stdout)
+        docker_inet = match.group(1) if match else ""
+        if docker_inet:
+            self._update_netmask_info("docker0", docker_inet)
+
+        match = re.search(r"brd (\d+\.\d+\.\d+\.\d+)", result.stdout)
+        docker_brd = match.group(1) if match else ""
+        if docker_brd:
+            self._update_netmask_info("docker0", docker_brd)
+
+        self.netmask_list.sort()
+
+    def get_netmask_oid(self, sub_id):
+        return self.netmask_map.get(sub_id, None)
+
+    def get_next(self, sub_id):
+        right = bisect_right(self.netmask_list, sub_id)
+        if right >= len(self.netmask_list):
+            return None
+
+        return self.netmask_list[right]
+
 class IpMib(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.4'):
     arp_updater = ArpUpdater()
     nexthop_updater = NextHopUpdater()
+    netmask_updater = NetmaskUpdater()
 
     ipRouteNextHop = \
         SubtreeMIBEntry('21.1.7', nexthop_updater, ValueType.IP_ADDRESS, nexthop_updater.nexthop)
 
     ipNetToMediaPhysAddress = \
         SubtreeMIBEntry('22.1.2', arp_updater, ValueType.OCTET_STRING, arp_updater.arp_dest)
+
+    ipNetToNetMask = \
+        SubtreeMIBEntry('34.1.5.1', netmask_updater, ValueType.OBJECT_IDENTIFIER, netmask_updater.get_netmask_oid)
 
 class InterfacesUpdater(MIBUpdater):
 
@@ -398,6 +504,9 @@ class InterfacesUpdater(MIBUpdater):
             # TODO: mgmt counters not available through SNMP right now
             # COUNTERS DB does not have support for generic linux (mgmt) interface counters
             return 0
+        elif oid in self.vlan_oid_name_map:
+            return 0
+
         elif oid in self.oid_lag_name_map:
             counter_value = 0
             # Sum the values of this counter for all ports in the LAG.
