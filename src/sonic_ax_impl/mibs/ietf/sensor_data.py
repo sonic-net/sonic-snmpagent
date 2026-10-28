@@ -279,3 +279,72 @@ class ThermalSensorData(BaseSensorData):
                     sensor_data_list.append(sensor_data)
 
         return sensor_data_list
+
+class VoltageSensorData(BaseSensorData):
+    """
+    Base Voltage sensor data class. Responsible for:
+        1. Manage concrete sensor data class
+        2. Create concrete sensor data instances
+        3. Provide common logic for concrete sensor data class
+    """
+
+    sensor_attr_dict = {
+        'voltage': {
+            'pattern': 'voltage',
+            'name': 'Voltage',
+            'oid_offset_base': SENSOR_TYPE_VOLTAGE,
+            'sort_factor': 0
+        }
+    }
+
+    @classmethod
+    def create_sensor_data(cls, sensor_data_dict):
+        """
+        Create sensor data instances according to the sensor data got from redis
+        :param sensor_data_dict: sensor data got from redis
+        :return: A sorted sensor data instance list
+        """
+        sensor_data_list = []
+        for name, value in sensor_data_dict.items():
+            for sensor_attrs in cls.sensor_attr_dict.values():
+                match_result = re.fullmatch(sensor_attrs['pattern'], name)
+                if match_result:
+                    sensor_data = VoltageSensorData(name, value, sensor_attrs, match_result)
+                    sensor_data_list.append(sensor_data)
+
+        return sensor_data_list
+
+
+class CurrentSensorData(BaseSensorData):
+    """
+    Base Current sensor data class. Responsible for:
+        1. Manage concrete sensor data class
+        2. Create concrete sensor data instances
+        3. Provide common logic for concrete sensor data class
+    """
+
+    sensor_attr_dict = {
+        'current': {
+            'pattern': 'current',
+            'name': 'Current',
+            'oid_offset_base': SENSOR_TYPE_CURRENT,
+            'sort_factor': 0
+        }
+    }
+
+    @classmethod
+    def create_sensor_data(cls, sensor_data_dict):
+        """
+        Create sensor data instances according to the sensor data got from redis
+        :param sensor_data_dict: sensor data got from redis
+        :return: A sorted sensor data instance list
+        """
+        sensor_data_list = []
+        for name, value in sensor_data_dict.items():
+            for sensor_attrs in cls.sensor_attr_dict.values():
+                match_result = re.fullmatch(sensor_attrs['pattern'], name)
+                if match_result:
+                    sensor_data = CurrentSensorData(name, value, sensor_attrs, match_result)
+                    sensor_data_list.append(sensor_data)
+
+        return sensor_data_list
