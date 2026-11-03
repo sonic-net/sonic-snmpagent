@@ -343,3 +343,86 @@ class TestLLDPMIB(TestCase):
         for key in expect.keys():
             assert key in event_cache
             self.assertEqual(expect[key], event_cache[key])     
+
+
+class TestLLDPRemManAddrUpdaterCache(TestCase):
+    def setUp(self):
+        self.updater = object.__new__(ieee802_1ab.LLDPRemManAddrUpdater)
+        self.updater.db_conn = []
+        self.updater.if_range = []
+        self.updater.oid_name_map = {
+            5: 'Ethernet5',
+            9: 'Ethernet9',
+        }
+
+    @staticmethod
+    def remote_management_addresses(addresses, time_mark='100'):
+        return {
+            'lldp_rem_man_addr': addresses,
+            'lldp_rem_time_mark': time_mark,
+            'lldp_rem_index': '7',
+        }
+
+    def update_interface(self, data, if_oid=5, if_name='Ethernet5'):
+        with patch.object(ieee802_1ab.Namespace, 'dbs_get_all', return_value=data):
+            self.updater.update_rem_if_mgmt(if_oid, if_name)
+
+    def entries_for_interface(self, if_oid=5):
+        return [entry for entry in self.updater.if_range if entry[1] == if_oid]
+
+    def test_refresh_replaces_all_entries_and_preserves_multiple_addresses(self):
+        self.update_interface(self.remote_management_addresses(
+            '10.0.0.1,2001:db8::1'))
+        self.update_interface(self.remote_management_addresses(
+            '10.0.0.2,2001:db8::2', time_mark='101'))
+
+        entries = self.entries_for_interface()
+        self.assertEqual(len(entries), 2)
+        self.assertEqual({entry[0] for entry in entries}, {101})
+        self.assertEqual({entry[3] for entry in entries}, {
+            ieee802_1ab.ManAddrConst.man_addr_subtype_ipv4,
+            ieee802_1ab.ManAddrConst.man_addr_subtype_ipv6,
+        })
+
+    def test_refresh_does_not_duplicate_unchanged_entries(self):
+        data = self.remote_management_addresses('10.0.0.1,2001:db8::1')
+
+        self.update_interface(data)
+        self.update_interface(data)
+
+        self.assertEqual(len(self.entries_for_interface()), 2)
+
+    def test_delete_notification_removes_only_deleted_interface(self):
+        other_entry = (50, 9, 1, 1, 4, 192, 0, 2, 1)
+        self.updater.if_range.append(other_entry)
+        self.update_interface(self.remote_management_addresses('10.0.0.1'))
+
+        with patch.object(ieee802_1ab.Namespace, 'dbs_get_all', return_value={}), \
+                patch.object(ieee802_1ab, 'get_latest_notification',
+                             return_value={'Ethernet5': ('del', 5)}):
+            self.updater._update_per_namespace_data(None)
+
+        self.assertEqual(self.entries_for_interface(), [])
+        self.assertIn(other_entry, self.updater.if_range)
+
+    def test_empty_invalid_or_incomplete_data_removes_stale_entries(self):
+        invalid_data = [
+            self.remote_management_addresses(' '),
+            self.remote_management_addresses('not-an-ip'),
+            {'lldp_rem_man_addr': '10.0.0.1'},
+        ]
+
+        for data in invalid_data:
+            with self.subTest(data=data):
+                self.update_interface(
+                    self.remote_management_addresses('10.0.0.1'))
+                self.update_interface(data)
+                self.assertEqual(self.entries_for_interface(), [])
+
+    def test_interface_outside_oid_map_is_not_cached(self):
+        self.update_interface(
+            self.remote_management_addresses('10.0.0.1'),
+            if_oid=10000,
+            if_name='eth0')
+
+        self.assertEqual(self.updater.if_range, [])

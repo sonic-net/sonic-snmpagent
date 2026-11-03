@@ -512,21 +512,39 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         self.mgmt_oid_name_map = {}
         self.pubsub = [None] * len(self.db_conn)
 
+    def replace_rem_if_mgmt(self, if_oid, new_entries):
+        """
+        Atomically replace cached remote management address entries for an
+        interface.
+        """
+        entries = [sub_oid for sub_oid in self.if_range if sub_oid[1] != if_oid]
+        entries.extend(new_entries)
+        self.if_range = sorted(entries)
+
     def update_rem_if_mgmt(self, if_oid, if_name):
+        new_entries = []
+
+        if if_oid not in self.oid_name_map:
+            self.replace_rem_if_mgmt(if_oid, new_entries)
+            return
+
         lldp_kvs = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.lldp_entry_table(if_name))
         if not lldp_kvs or 'lldp_rem_man_addr' not in lldp_kvs:
             # this interfaces doesn't have remote lldp data, or the peer doesn't advertise his mgmt address
+            self.replace_rem_if_mgmt(if_oid, new_entries)
             return
         try:
             mgmt_ip_str = lldp_kvs['lldp_rem_man_addr']
             mgmt_ip_str = mgmt_ip_str.strip()
             if len(mgmt_ip_str) == 0:
                 # the peer advertise an emtpy mgmt address
+                self.replace_rem_if_mgmt(if_oid, new_entries)
                 return
-            mgmt_ip_set=set()
+            mgmt_ip_set = set()
+            time_mark = int(lldp_kvs['lldp_rem_time_mark'])
+            remote_index = int(lldp_kvs['lldp_rem_index'])
             for mgmt_ip in mgmt_ip_str.split(','):
-                time_mark = int(lldp_kvs['lldp_rem_time_mark'])
-                remote_index = int(lldp_kvs['lldp_rem_index'])
+                mgmt_ip = mgmt_ip.strip()
                 subtype = self.get_subtype(mgmt_ip)
                 if not subtype:
                     logger.warning("Invalid management IP {}".format(mgmt_ip))
@@ -540,15 +558,15 @@ class LLDPRemManAddrUpdater(MIBUpdater):
                     addr_subtype_sub_oid = 16
                 mgmt_ip_set.add(mgmt_ip_tuple)
                 mgmt_ip_sub_oid = (addr_subtype_sub_oid, *mgmt_ip_tuple)
-                self.if_range.append((time_mark,
-                                      if_oid,
-                                      remote_index,
-                                      subtype,
-                                      *mgmt_ip_sub_oid))
-        except (KeyError, AttributeError) as e:
+                new_entries.append((time_mark,
+                                    if_oid,
+                                    remote_index,
+                                    subtype,
+                                    *mgmt_ip_sub_oid))
+        except (KeyError, AttributeError, ValueError) as e:
             logger.warning("Error updating remote mgmt addr: {}".format(e))
-            return
-        self.if_range.sort()
+
+        self.replace_rem_if_mgmt(if_oid, new_entries)
 
     def _update_per_namespace_data(self, pubsub):
         """
@@ -562,8 +580,8 @@ class LLDPRemManAddrUpdater(MIBUpdater):
             if "set" in data:
                 self.update_rem_if_mgmt(if_index, interface)
             elif "del" in data:
-                # if del is the latest notification, then delete it from the local cache
-                self.if_range = [sub_oid for sub_oid in self.if_range if sub_oid[0] != if_index]
+                # Refresh from DB so the same path handles delete/recreate races.
+                self.update_rem_if_mgmt(if_index, interface)
                 
     def update_data(self):
         for i in range(len(self.db_conn)):
