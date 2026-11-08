@@ -13,6 +13,9 @@ sys.path.insert(0, os.path.join(modules_path, 'src'))
 
 from sonic_ax_impl.mibs.ietf.rfc3635 import dot3MIBUpdater
 from sonic_ax_impl.mibs.ietf.rfc3635 import DbTables64
+from sonic_ax_impl.mibs.ietf.rfc3635 import etherMIBObjects
+from ax_interface import util
+from ax_interface.mib import MIBMeta
 
 class Testdot3MIBUpdater(TestCase):
 
@@ -56,15 +59,14 @@ class Testdot3MIBUpdater(TestCase):
 
         updater.reinit_data()
         updater.update_data()
-        def mock_get_counter(oid, table_name, mask):
-            if oid == 121:
-                return None
-            else:
-                return updater._get_counter(oid, table_name, mask)
-
         try:
             counter = updater.get_counter64((1103,), DbTables64(6))
         except TypeError:
             self.fail("Caught Type error")
         self.assertTrue(counter == None)
 
+    def test_hc_stats_oids_registered(self):
+        prefix = util.oid2tuple('.1.3.6.1.2.1.10.7.11.1')
+        subids = getattr(etherMIBObjects, MIBMeta.KEYSTORE)
+        for i in range(1, 7):
+            self.assertIn(prefix + (i,), subids)

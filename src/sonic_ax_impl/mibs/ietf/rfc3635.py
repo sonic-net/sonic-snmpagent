@@ -391,7 +391,7 @@ class etherMIBObjects(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.10.7'):
             OidMIBEntry('11.1.5', ValueType.COUNTER_64, oidtree_updater.get_oidvalue)
         )
 
-    dot3HCStatsInternalMacReceiveErrors = \
+    dot3HCStatsSymbolErrors = \
         OverlayAdpaterMIBEntry(
             SubtreeMIBEntry('11.1.6', if_updater, ValueType.COUNTER_64, if_updater.get_counter64,
                            DbTables64(6)),
