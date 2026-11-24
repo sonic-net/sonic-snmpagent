@@ -4,6 +4,7 @@ import tests.mock_tables.dbconnector
 
 
 from unittest import TestCase
+from unittest.mock import patch
 
 from ax_interface import ValueType
 from ax_interface.pdu_implementations import GetPDU, GetNextPDU
@@ -95,6 +96,14 @@ class TestPsuStatus(TestCase):
         self.assertEqual(value0.type_, ValueType.END_OF_MIB_VIEW)
         self.assertEqual(str(value0.name), str(oid))
         self.assertEqual(value0.data, None)
+
+    def test_getNumPsusInvalid(self):
+        handler = ciscoEntityFruControlMIB.cefcFruPowerStatusTable.power_status_handler
+
+        for chassis_info in ({}, {"psu_num": "invalid"}, {"psu_num": None}):
+            with self.subTest(chassis_info=chassis_info):
+                with patch.object(handler.statedb, "get_all", return_value=chassis_info):
+                    self.assertEqual(handler._get_num_psus(), 0)
 
     def test_getMissedPsu(self):
         oid = ObjectIdentifier(2, 0, 0, 0, (1, 3, 6, 1, 4, 1, 9, 9, 117, 1, 1, 2, 1, 2, 5, 1))
