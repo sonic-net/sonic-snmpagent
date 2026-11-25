@@ -42,5 +42,17 @@
   },
   "BUFFER_MAX_PARAM_TABLE|Ethernet24": {
     "max_queues": "16"
+  },
+  "MGMT_PORT_TABLE:Ethernet0": {
+    "description": "snowflake",
+    "alias": "etp1",
+    "role": "Ext",
+    "speed": 100000
+  },
+  "MGMT_PORT_TABLE:Ethernet4": {
+    "description": "snowflake",
+    "alias": "etp2",
+    "role": "Ext",
+    "speed": 100000
   }
 }
