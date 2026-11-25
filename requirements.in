@@ -1,0 +1,4 @@
+# External Python runtime; SONiC owner interfaces are supplied by applications.
+psutil==7.0.0
+python-arptable==0.0.2
+natsort==8.4.0

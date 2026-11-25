@@ -1,0 +1,7 @@
+pytest==8.4.2
+pytest-cov==6.2.1
+mock==3.0.5
+mockredispy==2.9.3
+# Legacy unit-test fixtures use this compatibility SDK, not production runtime.
+swsssdk @ https://github.com/securely1g/sonic-py-swsssdk/archive/5878f93779df1bfdfe58ea00c8d34fe8261d362e.tar.gz
+redis==4.5.4

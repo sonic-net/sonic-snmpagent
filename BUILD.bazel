@@ -1,0 +1,88 @@
+load("@rules_python//python:packaging.bzl", "py_wheel")
+load("@rules_python//python:py_library.bzl", "py_library")
+load("@snmpagent_pip//:requirements.bzl", "requirement")
+load("@tar.bzl//tar:tar.bzl", "tar")
+
+package(default_visibility = ["//visibility:public"])
+
+_SOURCES = glob(["src/**/*.py"])
+
+_PACKAGE_DATA = glob(
+    [
+        "src/sonic_ax_impl/config/*.json",
+        "src/sonic_ax_impl/bin/*",
+        "src/sonic_ax_impl/systemd/*.service",
+    ],
+    # Preserve setup.py's optional package-data patterns; this revision has
+    # only the bin payload, without fabricating absent config/service files.
+    allow_empty = True,
+)
+
+_PAYLOAD = _SOURCES + [path for path in _PACKAGE_DATA if path not in _SOURCES]
+
+# Applications supply the existing Common binding and sonic-py-common owner
+# interfaces. The separate test application declares their real native runtime.
+py_library(
+    name = "sonic_snmpagent",
+    srcs = _SOURCES,
+    data = _PACKAGE_DATA,
+    imports = ["src"],
+    deps = [
+        requirement("natsort"),
+        requirement("psutil"),
+        requirement("python-arptable"),
+    ],
+)
+
+filegroup(
+    name = "wheel_payload",
+    srcs = _PAYLOAD,
+)
+
+py_wheel(
+    name = "sonic_snmpagent_wheel",
+    author = "SONiC Team",
+    author_email = "linuxnetdev@microsoft.com",
+    distribution = "asyncsnmp",
+    extra_distinfo_files = {"LICENSE": "licenses/LICENSE"},
+    extra_requires = {"high_perf": []},
+    license = "Apache 2.0",
+    python_tag = "py3",
+    requires = [
+        "psutil>=4.0",
+        "python_arptable>=0.0.1",
+    ],
+    strip_path_prefixes = ["src"],
+    version = "2.1.0",
+    deps = [":wheel_payload"],
+)
+
+# The complete effect of `python3 -m sonic_ax_impl install`, expressed directly
+# as an upstream TAR rule instead of running an installer against a host root.
+tar(
+    name = "snmp_install",
+    srcs = ["src/sonic_ax_impl/bin/sysDescr_pass.py"],
+    mtree = [
+        "usr/share/snmp/sysDescr_pass.py uid=0 gid=0 mode=0755 time=0 type=file content=$(location src/sonic_ax_impl/bin/sysDescr_pass.py)",
+    ],
+)
+
+exports_files(["setup.py"])
+
+filegroup(
+    name = "test_sources",
+    testonly = True,
+    srcs = _PAYLOAD + glob(
+        ["tests/**"],
+        exclude = [
+            "tests/bazel/**",
+            "**/__pycache__/**",
+            "**/*.pyc",
+        ],
+    ) + [
+        "LICENSE",
+        "pytest.ini",
+        "setup.cfg",
+        "setup.py",
+    ],
+)

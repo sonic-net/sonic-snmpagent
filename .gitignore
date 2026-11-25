@@ -137,3 +137,15 @@ fabric.properties
 gh-release.patch
 tests/test_cpuUtilizationHandler.py
 tests/test-results.xml
+
+# Generated Bazel outputs and resolution evidence.
+/bazel-*
+/MODULE.bazel.lock
+/.bazelrc.user
+/tests/bazel/bazel-*
+/tests/bazel/MODULE.bazel.lock
+/tests/bazel/.bazelrc.user
+/bazel-evidence/
+
+/tests/bazel/refresh/MODULE.bazel.lock
+/tests/bazel/refresh/bazel-*
