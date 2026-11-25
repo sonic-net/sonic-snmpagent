@@ -1,3 +1,5 @@
+import os
+import re
 import ipaddress
 import python_arptable
 import socket
@@ -179,15 +181,96 @@ class NextHopUpdater(MIBUpdater):
 
         return self.route_list[right]
 
+class IfIndexUpdater(MIBUpdater):
+    def __init__(self):
+        super().__init__()
+        self.db_conn = Namespace.init_namespace_dbs()
+        self.if_index_map = {}
+        self.if_index_list = []
+
+    def _update_if_index_info(self, dev, ip):
+        if ip is None: return
+
+        if_index = mibs.get_index_from_str(dev)
+        if if_index is None: return
+
+        try:
+            ipaddr = ipaddress.ip_address(ip)
+        except Exception as e:
+            mibs.logger.warning("Failed to convert IP address '{}', error: {}.".format(ip, e))
+            return
+
+        iptuple = ip2byte_tuple(ip)
+        ip_type = 1 if isinstance(ipaddr, ipaddress.IPv4Address) else 2
+        ip_len = 4 if isinstance(ipaddr, ipaddress.IPv4Address) else 16
+        subid = (ip_type, ip_len,) + iptuple
+        self.if_index_map[subid] = if_index
+        self.if_index_list.append(subid)
+
+    def update_data(self):
+        self.if_index_map = {}
+        self.if_index_list = []
+
+        interfaces = Namespace.dbs_keys(self.db_conn, mibs.APPL_DB, "INTF_TABLE:*")
+        for interface in interfaces:
+            ethTablePrefix = re.search(r"INTF_TABLE\:[A-Za-z]+[0-9]+\:[0-9.\:A-Fa-f]+", interface)
+            if ethTablePrefix is None:
+                continue
+            else:
+                dev = ethTablePrefix.group().split(':')[1]
+                ip = ':'.join(ethTablePrefix.group().split(':')[2:])
+            self._update_if_index_info(dev, ip)
+
+        mgmt_ipv4 = os.popen('ip addr show eth0').read().split("inet ")[1].split("/")[0]
+        if (len(mgmt_ipv4) != 0):
+            self._update_if_index_info("eth0", mgmt_ipv4)
+        mgmt_ipv6 = os.popen('ip addr show eth0').read().split("inet6 ")[1].split("/")[0]
+        if (len(mgmt_ipv6) != 0):
+            self._update_if_index_info("eth0", mgmt_ipv6)
+
+        ips = os.popen('ip addr show docker0').read().split("inet ")[1].split("scope")[0]
+        if (len(ips) != 0):
+            ipv4 = ips.split(" brd ")[0].split("/")[0]
+            self._update_if_index_info("docker0", ipv4)
+            brd = ips.split(" brd ")[1].split(" ")[0]
+            self._update_if_index_info("docker0", brd)
+
+        ipv6 = os.popen('ip addr show docker0').read().split("inet6 ")[1].split("/")[0]
+        if (len(ipv6) != 0):
+            self._update_if_index_info("docker0", ipv6)
+        ipv6 = os.popen('ip addr show docker0').read().split("inet6 ")[2].split("/")[0]
+        if (len(ipv6) != 0):
+            self._update_if_index_info("docker0", ipv6)
+
+        brdg = os.popen('ip addr show Bridge').read().split("inet6 ")[1].split("/")[0]
+        if (len(brdg) != 0):
+            self._update_if_index_info("docker0", brdg)
+
+        self.if_index_list.sort()
+
+    def get_if_index(self, sub_id):
+        return self.if_index_map.get(sub_id, None)
+
+    def get_next(self, sub_id):
+        right = bisect_right(self.if_index_list, sub_id)
+        if right >= len(self.if_index_list):
+            return None
+
+        return self.if_index_list[right]
+
 class IpMib(metaclass=MIBMeta, prefix='.1.3.6.1.2.1.4'):
     arp_updater = ArpUpdater()
     nexthop_updater = NextHopUpdater()
+    ifindex_updater = IfIndexUpdater()
 
     ipRouteNextHop = \
         SubtreeMIBEntry('21.1.7', nexthop_updater, ValueType.IP_ADDRESS, nexthop_updater.nexthop)
 
     ipNetToMediaPhysAddress = \
         SubtreeMIBEntry('22.1.2', arp_updater, ValueType.OCTET_STRING, arp_updater.arp_dest)
+
+    ipNetToIfIndex = \
+        SubtreeMIBEntry('34.1.3', ifindex_updater, ValueType.INTEGER, ifindex_updater.get_if_index)
 
 class InterfacesUpdater(MIBUpdater):
 
