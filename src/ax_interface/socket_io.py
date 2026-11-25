@@ -35,7 +35,7 @@ class SocketManager:
 
         # open the snmpd config file and search for a agentx socket redefinition. Exceptions will be raised
         # if the constants.SNMPD_CONFIG_FILE or the file in itself do not exist
-        pattern = re.compile("^agentxsocket\s+(.*)$", re.IGNORECASE)
+        pattern = re.compile(r"^agentxsocket\s+(.*)$", re.IGNORECASE)
         try :
             with open(constants.SNMPD_CONFIG_FILE,'rt') as config_file:
                 for line in config_file:
