@@ -12,7 +12,7 @@ bazel_dep(name = "sonic-buildimage", version = "0.0.0", repo_name = "sonic_build
 git_override(
     module_name = "sonic-buildimage",
     commit = "c743d7521e80fc1733e5cc0ffc24889b08f78444",
-    remote = "https://github.com/securely1g/sonic-buildimage.git",
+    remote = "https://github.com/sonic-net/sonic-buildimage.git",
 )
 
 # Resolve the pinned buildimage fixture against the versions published by sonic-net.
