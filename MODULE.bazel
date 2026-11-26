@@ -1,0 +1,31 @@
+module(
+    name = "sonic-snmpagent",
+    version = "2.1.0",
+    bazel_compatibility = [
+        ">=8.5.1",
+        "<=8.5.1",
+    ],
+)
+
+bazel_dep(name = "rules_python", version = "1.9.0.sonic.2")
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    is_default = True,
+    python_version = "3.13",
+)
+
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "snmpagent_pip",
+    python_version = "3.13",
+    requirements_lock = "//:requirements_lock.txt",
+)
+use_repo(pip, "snmpagent_pip")
+
+bazel_dep(name = "tar.bzl", version = "0.10.5.sonic.2")
+
+toolchains = use_extension("@tar.bzl//tar:extensions.bzl", "toolchains")
+use_repo(toolchains, "bsd_tar_toolchains")
+
+register_toolchains("@bsd_tar_toolchains//:all")

@@ -1,0 +1,30 @@
+module(name = "snmp_test_service_lock")
+
+bazel_dep(name = "rules_distroless", version = "0.9.4.sonic.26")
+
+apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = ["trixie"],
+    uris = ["https://snapshot.debian.org/archive/debian/20260727T143429Z"],
+)
+apt.sources_list(
+    architectures = ["amd64"],
+    components = ["main"],
+    suites = ["trixie-security"],
+    uris = ["https://snapshot.debian.org/archive/debian-security/20260726T121236Z"],
+)
+apt.install(
+    dependency_set = "snmp_test_services",
+    packages = [
+        "redis-server:amd64",
+        "snmp:amd64",
+        "snmpd:amd64",
+    ],
+    suites = [
+        "trixie",
+        "trixie-security",
+    ],
+)
+use_repo(apt, "snmp_test_services")
