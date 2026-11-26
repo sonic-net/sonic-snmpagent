@@ -52,17 +52,16 @@ class TestNextHopUpdaterRedisException(TestCase):
         self.updater = NextHopUpdater()
     
     # setup mock method, throw exception when first time call it
-    def mock_dbs_keys(self, *args, **kwargs):
+    def mock_dbs_get_all(self, *args, **kwargs):
         if self.throw_exception:
             self.throw_exception = False
             raise RuntimeError
 
         self.updater.run_event.clear()
-        return None
+        return {}
 
-    @mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all', mock.MagicMock(return_value=({"ifname": "Ethernet0,Ethernet4"})))
     def test_NextHopUpdater_redis_exception(self):
-        with mock.patch('sonic_ax_impl.mibs.Namespace.dbs_keys', self.mock_dbs_keys):
+        with mock.patch('sonic_ax_impl.mibs.Namespace.dbs_get_all', self.mock_dbs_get_all):
             with mock.patch('ax_interface.logger.exception') as mocked_exception:
                 self.updater.run_event.set()
                 self.updater.frequency = 1
@@ -160,3 +159,4 @@ class TestNextHopUpdaterRedisException(TestCase):
         except TypeError:
             self.fail("Caught Type error")
         self.assertTrue(counter == None)
+
