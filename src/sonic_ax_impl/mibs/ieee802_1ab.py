@@ -122,8 +122,6 @@ class LLDPLocalSystemDataUpdater(MIBUpdater):
         """
         Subclass update data routine.
         """
-        # establish connection to application database.
-        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.loc_chassis_data = Namespace.dbs_get_all(self.db_conn, mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE)
         if self.loc_chassis_data:
             self.loc_chassis_data['lldp_loc_sys_cap_supported'] = parse_sys_capability(self.loc_chassis_data.get('lldp_loc_sys_cap_supported', ''))
@@ -155,8 +153,6 @@ class LocPortUpdater(MIBUpdater):
         super().__init__()
 
         self.db_conn = Namespace.init_namespace_dbs()
-        # establish connection to application database.
-        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.if_name_map = {}
         self.if_alias_map = {}
         self.if_id_map = {}
@@ -304,6 +300,7 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         super().__init__()
 
         self.db_conn = mibs.init_db()
+        self.db_conn.connect(mibs.APPL_DB)
         self.loc_chassis_data = {}
         self.man_addr_list = []
         self.mgmt_ip_str = None
@@ -316,7 +313,6 @@ class LLDPLocManAddrUpdater(MIBUpdater):
         self.mgmt_ip_str = None
 
         # establish connection to application database.
-        self.db_conn.connect(mibs.APPL_DB)
         mgmt_ip_bytes = self.db_conn.get(mibs.APPL_DB, mibs.LOC_CHASSIS_TABLE, 'lldp_loc_man_addr')
 
         if not mgmt_ip_bytes:
@@ -506,7 +502,6 @@ class LLDPRemManAddrUpdater(MIBUpdater):
 
         self.db_conn = Namespace.init_namespace_dbs()
         # establish connection to application database.
-        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
         self.if_range = []
         self.oid_name_map = {}
         self.mgmt_oid_name_map = {}
@@ -581,9 +576,6 @@ class LLDPRemManAddrUpdater(MIBUpdater):
         self.mgmt_oid_name_map, _ = mibs.init_mgmt_interface_tables(self.db_conn[0])
 
         self.oid_name_map.update(self.mgmt_oid_name_map)
-
-        # establish connection to application database.
-        Namespace.connect_all_dbs(self.db_conn, mibs.APPL_DB)
 
         self.if_range = []
         for if_oid, if_name in self.oid_name_map.items():
